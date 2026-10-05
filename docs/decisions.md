@@ -23,6 +23,7 @@
 | ADR-016 | 开发顺序：先端侧垂直切片 | 已采纳 |
 | ADR-017 | 使用真机开发，不下模拟器镜像 | 已采纳 |
 | ADR-018 | 协作方式：GitHub 私有仓 + 简化分支 + 本地钩子 | 已采纳 |
+| ADR-019 | 共享契约必须写成 ArkTS 子集 | 已采纳 |
 
 ---
 
@@ -221,6 +222,28 @@
 - **备选**：标准分支模型（含 dev 分支）；GitHub Actions；Issues + Projects
 - **理由**：三人规模下多一层 dev 分支只增加合并开销；国内访问 GitHub Actions 不稳定；看板放在仓库里评审时可直接打开看
 - **影响**：合并纪律靠评审而非工具强制，改契约的 PR 必须两端各 1 人看过
+
+---
+
+## ADR-019 共享契约必须写成 ArkTS 子集
+
+- **日期**：2026-10-05 ｜ **状态**：已采纳
+- **背景**：D0 阶段实测发现，把普通 TypeScript 声明文件原样生成为端侧 `.ets` 时，`devecocli check arkts` 报出 **42 个错误**，全部集中在 6 类语法上
+- **决策**：`packages/shared` 中会被生成到端侧的四个文件（`constants` / `models` / `preset` / `api`）一律写成 **ArkTS 子集**；`tools/gen` 只做逐字复制 + 加头，不做语法转换
+- **备选**：让生成器做 TS → ArkTS 的语法转换
+- **理由**：转换器需要维护一张语法映射表，随两端语言演进而持续失效；写成子集则两端共用同一份源码，零转换、零漂移，且 `devecocli check arkts` 可直接当作契约的守门人
+- **影响**：以下语法在整个共享契约中**禁用**：
+
+| 禁用语法 | 报错规则 | 替代写法 |
+|---|---|---|
+| `as const` | `arkts-no-as-const` | 显式标注类型的数组：`const X: T[] = [...]` |
+| `(typeof X)[number]` | `arkts-no-aliases-by-index` | 手写字符串字面量联合类型 |
+| `typeof` 类型查询 | `arkts-no-type-query` | 同上 |
+| 内联对象类型 `{ a: number }` | `arkts-no-obj-literals-as-types` | 声明具名 `interface` |
+| 未标注类型的对象字面量 | `arkts-no-untyped-obj-literals` | 先声明 interface 再标注 |
+| 数组展开 `[...a, b]` | `arkts-no-spread` | 逐项写全 |
+
+- **额外收益**：手写的 ArkTS 代码（Index / 各页面 / 主题常量）在同一轮检查中**零错误**，说明子集约束一旦建立，端侧代码质量可被工具持续验证
 
 ---
 

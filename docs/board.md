@@ -22,9 +22,9 @@
 
 ## 当前焦点（本周三件事）
 
-1. 解除开工阻塞项（见阻塞区）
-2. 完成 P0 地基：仓库骨架 + 数据契约 + 鸿蒙工程
-3. 完成四个技术验证，结论写入 [决策日志](./decisions.md)
+1. 完成 D0-10：接通真机，跑通空壳 App（阻塞中，见 B2）
+2. 完成 D0-V 四个技术验证，结论写入 [决策日志](./decisions.md) —— 优先 S1 分布式可行性
+3. 同步推进 P2-1：80 条清单联网核实
 
 ---
 
@@ -42,7 +42,7 @@
 
 | 待办 | 进行中 | 待评审 | 已完成 |
 |---|---|---|---|
-| P0-1 ~ P0-6<br>P2-1 ~ P2-8<br>P3-1 ~ P3-6 | P0-7 ~ P0-10（四个技术验证） | — | 文档整理（设计文档 / 决策日志 / 看板 / 索引） |
+| P0-7 ~ P0-10（四个技术验证）<br>P2-1 ~ P2-8<br>P3-1 ~ P3-6 | D0-10（等待真机） | — | P0-1 ~ P0-6（仓库 / 契约 / 生成器 / 工程骨架）<br>文档整理（设计文档 / 决策日志 / 看板 / 开发规范 / 全程方案 / 开发 TODO） |
 
 ---
 
@@ -50,12 +50,12 @@
 
 ### P0 地基（仓库 + 契约 + 工程骨架 + 技术验证）
 
-- [ ] **P0-1** 初始化仓库骨架：`git init` + `.gitignore` + `.githooks` + pnpm monorepo
-- [ ] **P0-2** 建 GitHub 私有仓并首次推送
-- [ ] **P0-3** 定义 `packages/shared` 数据契约（HeritageItem schema + 常量枚举 + API 类型）
-- [ ] **P0-4** 写 TS→ArkTS 类型生成脚本（输出带「自动生成 禁止手改」头）
-- [ ] **P0-5** 建鸿蒙工程 `YellowRiverArchive`（包名 `com.yellowriver.archive`，`compatibleSdkVersion` = 17）
-- [ ] **P0-6** 搭工程骨架与底部 Tab 路由（首页 / 检索 / 图谱 / 助手 / 我的）
+- [x] **P0-1** 初始化仓库骨架：`git init` + `.gitignore` + `.githooks` + pnpm monorepo
+- [x] **P0-2** 建 GitHub 私有仓并首次推送（`git@github.com:Young143l/yellow-river-archive.git`）
+- [x] **P0-3** 定义 `packages/shared` 数据契约（HeritageItem schema + 常量枚举 + API 类型）
+- [x] **P0-4** 写 TS→ArkTS 类型生成脚本（输出带「自动生成 禁止手改」头）
+- [x] **P0-5** 建鸿蒙工程 `YellowRiverArchive`（包名 `com.yellowriver.archive`，`compatibleSdkVersion` = 5.0.5(17)）
+- [x] **P0-6** 搭工程骨架与底部 Tab 路由（首页 / 检索 / 图谱 / 助手 / 我的）
 - [ ] **P0-7** 技术验证 S1：`distributedKVStore` 分布式可行性（真机自环 + 双端）
 - [ ] **P0-8** 技术验证 S2：RDB 从 rawfile 批量导入 1000 条的耗时与内存
 - [ ] **P0-9** 技术验证 S3：Canvas 力导向 200 节点帧率

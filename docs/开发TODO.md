@@ -6,22 +6,42 @@
 
 ---
 
+## 进度总览
+
+| 阶段 | 已完成 | 总计 | 状态 |
+|---|---|---|---|
+| D0 地基 | 9 | 10 | 进行中（仅剩 D0-10 需真机） |
+| D0-V 技术验证 | 0 | 5 | 待开始 |
+| D1 垂直切片 | 0 | 10 | 未开始 |
+| D2 数据工程 | 0 | 13 | 未开始 |
+| D3 后端与检索 | 0 | 12 | 未开始 |
+| D4 同步 | 0 | 11 | 未开始 |
+| D5 AI 助手 | 0 | 5 | 未开始 |
+| D6 图谱可视化 | 0 | 5 | 未开始 |
+| D7 收尾 | 0 | 6 | 未开始 |
+
+**最近一次更新**：2026-10-05
+
+---
+
 ## D0 地基（先让工程跑起来）
 
-| # | 任务 | 产出 | 依赖 |
-|---|---|---|---|
-| D0-1 | `git init` + `.gitignore` + `.githooks/` + `core.hooksPath` 配置 | 本地仓库与钩子生效 | — |
-| D0-2 | 初始化 pnpm workspace（根 `package.json` / `pnpm-workspace.yaml` / 共享 tsconfig） | `pnpm install` 可跑 | D0-1 |
-| D0-3 | `packages/shared`：`HeritageItem` 的 Zod schema（20 字段） | `models/heritage-item.ts` | D0-2 |
-| D0-4 | `packages/shared`：常量枚举（5 城 / 6 时代 / 类型 / 标签 / 错误码） | `constants/*.ts` | D0-2 |
-| D0-5 | `packages/shared`：API 类型（search / qa / graph / sync / backup 的请求响应） | `api/*.ts` | D0-3 |
-| D0-6 | `tools/gen`：TS → ArkTS 类型生成脚本，并生成一次 | `.ets` 类型文件（带「自动生成」头） | D0-3 |
-| D0-7 | 建鸿蒙工程 `YellowRiverArchive`（`com.yellowriver.archive`，`compatibleSdkVersion` = 17） | DevEco 工程可构建 | D0-2 |
-| D0-8 | 工程目录规范落地：`pages/ components/ model/ service/ utils/ constants/` | 空目录与占位文件 | D0-7 |
-| D0-9 | 底部 Tab 路由骨架（首页 / 检索 / 图谱 / 助手 / 我的），每页一个占位 | 可运行的空壳 App | D0-8 |
-| D0-10 | 签名配置：`devecocli auth login` → `signature generate` → `devecocli run` 上真机 | 真机能跑空壳 | D0-9 |
+| # | 任务 | 产出 | 依赖 | 状态 |
+|---|---|---|---|---|
+| D0-1 | `git init` + `.gitignore` + `.githooks/` + `core.hooksPath` 配置 | 本地仓库与钩子生效（已实测拦截密钥） | — | 完成 |
+| D0-2 | 初始化 pnpm workspace（根 `package.json` / `pnpm-workspace.yaml` / 共享 tsconfig） | `pnpm install` 可跑 | D0-1 | 完成 |
+| D0-3 | `packages/shared`：`HeritageItem` 等模型的 Zod schema | `src/models.ts` + `src/schemas.ts`（含编译期一致性断言） | D0-2 | 完成 |
+| D0-4 | `packages/shared`：常量（5 城 / 6 时代 / 类型 / 标签 / 错误码） | `src/constants.ts` | D0-2 | 完成 |
+| D0-5 | `packages/shared`：API 类型（items / search / qa / graph / sync / backup / stats） | `src/api.ts` + `src/preset.ts` | D0-3 | 完成 |
+| D0-6 | `tools/gen`：TS → ArkTS 类型生成器（逐字复制 + 生成头，带 `--check` 模式） | `tools/gen/src/index.ts` | D0-3 | 完成 |
+| D0-7 | 建鸿蒙工程 `YellowRiverArchive`（`com.yellowriver.archive`，`compatibleSdkVersion` = 5.0.5(17)） | DevEco 工程可构建 | D0-2 | 完成 |
+| D0-8 | 工程目录规范落地：`pages/ components/ model/ service/ utils/ constants/ shared/` | 目录与占位文件 | D0-7 | 完成 |
+| D0-9 | 底部 Tab 路由骨架（首页 / 检索 / 图谱 / 助手 / 我的） | 可运行的空壳 App（`devecocli build` 成功） | D0-8 | 完成 |
+| D0-10 | 签名配置：`devecocli auth login` → `signature generate` → `devecocli run` 上真机 | 真机能跑空壳 | D0-9 | **阻塞**（无真机连接，见看板 B2） |
 
 **出口**：`devecocli run` 输出 `Smoke: PASS`；`packages/shared` 的类型两端都能引到。
+
+> D0 已提前完成的一件事：发现端侧 ArkTS 是 TypeScript 的**子集**，据此重写了共享契约（见 [决策日志 ADR-019](./decisions.md)），42 个编译错误归零。
 
 ---
 

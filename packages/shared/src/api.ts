@@ -2,7 +2,8 @@
  * 接口契约。
  *
  * 端侧与云侧共用；改这里必须同时通知两端（见 docs/开发规范.md §5）。
- * 本文件为纯类型，会被 tools/gen 生成为端侧 .ets。
+ * 约束：会生成为端侧 .ets，必须写成 ArkTS 子集（无 as const / typeof 查询 /
+ * 索引访问类型 / 内联对象类型 / 数组展开）。
  */
 
 import type {
@@ -23,6 +24,7 @@ import type {
   GraphRelation,
   HeritageItem,
   Note,
+  SimilarNeighbor,
   SyncableRecord,
   Tag,
   Theme,
@@ -36,13 +38,6 @@ import type {
 export interface ApiError {
   readonly code: string
   readonly message: string
-}
-
-/** 统一响应包装 */
-export interface ApiResult<T> {
-  readonly ok: boolean
-  readonly data?: T
-  readonly error?: ApiError
 }
 
 /** 分页请求 */
@@ -88,13 +83,7 @@ export type ItemDetailResponse = HeritageItem
 /** 关联推荐 */
 export interface RelatedResponse {
   readonly itemId: string
-  readonly related: readonly {
-    readonly id: string
-    readonly name: string
-    readonly score: number
-    /** 可解释的推荐理由，如「同属唐三彩」 */
-    readonly reason: string
-  }[]
+  readonly related: readonly SimilarNeighbor[]
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +148,15 @@ export interface QaDelta {
   readonly text: string
 }
 
+/** 图谱路径（问答证据） */
+export interface GraphPath {
+  readonly from: string
+  readonly fromName: string
+  readonly rel: GraphRelation
+  readonly to: string
+  readonly toName: string
+}
+
 /** 结束帧 */
 export interface QaDone {
   readonly type: 'done'
@@ -169,23 +167,14 @@ export interface QaDone {
   readonly degraded: boolean
 }
 
-export interface QaError {
+export interface MsgError {
   readonly type: 'error'
   readonly code: string
   readonly message: string
 }
 
 export type QaClientMessage = QaAsk
-export type QaServerMessage = QaAck | QaDelta | QaDone | QaError
-
-/** 图谱路径（问答证据） */
-export interface GraphPath {
-  readonly from: string
-  readonly fromName: string
-  readonly rel: GraphRelation
-  readonly to: string
-  readonly toName: string
-}
+export type QaServerMessage = QaAck | QaDelta | QaDone | MsgError
 
 // ---------------------------------------------------------------------------
 // 图谱
@@ -212,8 +201,11 @@ export interface GraphPathQuery {
   readonly to: string
 }
 
+/** 一条完整路径（多跳） */
+export type GraphPathChain = GraphPath[]
+
 export interface GraphPathResponse {
-  readonly paths: readonly GraphPath[][]
+  readonly paths: readonly GraphPathChain[]
 }
 
 /** 社区（自动发现的文化主题） */
@@ -249,7 +241,7 @@ export interface ThemeBuildResponse {
 
 /** 单表变更集 */
 export interface ChangeSet {
-  readonly table: 'favorites' | 'notes' | 'tags' | 'themes'
+  readonly table: string
   readonly records: readonly SyncableRecord[]
 }
 
@@ -266,7 +258,7 @@ export interface SyncPull {
   readonly since: number
 }
 
-export interface SyncProgress {
+export interface SyncProgressMsg {
   readonly type: 'progress'
   readonly done: number
   readonly total: number
@@ -293,11 +285,11 @@ export interface SyncStateMessage {
 
 export type SyncClientMessage = SyncPush | SyncPull
 export type SyncServerMessage =
-  | SyncProgress
+  | SyncProgressMsg
   | SyncApplied
   | SyncPulled
   | SyncStateMessage
-  | QaError
+  | MsgError
 
 // ---------------------------------------------------------------------------
 // 备份与恢复
@@ -339,9 +331,14 @@ export interface UsageEntry {
   readonly errorCount: number
 }
 
+/** 按 provider:operation 聚合的单条用量，如 dashscope:embedding */
+export interface OperationUsage {
+  readonly operation: string
+  readonly usage: UsageEntry
+}
+
 export interface UsageStats {
-  /** 按 provider/operation 聚合，如 dashscope:embedding */
-  readonly byOperation: Record<string, UsageEntry>
+  readonly byOperation: readonly OperationUsage[]
   readonly since: number
   readonly until: number
 }
@@ -371,7 +368,7 @@ export interface PairingResponse {
 }
 
 // ---------------------------------------------------------------------------
-// 收藏 / 笔记（REST 备选通道，主通道为同步）
+// 收藏（REST 备选通道，主通道为同步）
 // ---------------------------------------------------------------------------
 
 export interface CollectRequest {

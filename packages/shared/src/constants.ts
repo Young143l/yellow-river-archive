@@ -1,8 +1,14 @@
 /**
  * 全局常量与枚举。
  *
- * 本文件为纯类型与常量，不依赖任何第三方库，会被 tools/gen 生成为端侧 .ets，
- * 因此只能使用 ArkTS 也支持的基础语法（不要引入泛型体操、映射类型等）。
+ * 重要约束：本文件同时被 TypeScript（服务端与工具链）和 ArkTS（端侧）消费，
+ * 必须写成 **ArkTS 子集**，以下语法一律禁用：
+ *   - as const
+ *   - typeof 类型查询
+ *   - 索引访问类型 (typeof X)[number]
+ *   - 内联对象类型（必须声明具名 interface）
+ *   - 数组展开 [...]
+ * 详见 docs/决策日志.md 中关于 ArkTS 子集的条目。
  */
 
 // ---------------------------------------------------------------------------
@@ -10,9 +16,9 @@
 // ---------------------------------------------------------------------------
 
 /** 赛题指定的沿黄五市 */
-export const CITIES = ['三门峡', '洛阳', '郑州', '开封', '濮阳'] as const
+export type City = '三门峡' | '洛阳' | '郑州' | '开封' | '濮阳'
 
-export type City = (typeof CITIES)[number]
+export const CITIES: City[] = ['三门峡', '洛阳', '郑州', '开封', '濮阳']
 
 /** 城市元信息：ID 前缀与档案配额（配额依据 ADR-014） */
 export interface CityMeta {
@@ -23,7 +29,7 @@ export interface CityMeta {
   readonly quota: number
 }
 
-export const CITY_META: readonly CityMeta[] = [
+export const CITY_META: CityMeta[] = [
   { name: '洛阳', idPrefix: 'ly', quota: 20 },
   { name: '郑州', idPrefix: 'zz', quota: 20 },
   { name: '开封', idPrefix: 'kf', quota: 16 },
@@ -32,25 +38,39 @@ export const CITY_META: readonly CityMeta[] = [
 ]
 
 /** 档案总条数 */
-export const TOTAL_QUOTA = 80
+export const TOTAL_QUOTA: number = 80
 
 // ---------------------------------------------------------------------------
 // 时代
 // ---------------------------------------------------------------------------
 
 /** 赛题时代轴六段（顺序即时间轴顺序） */
-export const CORE_ERAS = ['仰韶', '龙山', '夏商', '周', '汉唐', '宋'] as const
+export type CoreEra = '仰韶' | '龙山' | '夏商' | '周' | '汉唐' | '宋'
 
 /** 完整时代集合（含"宋以后"延伸段，UI 上弱化展示） */
-export const ERAS = [...CORE_ERAS, '宋以后'] as const
+export type Era = CoreEra | '宋以后'
 
-export type Era = (typeof ERAS)[number]
+export const CORE_ERAS: CoreEra[] = ['仰韶', '龙山', '夏商', '周', '汉唐', '宋']
+
+export const ERAS: Era[] = ['仰韶', '龙山', '夏商', '周', '汉唐', '宋', '宋以后']
 
 // ---------------------------------------------------------------------------
 // 遗产类型
 // ---------------------------------------------------------------------------
 
-export const HERITAGE_TYPES = [
+export type HeritageType =
+  | '都城遗址'
+  | '城址'
+  | '聚落遗址'
+  | '墓葬群'
+  | '窑址'
+  | '古建筑'
+  | '石窟寺'
+  | '碑刻'
+  | '祭祀址'
+  | '关隘遗址'
+
+export const HERITAGE_TYPES: HeritageType[] = [
   '都城遗址',
   '城址',
   '聚落遗址',
@@ -61,21 +81,19 @@ export const HERITAGE_TYPES = [
   '碑刻',
   '祭祀址',
   '关隘遗址',
-] as const
-
-export type HeritageType = (typeof HERITAGE_TYPES)[number]
+]
 
 /** 赛题点名的四类，每类条目数不得少于 6（见数据规范） */
-export const REQUIRED_TYPES = ['都城遗址', '墓葬群', '窑址', '古建筑'] as const
+export const REQUIRED_TYPES: HeritageType[] = ['都城遗址', '墓葬群', '窑址', '古建筑']
 
 // ---------------------------------------------------------------------------
 // 详情页分区
 // ---------------------------------------------------------------------------
 
 /** 详情页六个内容分区，顺序与 Tab 顺序一致 */
-export const SECTIONS = ['intro', 'archaeology', 'events', 'poems', 'travel', 'graph'] as const
+export type Section = 'intro' | 'archaeology' | 'events' | 'poems' | 'travel' | 'graph'
 
-export type Section = (typeof SECTIONS)[number]
+export const SECTIONS: Section[] = ['intro', 'archaeology', 'events', 'poems', 'travel', 'graph']
 
 /** 分区与中文名的对应项（用数组而非 Record，便于 ArkTS 消费） */
 export interface SectionLabel {
@@ -83,7 +101,7 @@ export interface SectionLabel {
   readonly label: string
 }
 
-export const SECTION_LABELS: readonly SectionLabel[] = [
+export const SECTION_LABELS: SectionLabel[] = [
   { key: 'intro', label: '图文介绍' },
   { key: 'archaeology', label: '考古发现' },
   { key: 'events', label: '历史事件' },
@@ -96,51 +114,77 @@ export const SECTION_LABELS: readonly SectionLabel[] = [
 // 保护级别
 // ---------------------------------------------------------------------------
 
-export const LEVELS = ['世界遗产', '全国重点文保', '省级文保', '市县级文保', '未定级'] as const
+export type Level = '世界遗产' | '全国重点文保' | '省级文保' | '市县级文保' | '未定级'
 
-export type Level = (typeof LEVELS)[number]
+export const LEVELS: Level[] = ['世界遗产', '全国重点文保', '省级文保', '市县级文保', '未定级']
 
 // ---------------------------------------------------------------------------
 // 个人数据
 // ---------------------------------------------------------------------------
 
 /** 收藏 / 笔记的指向类型：遗址条目或文物条目 */
-export const COLLECT_TARGET_TYPES = ['site', 'artifact'] as const
+export type CollectTargetType = 'site' | 'artifact'
 
-export type CollectTargetType = (typeof COLLECT_TARGET_TYPES)[number]
+export const COLLECT_TARGET_TYPES: CollectTargetType[] = ['site', 'artifact']
 
 /** 预设标签（用户可另建自定义标签） */
-export const PRESET_TAGS = ['待实地探访', '已去过', '研究资料'] as const
+export type PresetTag = '待实地探访' | '已去过' | '研究资料'
 
-export type PresetTag = (typeof PRESET_TAGS)[number]
+export const PRESET_TAGS: PresetTag[] = ['待实地探访', '已去过', '研究资料']
 
 /** 同步状态 */
-export const SYNC_STATES = ['idle', 'syncing', 'offline', 'error'] as const
+export type SyncState = 'idle' | 'syncing' | 'offline' | 'error'
 
-export type SyncState = (typeof SYNC_STATES)[number]
+export const SYNC_STATES: SyncState[] = ['idle', 'syncing', 'offline', 'error']
 
 // ---------------------------------------------------------------------------
 // 错误码
 // ---------------------------------------------------------------------------
 
 /** E1xxx 端侧 ｜ E2xxx 云侧 ｜ E3xxx 数据 */
-export const ERROR_CODES = {
-  // 端侧
+export type ErrorCode =
+  | 'E1001'
+  | 'E1002'
+  | 'E1003'
+  | 'E1004'
+  | 'E1005'
+  | 'E2001'
+  | 'E2002'
+  | 'E2003'
+  | 'E2004'
+  | 'E3001'
+  | 'E3002'
+  | 'E3003'
+  | 'E3004'
+
+export interface ErrorCodeMap {
+  readonly DATA_IMPORT_FAILED: ErrorCode
+  readonly SEARCH_FAILED: ErrorCode
+  readonly SYNC_FAILED: ErrorCode
+  readonly IDENTITY_BIND_FAILED: ErrorCode
+  readonly GRAPH_RENDER_FAILED: ErrorCode
+  readonly EMBEDDING_UNAVAILABLE: ErrorCode
+  readonly RERANK_UNAVAILABLE: ErrorCode
+  readonly LLM_UNAVAILABLE: ErrorCode
+  readonly SEARCH_TIMEOUT: ErrorCode
+  readonly SCHEMA_INVALID: ErrorCode
+  readonly DUPLICATE_TEXT: ErrorCode
+  readonly LICENSE_MISSING: ErrorCode
+  readonly COVERAGE_INSUFFICIENT: ErrorCode
+}
+
+export const ERROR_CODES: ErrorCodeMap = {
   DATA_IMPORT_FAILED: 'E1001',
   SEARCH_FAILED: 'E1002',
   SYNC_FAILED: 'E1003',
   IDENTITY_BIND_FAILED: 'E1004',
   GRAPH_RENDER_FAILED: 'E1005',
-  // 云侧
   EMBEDDING_UNAVAILABLE: 'E2001',
   RERANK_UNAVAILABLE: 'E2002',
   LLM_UNAVAILABLE: 'E2003',
   SEARCH_TIMEOUT: 'E2004',
-  // 数据
   SCHEMA_INVALID: 'E3001',
   DUPLICATE_TEXT: 'E3002',
   LICENSE_MISSING: 'E3003',
   COVERAGE_INSUFFICIENT: 'E3004',
-} as const
-
-export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]
+}

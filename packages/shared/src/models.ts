@@ -1,11 +1,28 @@
 /**
  * 数据模型。
  *
- * 本文件为纯接口定义，会被 tools/gen 生成为端侧 .ets，
- * 因此只放数据结构，不放逻辑。
+ * 约束：会被 tools/gen 生成为端侧 .ets，必须写成 **ArkTS 子集**：
+ * 不使用 as const、typeof 类型查询、索引访问类型、内联对象类型、数组展开。
+ * 所有对象形状一律声明为具名 interface。
  */
 
 import type { City, CollectTargetType, Era, HeritageType, Level, Section, SyncState } from './constants'
+
+// ---------------------------------------------------------------------------
+// 基础形状
+// ---------------------------------------------------------------------------
+
+/** 经纬度 */
+export interface GeoPoint {
+  readonly lat: number
+  readonly lng: number
+}
+
+/** 计数对（同步进度、学习进度等复用） */
+export interface CountPair {
+  readonly done: number
+  readonly total: number
+}
 
 // ---------------------------------------------------------------------------
 // 档案条目
@@ -89,7 +106,7 @@ export interface HeritageItem {
   readonly types: readonly HeritageType[]
   readonly level?: Level
 
-  readonly geo: { readonly lat: number; readonly lng: number }
+  readonly geo: GeoPoint
 
   // ---- 五层内容 ----
   /** 一句话概述 */
@@ -114,7 +131,7 @@ export interface HeritageItem {
 // 检索与图谱
 // ---------------------------------------------------------------------------
 
-/** 详情页的六个内容分区已定义在 constants.ts 的 SECTIONS */
+/** 详情页的六个内容分区见 constants.ts 的 SECTIONS */
 
 /** 检索片段（chunk） */
 export interface Chunk {
@@ -128,7 +145,20 @@ export interface Chunk {
   readonly tokens: readonly string[]
 }
 
-export const GRAPH_NODE_TYPES = [
+/** 图谱节点类型 */
+export type GraphNodeType =
+  | 'Site'
+  | 'Era'
+  | 'City'
+  | 'Type'
+  | 'Artifact'
+  | 'Figure'
+  | 'Event'
+  | 'Poem'
+  | 'Theme'
+  | 'Museum'
+
+export const GRAPH_NODE_TYPES: GraphNodeType[] = [
   'Site',
   'Era',
   'City',
@@ -139,22 +169,22 @@ export const GRAPH_NODE_TYPES = [
   'Poem',
   'Theme',
   'Museum',
-] as const
+]
 
-export type GraphNodeType = (typeof GRAPH_NODE_TYPES)[number]
+/** 图谱关系类型 */
+export type GraphRelation =
+  | 'locatedIn'
+  | 'belongsToEra'
+  | 'hasType'
+  | 'unearthed'
+  | 'relatedFigure'
+  | 'hasPoem'
+  | 'occurredEvent'
+  | 'culturalLink'
+  | 'nearby'
+  | 'collectedAt'
 
-/** 图谱节点 */
-export interface GraphNode {
-  readonly id: string
-  readonly type: GraphNodeType
-  readonly name: string
-  readonly aliases: readonly string[]
-  /** PageRank 值，构建期计算，用于可视化节点大小与推荐排序 */
-  readonly rank?: number
-}
-
-/** 图谱关系 */
-export const GRAPH_RELATIONS = [
+export const GRAPH_RELATIONS: GraphRelation[] = [
   'locatedIn',
   'belongsToEra',
   'hasType',
@@ -165,9 +195,17 @@ export const GRAPH_RELATIONS = [
   'culturalLink',
   'nearby',
   'collectedAt',
-] as const
+]
 
-export type GraphRelation = (typeof GRAPH_RELATIONS)[number]
+/** 图谱节点 */
+export interface GraphNode {
+  readonly id: string
+  readonly type: GraphNodeType
+  readonly name: string
+  readonly aliases: readonly string[]
+  /** PageRank 值，构建期计算，用于可视化节点大小与推荐排序 */
+  readonly rank?: number
+}
 
 /** 图谱边 */
 export interface GraphEdge {
@@ -180,11 +218,19 @@ export interface GraphEdge {
   readonly evidence?: string
 }
 
+/** 相似邻居项 */
+export interface SimilarNeighbor {
+  readonly id: string
+  readonly score: number
+  /** 可解释的推荐理由，如「同属唐三彩」 */
+  readonly reason: string
+}
+
 /** 预计算的关联推荐条目 */
 export interface SimilarEntry {
   readonly itemId: string
   /** 相似邻居，按相似度降序 */
-  readonly neighbors: readonly { readonly id: string; readonly score: number; readonly reason: string }[]
+  readonly neighbors: readonly SimilarNeighbor[]
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +285,9 @@ export interface Progress {
   readonly total: number
 }
 
+/** 冲突胜出方 */
+export type ConflictWinner = 'local' | 'remote'
+
 /** 冲突记录（同步中心展示用） */
 export interface ConflictRecord {
   readonly id: string
@@ -246,7 +295,7 @@ export interface ConflictRecord {
   readonly table: string
   readonly localUpdatedAt: number
   readonly remoteUpdatedAt: number
-  readonly winner: 'local' | 'remote'
+  readonly winner: ConflictWinner
   readonly detectedAt: number
 }
 
@@ -258,7 +307,7 @@ export interface SyncStatus {
   /** 待推送条数 */
   readonly pending: number
   /** 本次同步进度 */
-  readonly progress: { readonly done: number; readonly total: number }
+  readonly progress: CountPair
   /** 同步方向标识，如「手机 → 平板」 */
   readonly direction: string
   /** 冲突条数 */
