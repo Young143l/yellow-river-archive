@@ -13,8 +13,8 @@
 | D0 地基 | 10 | 10 | **完成** |
 | D0-V 技术验证 | 5 | 5 | **完成**（跨设备同步待第二台设备补验） |
 | D1 垂直切片 | 10 | 10 | **完成** |
-| D2 数据工程 | 4 | 13 | 进行中 |
-| D3 后端与检索 | 0 | 12 | 未开始 |
+| D2 数据工程 | 5 | 13 | 进行中 |
+| D3 后端与检索 | 2 | 12 | 进行中（provider 层与实测已完成） |
 | D4 同步 | 0 | 11 | 未开始 |
 | D5 AI 助手 | 0 | 5 | 未开始 |
 | D6 图谱可视化 | 0 | 5 | 未开始 |
@@ -104,7 +104,7 @@
 | D2-2 | 写 `docs/data-spec.md`（字段 / 字数 / 来源 / 改写红线 / 图片规范 / 分工与核对） | 数据规范 | 完成 |
 | D2-3 | `tools/pipeline/chunk.ts`：语义分块 | 分块产物 | **D1-2 已完成** |
 | D2-4 | `tools/pipeline/tokenize.ts`：jieba 分词 + 自定义词典 + 词表导出 | `tokens` 与 `vocab.json` | 完成（jieba + 领域词典最大匹配；端侧同套词表） |
-| D2-5 | `tools/pipeline/embed.ts`：批量 + 并发 + 退避重试 + sha256 缓存 + 断点续跑 | 向量文件 | 待开始（需百炼 Key） |
+| D2-5 | `tools/pipeline/embed.ts`：批量 + 并发 + 退避重试 + sha256 缓存 + 断点续跑 | 向量文件 | 完成（缓存生效，零重复计费） |
 | D2-6 | `tools/pipeline/graph.ts`：三元组生成 + 实体归一化 | `graph.json` | **D1-2 已完成基础版** |
 | D2-7 | `tools/pipeline/similar.ts`：条目间 top-20 相似度预计算 | `similar.json` | **D1-2 已完成基础版**（待并入向量相似度） |
 | D2-8 | `tools/pipeline/lint.ts`：schema / 字数 / license / 分布 / n-gram 查重 | 质检报告 | 待开始 |
@@ -123,10 +123,10 @@
 | # | 任务 | 产出 | 依赖 |
 |---|---|---|---|
 | D3-1 | `apps/server` 骨架：Fastify + pino + Zod + env 加载 + `/api/health` | 服务可启动 | D0-2 |
-| D3-2 | provider 层：`EmbeddingProvider`（百炼） | `ai/embedding/` | D3-1 |
-| D3-3 | provider 层：`RerankProvider`（百炼） | `ai/rerank/` | D3-1 |
-| D3-4 | provider 层：`LlmProvider`（DeepSeek，流式） | `ai/llm/` | D3-1 |
-| D3-5 | 连通性与限额实测脚本 + 记录 | `docs/ai-providers.md` | D3-2 ~ D3-4 |
+| D3-2 | provider 层：`EmbeddingProvider`（百炼） | `ai/embedding/` | **已完成**（packages/ai） |
+| D3-3 | provider 层：`RerankProvider`（百炼） | `ai/rerank/` | **已完成**（packages/ai） |
+| D3-4 | provider 层：`LlmProvider`（DeepSeek，流式） | `ai/llm/` | **已完成**（packages/ai） |
+| D3-5 | 连通性与限额实测脚本 + 记录 | `docs/ai-providers.md` | **已完成** |
 | D3-6 | 服务端数据导入：chunk 文本 + FTS5 索引 + 向量索引 + 图谱表 | `data/import.ts` | D2-13, D3-1 |
 | D3-7 | `/api/items`、`/api/items/:id`、`/api/items/:id/related` | 只读接口 | D3-6 |
 | D3-8 | `/api/search` BM25 版（含维度过滤） | 关键词检索 | D3-6 |
