@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# pre-commit：快检查（目标 <3 秒）
+# 只做两件事：拦住不该入库的文件、拦住疑似密钥泄露
+set -uo pipefail
+
+fail=0
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+# 1. 不该入库的文件
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  base=$(basename "$f")
+  case "$base" in
+    .env|.env.local|*.pem|*.p12|*.p7b|*.cer|*.csr)
+      echo "[pre-commit] 错误：密钥或证书文件禁止入库 -> $f"
+      fail=1
+      ;;
+    .~*.xlsx|.~*.docx|.~*.pptx|'~$'*.xlsx|'~$'*.docx|'~$'*.pptx)
+      echo "[pre-commit] 错误：Office 锁文件不应入库 -> $f"
+      fail=1
+      ;;
+  esac
+done <<< "$staged"
+
+# 2. 疑似密钥泄露
+secret_re='sk-[A-Za-z0-9_-]{16,}|(DASHSCOPE|DEEPSEEK|OPENAI)_API_KEY[[:space:]]*=[[:space:]]*[A-Za-z0-9_-]{12,}'
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  [ -f "$f" ] || continue
+  case "$f" in
+    *.png|*.jpg|*.jpeg|*.webp|*.gif|*.pdf|*.xlsx|*.docx|*.pptx|*.zip|*.rar) continue ;;
+  esac
+  if grep -nIE "$secret_re" "$f" >/dev/null 2>&1; then
+    echo "[pre-commit] 错误：疑似密钥泄露 -> $f"
+    grep -nIE "$secret_re" "$f" | sed 's/^/    /' | head -3
+    fail=1
+  fi
+done <<< "$staged"
+
+# 3. 大文件提醒（>5MB）
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  [ -f "$f" ] || continue
+  size=$(wc -c < "$f" | tr -d ' ')
+  if [ "$size" -gt 5242880 ]; then
+    echo "[pre-commit] 错误：文件超过 5MB，请放入 rawfile/外部存储或加 .gitignore -> $f"
+    fail=1
+  fi
+done <<< "$staged"
+
+if [ "$fail" -ne 0 ]; then
+  echo "[pre-commit] 已阻止提交。确需跳过可用：git commit --no-verify"
+  exit 1
+fi
+
+echo "[pre-commit] 通过"
+exit 0

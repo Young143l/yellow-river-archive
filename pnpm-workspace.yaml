@@ -1,0 +1,8 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'tools/*'
+
+# 允许执行构建脚本的依赖（pnpm 10+ 默认拦截）
+allowBuilds:
+  esbuild: true

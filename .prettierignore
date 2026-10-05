@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+harmony
+submission
+packages/data/assets
+packages/data/derived
+docs

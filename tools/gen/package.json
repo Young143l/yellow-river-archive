@@ -1,0 +1,12 @@
+{
+  "name": "@yra/gen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "把 packages/shared 的纯声明文件生成为端侧 ArkTS 类型",
+  "scripts": {
+    "gen": "tsx src/index.ts",
+    "gen:check": "tsx src/index.ts --check",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

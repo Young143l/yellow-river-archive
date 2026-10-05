@@ -1,0 +1,58 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物
+dist/
+build/
+*.tsbuildinfo
+
+# 鸿蒙工程
+harmony/**/.hvigor/
+harmony/**/oh_modules/
+harmony/**/build/
+harmony/**/.cxx/
+harmony/**/local.properties
+harmony/**/.clangd
+harmony/**/.clang-format
+harmony/**/oh-package-lock.json5
+harmony/**/signature/
+
+# 流水线缓存与派生数据（体积大，可由源重建）
+packages/data/.cache/
+packages/data/derived/
+packages/data/assets/img/**/thumb/
+
+# 环境与密钥（严禁入库）
+.env
+.env.local
+.env.*.local
+*.pem
+*.p12
+*.p7b
+*.cer
+*.csr
+
+# Office 锁文件
+.~*.xlsx
+.~*.docx
+.~*.pptx
+~$*.xlsx
+~$*.docx
+~$*.pptx
+
+# 编辑器与系统
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# 日志
+*.log
+logs/
+
+# 测试与覆盖率
+coverage/

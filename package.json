@@ -1,0 +1,25 @@
+{
+  "name": "yellow-river-archive",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "黄河图志 — 黄河文化分布式数字档案（赛题一）",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "lint": "pnpm -r --if-present run lint",
+    "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md,yaml,yml}\"",
+    "gen:arkts": "pnpm --filter @yra/gen run gen",
+    "data:status": "pnpm --filter @yra/pipeline run status"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}

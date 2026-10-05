@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# pre-push：重量检查（类型检查 + 单测），脚本未配置时跳过而非报错
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel)
+cd "$root" || exit 0
+
+has_script() {
+  node -e "
+const fs=require('fs');
+const p='package.json';
+if(!fs.existsSync(p)) process.exit(1);
+const s=JSON.parse(fs.readFileSync(p,'utf8')).scripts||{};
+process.exit(s['$1']?0:1);
+" 2>/dev/null
+}
+
+if command -v pnpm >/dev/null 2>&1 && has_script typecheck; then
+  echo "[pre-push] 类型检查..."
+  if ! pnpm -w run typecheck; then
+    echo "[pre-push] 类型检查失败，已阻止推送"
+    exit 1
+  fi
+else
+  echo "[pre-push] 跳过类型检查（脚本未配置或 pnpm 不可用）"
+fi
+
+if command -v pnpm >/dev/null 2>&1 && has_script test; then
+  echo "[pre-push] 单元测试..."
+  if ! pnpm -w run test; then
+    echo "[pre-push] 单元测试失败，已阻止推送"
+    exit 1
+  fi
+else
+  echo "[pre-push] 跳过单元测试（脚本未配置或 pnpm 不可用）"
+fi
+
+echo "[pre-push] 通过"
+exit 0
