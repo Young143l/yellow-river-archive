@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@yra/ai": "workspace:*",
+    "@yra/nlp": "workspace:*",
     "@yra/shared": "workspace:*",
     "fastify": "5.12.5"
   }

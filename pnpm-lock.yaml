@@ -26,6 +26,9 @@ importers:
       '@yra/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@yra/nlp':
+        specifier: workspace:*
+        version: link:../../packages/nlp
       '@yra/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -34,6 +37,15 @@ importers:
         version: 5.12.5
 
   packages/ai: {}
+
+  packages/nlp:
+    dependencies:
+      '@node-rs/jieba':
+        specifier: 2.0.3
+        version: 2.0.3
+      '@yra/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared:
     dependencies:
@@ -45,12 +57,12 @@ importers:
 
   tools/pipeline:
     dependencies:
-      '@node-rs/jieba':
-        specifier: 2.0.3
-        version: 2.0.3
       '@yra/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@yra/nlp':
+        specifier: workspace:*
+        version: link:../../packages/nlp
       '@yra/shared':
         specifier: workspace:*
         version: link:../../packages/shared

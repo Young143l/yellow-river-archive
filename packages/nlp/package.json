@@ -1,0 +1,19 @@
+{
+  "name": "@yra/nlp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "中文分词与词表构建：构建期建索引与查询期切分必须使用同一实现",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@node-rs/jieba": "2.0.3",
+    "@yra/shared": "workspace:*"
+  }
+}

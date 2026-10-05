@@ -1,3 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+import { Tokenizer } from '@yra/nlp'
+import type { VocabEntry } from '@yra/shared'
 import Fastify, { type FastifyInstance } from 'fastify'
 
 import { readServerConfig, type ServerConfig } from './config'
@@ -5,6 +10,7 @@ import { getMeta, openDb } from './db/index'
 import { importPreset } from './db/import'
 import { MetaKeys } from './db/schema'
 import { itemsRoutes } from './routes/items'
+import { searchRoutes } from './routes/search'
 import { VectorStore } from './search/vectors'
 
 export interface BuildOptions {
@@ -35,6 +41,15 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   const vectors: VectorStore = VectorStore.load(db)
   app.log.info(`向量库就绪：${vectors.size} 条 / ${vectors.dimension} 维`)
 
+  // ---- 分词器 ----
+  // 用预置包的 vocab.json 当词典：它与建索引时的分词同源，
+  // 保证「索引里有的词，查询也能切出来」。服务端不读 lexicon.txt，
+  // 避免两份词典不同步导致 BM25 静默失效。
+  const vocabPath: string = join(config.presetDir, 'vocab.json')
+  const vocabFile = JSON.parse(readFileSync(vocabPath, 'utf8')) as { entries: VocabEntry[] }
+  const tokenizer: Tokenizer = Tokenizer.createFromVocab(vocabFile.entries)
+  app.log.info(`分词器就绪：${vocabFile.entries.length} 个领域词`)
+
   // ---- 健康检查 ----
   app.get('/api/health', async () => {
     return {
@@ -47,11 +62,13 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
       embeddingDim: Number.parseInt(getMeta(db, MetaKeys.EMBEDDING_DIM) ?? '0', 10),
       uptimeMs: Math.round(process.uptime() * 1000),
       vectorCount: vectors.size,
+      vocabSize: vocabFile.entries.length,
     }
   })
 
   // ---- 业务路由 ----
   await app.register(itemsRoutes, { db, vectors })
+  await app.register(searchRoutes, { db, vectors, tokenizer })
 
   return app
 }

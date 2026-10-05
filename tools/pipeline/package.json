@@ -17,9 +17,9 @@
     "draft": "tsx src/index.ts draft"
   },
   "dependencies": {
+    "@yra/ai": "workspace:*",
+    "@yra/nlp": "workspace:*",
     "@yra/shared": "workspace:*",
-    "yaml": "2.8.1",
-    "@node-rs/jieba": "2.0.3",
-    "@yra/ai": "workspace:*"
+    "yaml": "2.8.1"
   }
 }
