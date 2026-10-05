@@ -17,6 +17,7 @@ import { exportPreset } from './export'
 import { buildGraph } from './graph'
 import { computeDistribution, loadSites, type Distribution, type LoadIssue } from './load-sites'
 import { buildSimilar } from './similar'
+import { draftAll, type DraftReport, type DraftTarget } from './draft'
 import { loadSitesDoc, reportSites, type SitesReport } from './sites'
 import {
   lintAll,
@@ -39,6 +40,7 @@ const SITES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sites')
 const SITES_INDEX: string = join(REPO_ROOT, 'packages', 'data', 'sites.yaml')
 const SOURCES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sources')
 const LEXICON: string = join(REPO_ROOT, 'packages', 'data', 'lexicon.txt')
+const DRAFTS_DIR: string = join(REPO_ROOT, 'packages', 'data', 'drafts')
 
 /** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
 const VOCAB_TOP_N: number = 12000
@@ -93,6 +95,40 @@ function printLintIssues(issues: readonly LintIssue[], level: 'error' | 'warning
 
 async function main(): Promise<void> {
   const command: string = process.argv[2] ?? 'build'
+
+
+  // draft 子命令：为有来源摘录的条目生成 AI 草稿（禁止直接入库）
+  if (command === 'draft') {
+    const loaded = await loadSites(SITES_DIR)
+    const doc = await loadSitesDoc(SITES_INDEX)
+    const only: string | undefined = process.argv.find((a) => a.startsWith('--id='))?.slice('--id='.length)
+    const p0Only: boolean = !process.argv.includes('--all')
+
+    const targets: DraftTarget[] = doc.sites
+      .filter((s) => (only !== undefined ? s.id === only : true))
+      .filter((s) => (p0Only ? s.priority === 'P0' : true))
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        city: s.city,
+        era: s.era,
+        ...(s.eraRange !== undefined ? { eraRange: s.eraRange } : {}),
+        types: s.types,
+        level: s.level,
+        ...(s.batch !== undefined ? { batch: s.batch } : {}),
+        ...(s.notes !== undefined ? { notes: s.notes } : {}),
+      }))
+
+    void loaded
+    console.log(`[draft] 目标 ${targets.length} 条（${p0Only ? '仅 P0' : '全部'}）`)
+    const reports: DraftReport[] = await draftAll(targets, SOURCES_DIR, DRAFTS_DIR)
+    const ok: number = reports.filter((r) => r.ok).length
+    const skipped: number = reports.filter((r) => r.message.startsWith('缺少来源摘录')).length
+    console.log('')
+    console.log(`[draft] 成功 ${ok} 条，跳过 ${skipped} 条，失败 ${reports.length - ok - skipped} 条`)
+    console.log(`[draft] 产物目录 ${DRAFTS_DIR.replace(REPO_ROOT + '/', '')}（草稿，禁止直接入库）`)
+    return
+  }
 
   // lint 子命令：质量体检，不写任何文件
   if (command === 'lint') {

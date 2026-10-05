@@ -20,6 +20,8 @@ export interface ChatOptions {
   readonly temperature?: number
   readonly maxTokens?: number
   readonly timeoutMs?: number
+  /** 要求模型输出严格 JSON（DeepSeek 支持 response_format） */
+  readonly jsonMode?: boolean
 }
 
 export interface LlmProvider {
@@ -70,12 +72,15 @@ export class DeepSeekLlm implements LlmProvider {
   }
 
   async complete(messages: readonly ChatMessage[], options?: ChatOptions): Promise<string> {
-    const body = {
+    const body: Record<string, unknown> = {
       model: this.model,
       messages,
       temperature: options?.temperature ?? 0.3,
       max_tokens: options?.maxTokens ?? 4096,
       stream: false,
+    }
+    if (options?.jsonMode === true) {
+      body.response_format = { type: 'json_object' }
     }
 
     const response: Response = await fetch(this.endpoint, {
@@ -116,7 +121,6 @@ export class DeepSeekLlm implements LlmProvider {
       max_tokens: options?.maxTokens ?? 2048,
       stream: true,
     }
-
     const response: Response = await fetch(this.endpoint, {
       method: 'POST',
       headers: this.headers(),

@@ -21,6 +21,9 @@ harmony/**/signature/
 # 流水线缓存与派生数据（体积大，可由源重建）
 packages/data/.cache/
 packages/data/derived/
+
+# AI 草稿（生成物，禁止直接入库；正式内容在 sites/，草稿应经改写后移入）
+packages/data/drafts/
 packages/data/assets/img/**/thumb/
 
 # 环境与密钥（严禁入库）

@@ -13,6 +13,7 @@
     "lint": "pnpm -r --if-present run lint",
     "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md,yaml,yml}\"",
+    "data:draft": "pnpm --filter @yra/pipeline run draft",
     "data:lint": "pnpm --filter @yra/pipeline run lint",
     "data:embed": "pnpm --filter @yra/pipeline run embed",
     "env:init": "pnpm --filter @yra/pipeline run env:init",

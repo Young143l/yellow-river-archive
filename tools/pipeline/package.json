@@ -13,7 +13,8 @@
     "ai:check": "tsx src/ai-check.ts",
     "embed": "tsx src/index.ts embed",
     "env:init": "tsx src/env-init.ts",
-    "lint": "tsx src/index.ts lint"
+    "lint": "tsx src/index.ts lint",
+    "draft": "tsx src/index.ts draft"
   },
   "dependencies": {
     "@yra/shared": "workspace:*",
