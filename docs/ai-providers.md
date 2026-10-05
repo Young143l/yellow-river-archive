@@ -1,0 +1,94 @@
+# AI 服务实测记录
+
+> 这一页记录**真实打请求量出来的参数**，而不是照抄文档。
+> 各厂商的模型名、维度档位、批量上限会随版本变化，重新实测用 `pnpm ai:check`。
+>
+> 首次实测：2026-10-05 ｜ 待填充项会在拿到结果后补上
+
+---
+
+## 1. 阿里云百炼（嵌入与重排）
+
+端点：`https://dashscope.aliyuncs.com`
+
+### 1.1 嵌入
+
+走 OpenAI 兼容协议：`POST /compatible-mode/v1/embeddings`
+
+| 模型 | 维度档位 | 实测结果 |
+|---|---|---|
+| `text-embedding-v4` | 1024 | 可用，3 条 238ms，返回维度确为 1024 |
+| `text-embedding-v4` | 512 | 可用，3 条 131ms |
+| `text-embedding-v3` | 1024 | 可用，3 条 219ms |
+| `text-embedding-v3` | 512 | 可用，3 条 105ms |
+
+**单次批量上限：10 条**。实测提交 10 条成功、25 条被拒。
+
+> 流水线必须按 10 条一批切分（`DashScopeEmbedding.batchSize = 10`）。
+
+### 1.2 重排
+
+原生端点：`POST /api/v1/services/rerank/text-rerank/text-rerank`
+
+| 模型 | 实测结果 |
+|---|---|
+| `gte-rerank-v2` | 可用，3 条候选 122ms，top1 命中正确答案（score 0.943） |
+| `gte-rerank` | 403 AccessDenied —— 旧版不可用，不要使用 |
+
+**当前配置**：`RERANK_MODEL=gte-rerank-v2`
+
+---
+
+## 2. DeepSeek（生成）
+
+端点：`https://api.deepseek.com`，OpenAI 兼容协议 `POST /chat/completions`
+
+| 调用方式 | 实测结果 |
+|---|---|
+| 非流式 `deepseek-chat` | 447ms，token 36，回答正确 |
+| 流式 `deepseek-chat` | **首字 417ms**，总 547ms |
+
+首字延迟约 0.4 秒，流式问答的体感足够好。
+
+---
+
+## 3. 当前配置（已写入 .env 模板）
+
+```
+EMBEDDING_MODEL=text-embedding-v4
+EMBEDDING_DIM=1024
+RERANK_MODEL=gte-rerank-v2
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+**维度为什么选 1024**：语料规模约 1500 个片段，1024 维 × 4 字节 ≈ 6MB，服务器内存完全吃得下；512 维省一半内存但语义分辨力下降。既然不是瓶颈，就选质量更好的一档。
+
+**维度一旦选定不可随意改**：索引与查询必须同一模型同一维度，否则向量空间不一致、相似度无意义。改动意味着重建全部索引。
+
+---
+
+## 4. 成本估算
+
+按实测用量推算：
+
+| 环节 | 用量 | 备注 |
+|---|---|---|
+| 建库嵌入（80 条档案、约 1500 片段） | 约 30-60 万 token | 一次性；有缓存，重建只对新内容计费 |
+| 查询嵌入 | 每次约 20 token | 可忽略 |
+| 重排 | 每次按候选条数计 | 候选 40 条/次，可忽略 |
+| 问答生成 | 每次约 1-3k token | 路演期间几百次调用 |
+
+**结论：全项目成本在个位数元级别**，免费额度大概率覆盖建库部分。
+
+---
+
+## 5. 如何在本地跑实测
+
+```bash
+pnpm ai:check
+```
+
+脚本会依次验证：配置中的嵌入模型、四个候选模型/维度组合、批量上限（10 / 25）、
+重排模型（含旧版对比）、生成（非流式与流式含首字延迟）。
+
+**前提**：仓库根目录存在 `.env`（模板见 [env-template.md](./env-template.md)）。

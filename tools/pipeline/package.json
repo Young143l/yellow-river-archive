@@ -9,11 +9,13 @@
     "status": "tsx src/index.ts status",
     "sites": "tsx src/index.ts sites",
     "verify": "tsx src/index.ts verify",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "ai:check": "tsx src/ai-check.ts"
   },
   "dependencies": {
     "@yra/shared": "workspace:*",
     "yaml": "2.8.1",
-    "@node-rs/jieba": "2.0.3"
+    "@node-rs/jieba": "2.0.3",
+    "@yra/ai": "workspace:*"
   }
 }
