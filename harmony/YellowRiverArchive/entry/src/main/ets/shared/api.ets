@@ -53,7 +53,7 @@ export interface HeritageSummary {
   readonly name: string
   readonly city: City
   readonly era: Era
-  readonly types: readonly HeritageType[]
+  readonly types: HeritageType[]
   readonly level?: Level
   readonly summary: string
   /** 主图相对路径 */
@@ -72,7 +72,7 @@ export interface ItemListResponse {
   readonly total: number
   readonly page: number
   readonly pageSize: number
-  readonly items: readonly HeritageSummary[]
+  readonly items: HeritageSummary[]
 }
 
 export type ItemDetailResponse = HeritageItem
@@ -80,7 +80,7 @@ export type ItemDetailResponse = HeritageItem
 /** 关联推荐 */
 export interface RelatedResponse {
   readonly itemId: string
-  readonly related: readonly SimilarNeighbor[]
+  readonly related: SimilarNeighbor[]
 }
 
 // ---------------------------------------------------------------------------
@@ -88,9 +88,9 @@ export interface RelatedResponse {
 // ---------------------------------------------------------------------------
 
 export interface SearchFilters {
-  readonly cities?: readonly City[]
-  readonly eras?: readonly Era[]
-  readonly types?: readonly HeritageType[]
+  readonly cities?: City[]
+  readonly eras?: Era[]
+  readonly types?: HeritageType[]
 }
 
 export interface SearchRequest {
@@ -116,12 +116,12 @@ export interface SearchHit {
 }
 
 export interface SearchResponse {
-  readonly hits: readonly SearchHit[]
+  readonly hits: SearchHit[]
   readonly tookMs: number
   /** 是否触发了降级（true 表示语义通道不可用，仅关键词） */
   readonly degraded: boolean
   /** 实际参与检索的通道 */
-  readonly channels: readonly SearchChannel[]
+  readonly channels: SearchChannel[]
 }
 
 // ---------------------------------------------------------------------------
@@ -158,8 +158,8 @@ export interface GraphPath {
 export interface QaDone {
   readonly type: 'done'
   readonly answer: string
-  readonly citations: readonly Citation[]
-  readonly graphPaths: readonly GraphPath[]
+  readonly citations: Citation[]
+  readonly graphPaths: GraphPath[]
   /** 是否降级为抽取式回答 */
   readonly degraded: boolean
 }
@@ -181,16 +181,16 @@ export interface SubgraphQuery {
   readonly nodeId?: string
   /** 展开层数，默认 1，上限 2 */
   readonly depth?: number
-  readonly nodeTypes?: readonly string[]
+  readonly nodeTypes?: string[]
 }
 
 export interface SubgraphResponse {
-  readonly nodes: readonly GraphNode[]
-  readonly edges: readonly GraphEdge[]
+  readonly nodes: GraphNode[]
+  readonly edges: GraphEdge[]
 }
 
 export interface GraphSearchResponse {
-  readonly nodes: readonly GraphNode[]
+  readonly nodes: GraphNode[]
 }
 
 export interface GraphPathQuery {
@@ -202,34 +202,34 @@ export interface GraphPathQuery {
 export type GraphPathChain = GraphPath[]
 
 export interface GraphPathResponse {
-  readonly paths: readonly GraphPathChain[]
+  readonly paths: GraphPathChain[]
 }
 
 /** 社区（自动发现的文化主题） */
 export interface Community {
   readonly id: string
   readonly name: string
-  readonly nodeIds: readonly string[]
+  readonly nodeIds: string[]
   /** 社区规模，用于可视化 */
   readonly size: number
 }
 
 export interface CommunitiesResponse {
-  readonly communities: readonly Community[]
+  readonly communities: Community[]
 }
 
 /** 由用户收藏生成个人主题子图 */
 export interface ThemeBuildRequest {
   readonly name: string
-  readonly targetIds: readonly string[]
+  readonly targetIds: string[]
 }
 
 export interface ThemeBuildResponse {
   readonly theme: Theme
-  readonly nodes: readonly GraphNode[]
-  readonly edges: readonly GraphEdge[]
+  readonly nodes: GraphNode[]
+  readonly edges: GraphEdge[]
   /** 算法推荐的拓展条目 */
-  readonly suggestions: readonly string[]
+  readonly suggestions: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -239,13 +239,13 @@ export interface ThemeBuildResponse {
 /** 单表变更集 */
 export interface ChangeSet {
   readonly table: string
-  readonly records: readonly SyncableRecord[]
+  readonly records: SyncableRecord[]
 }
 
 export interface SyncPush {
   readonly type: 'push'
   readonly deviceId: string
-  readonly changes: readonly ChangeSet[]
+  readonly changes: ChangeSet[]
 }
 
 export interface SyncPull {
@@ -265,13 +265,13 @@ export interface SyncProgressMsg {
 export interface SyncApplied {
   readonly type: 'applied'
   readonly applied: number
-  readonly conflicts: readonly ConflictRecord[]
+  readonly conflicts: ConflictRecord[]
 }
 
 export interface SyncPulled {
   readonly type: 'pulled'
-  readonly changes: readonly ChangeSet[]
-  readonly conflicts: readonly ConflictRecord[]
+  readonly changes: ChangeSet[]
+  readonly conflicts: ConflictRecord[]
   readonly serverTime: number
 }
 
@@ -297,16 +297,16 @@ export interface BackupPayload {
   readonly version: string
   readonly exportedAt: number
   readonly deviceId: string
-  readonly favorites: readonly Favorite[]
-  readonly notes: readonly Note[]
-  readonly tags: readonly Tag[]
-  readonly themes: readonly Theme[]
+  readonly favorites: Favorite[]
+  readonly notes: Note[]
+  readonly tags: Tag[]
+  readonly themes: Theme[]
 }
 
 export interface ImportResult {
   readonly imported: number
   readonly merged: number
-  readonly conflicts: readonly ConflictRecord[]
+  readonly conflicts: ConflictRecord[]
 }
 
 /** 云端快照列表项 */
@@ -335,7 +335,7 @@ export interface OperationUsage {
 }
 
 export interface UsageStats {
-  readonly byOperation: readonly OperationUsage[]
+  readonly byOperation: OperationUsage[]
   readonly since: number
   readonly until: number
 }
@@ -371,5 +371,5 @@ export interface PairingResponse {
 export interface CollectRequest {
   readonly targetType: CollectTargetType
   readonly targetId: string
-  readonly tagIds?: readonly string[]
+  readonly tagIds?: string[]
 }

@@ -12,7 +12,7 @@
 |---|---|---|---|
 | D0 地基 | 10 | 10 | **完成** |
 | D0-V 技术验证 | 5 | 5 | **完成**（跨设备同步待第二台设备补验） |
-| D1 垂直切片 | 0 | 10 | 未开始 |
+| D1 垂直切片 | 10 | 10 | **完成** |
 | D2 数据工程 | 0 | 13 | 未开始 |
 | D3 后端与检索 | 0 | 12 | 未开始 |
 | D4 同步 | 0 | 11 | 未开始 |
@@ -75,22 +75,24 @@
 
 ---
 
-## D1 垂直切片（用 5 条数据打通端侧）
+## D1 垂直切片（已完成）
 
-| # | 任务 | 产出 | 依赖 |
+| # | 任务 | 产出 | 状态 |
 |---|---|---|---|
-| D1-1 | 手写 5 条样例档案（覆盖 5 城中的 4 城、含五层内容） | `packages/data/sites/*.yaml` | D0-3 |
-| D1-2 | 定稿端侧预置包格式 + 打包脚本 | `tools/pipeline/export.ts` 可产出预置包 | D1-1 |
-| D1-3 | 端侧 model 层：RDB 表结构定义（条目 / 分块 / 图谱 / 相似度） | `model/schema.ets` | D1-2 |
-| D1-4 | 首启导入逻辑（含进度提示与失败重试） | `service/DataImportService.ets` | D1-3, D0V-2 |
-| D1-5 | DAO 封装：列表 / 详情 / 按维度筛选 / 全文匹配 | `service/HeritageDao.ets` | D1-4 |
-| D1-6 | 端侧关键词检索：词典最大匹配 + 原文子串兜底 | `service/SearchService.ets` | D1-5 |
-| D1-7 | 首页：时代轴滑动切换 + 条目卡片流 | `pages/HomePage.ets` | D1-5 |
-| D1-8 | 检索页：关键词输入 + 三维筛选 chip + 结果列表 | `pages/SearchPage.ets` | D1-6, D1-7 |
-| D1-9 | 详情页：六 Tab（图文 / 考古 / 事件 / 诗词 / 文旅 / 图谱） | `pages/DetailPage.ets` | D1-5 |
-| D1-10 | 真机验证：飞行模式下浏览 5 条并检索 | 测试记录 | D1-7 ~ D1-9 |
+| D1-1 | 手写 5 条样例档案 | `packages/data/sites/*.yaml`（覆盖 5 城、多个时代与类型） | 完成 |
+| D1-2 | 定稿预置包格式 + 打包脚本 | `tools/pipeline`（load-sites / chunk / graph / similar / export） | 完成 |
+| D1-3 | RDB 表结构定义 | `model/Schema.ets`（6 张表 + 6 个索引） | 完成 |
+| D1-4 | 首启导入逻辑 | `service/DataImportService.ets`（幂等、事务、并发安全） | 完成 |
+| D1-5 | DAO 封装 | `service/HeritageDao.ets`（内存缓存 + 筛选 + 关联推荐） | 完成 |
+| D1-6 | 端侧关键词检索 | `service/SearchService.ets`（字段打分 + 正文子串兜底） | 完成 |
+| D1-7 | 首页时间轴 | `pages/HomePage.ets`（六时代轴 + 卡片流） | 完成 |
+| D1-8 | 检索页与三维筛选 | `pages/SearchPage.ets` | 完成 |
+| D1-9 | 详情页六 Tab | `pages/DetailPage.ets`（路由跳转） | 完成 |
+| D1-10 | 真机/模拟器验证 | 截图存 `.shots/` | 完成 |
 
-**出口**：飞行模式全流程可用，无崩溃。
+**出口**：飞行模式下能浏览 5 条并完成关键词检索，UI 无崩溃。✓ 已达成
+
+> D1 期间发现并修复一个隐蔽 Bug：ArkTS 的 `@Builder` 按值传参不具响应性，导致筛选 chip 选中态与实际筛选条件脱节（详见 [ADR-021](./decisions.md)）。
 
 ---
 

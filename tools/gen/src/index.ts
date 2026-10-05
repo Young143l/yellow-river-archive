@@ -49,13 +49,21 @@ function header(sourceName: string): string {
   ].join('\n')
 }
 
-/** 逐字复制，仅做少量稳妥的规整 */
+/**
+ * 逐字复制，只做两处稳妥的规整：
+ *
+ * 1. 去掉源文件自己的文件级注释块（由生成头替代）
+ * 2. **去掉数组类型上的 readonly**（`readonly string[]` → `string[]`）
+ *
+ * 第 2 条是必须的：ArkTS 的 ForEach 等组件不接受 `readonly T[]`。
+ * 只移除「数组类型」上的 readonly —— 属性上的 readonly（如 `readonly name: string`）
+ * 不受影响，因为正则要求 readonly 后面紧跟 `标识符[]`。
+ */
 function transform(code: string): string {
   return (
     code
-      // 去掉源文件自己的文件级注释块（由生成头替代）
       .replace(/^\/\*\*[\s\S]*?\*\/\s*/, '')
-      // 连续空行压缩
+      .replace(/readonly\s+(?=[A-Za-z_][A-Za-z0-9_]*\[\])/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .trimEnd()
       .concat('\n')

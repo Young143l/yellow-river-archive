@@ -25,6 +25,7 @@
 | ADR-018 | 协作方式：GitHub 私有仓 + 简化分支 + 本地钩子 | 已采纳 |
 | ADR-019 | 共享契约必须写成 ArkTS 子集 | 已采纳 |
 | ADR-020 | D0-V 四项技术验证结论 | 已采纳 |
+| ADR-021 | ArkTS 的 @Builder 只接静态标识，状态一律用 this 读 | 已采纳 |
 
 ---
 
@@ -272,6 +273,18 @@
 **遗留**：真正的**跨设备同步**尚未验证——directional 同步需要第二台可信设备。当前只有一台真机，需借机或临时下载 tablet 模拟器镜像补验（见看板 B1）。通道 A 的代码可先按 API 文档实现，待第二台设备到位后一次验证。
 
 > 验证代码：`harmony/YellowRiverArchive/entry/src/main/ets/service/DevProbe.ets` 与 `utils/ForceProbe.ets`；验证截图存本地 `.shots/`（已 gitignore）。验证完成后这两个文件可整体删除。
+
+---
+
+## ADR-021 ArkTS 的 @Builder 只接静态标识，状态一律用 this 读
+
+- **日期**：2026-10-05 ｜ **状态**：已采纳
+- **背景**：D1 检索页的第一版把筛选状态当参数传进 `@Builder filterRow(title, values, selected, onToggle)`。实测表现：点击筛选 chip 后界面**不刷新**（选中态不变），且检索引擎收到的条件与界面显示不一致
+- **决策**：`@Builder` 只接收**静态标识**（如 `'city'` / `'era'` / `'type'`），凡参与渲染的可变状态一律在 Builder 内部通过 `this.xxx` 直接读取
+- **备选**：用 `$$` 双向绑定；或完全放弃 Builder、把 UI 内联到 `build()`
+- **理由**：ArkTS 中 `@Builder` 的**值参数按值传递，不具备响应性**——参数变化不会触发 Builder 内 UI 刷新，而状态赋值是生效的，于是造成"数据变了但界面不变"的隐蔽不一致。通过 `this` 读取状态时，Builder 会随组件重渲染而重新执行
+- **影响**：写进 [开发规范](./开发规范.md) §4.2，列为端侧编码硬规则；本次修复后筛选 chip 选中态与检索引擎条件恢复一致（已在模拟器上验证）
+- **另一条并发约定**：异步检索必须在**调用点锁定**查询串与筛选条件（`const query = this.keyword`），再进入 await，避免 await 期间状态变化导致"结果与展示不符"
 
 ---
 

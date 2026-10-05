@@ -49,7 +49,7 @@ export interface TravelInfo {
   readonly ticket?: string
   /** 最佳游览季节 */
   readonly best?: string
-  readonly tips: readonly string[]
+  readonly tips: string[]
 }
 
 /** 文物（可被单独收藏的"轻条目"） */
@@ -93,14 +93,14 @@ export interface HeritageItem {
   /** 全局唯一，格式 <城市前缀>-<拼音>，如 ly-erlitou */
   readonly id: string
   readonly name: string
-  readonly aliases: readonly string[]
+  readonly aliases: string[]
 
   // ---- 三维度 ----
   readonly city: City
   readonly era: Era
   /** 起止年代，负数表示公元前；元组本身需可变以与校验层一致 */
   readonly eraRange?: [number, number]
-  readonly types: readonly HeritageType[]
+  readonly types: HeritageType[]
   readonly level?: Level
 
   readonly geo: GeoPoint
@@ -112,16 +112,16 @@ export interface HeritageItem {
   readonly intro: string
   /** 考古发现，200-600 字 */
   readonly archaeology: string
-  readonly events: readonly HeritageEvent[]
-  readonly poems: readonly HeritagePoem[]
+  readonly events: HeritageEvent[]
+  readonly poems: HeritagePoem[]
   readonly travel?: TravelInfo
-  readonly artifacts: readonly Artifact[]
-  readonly figures: readonly HeritageFigure[]
-  readonly images: readonly HeritageImage[]
+  readonly artifacts: Artifact[]
+  readonly figures: HeritageFigure[]
+  readonly images: HeritageImage[]
 
   // ---- 检索与溯源 ----
-  readonly keywords: readonly string[]
-  readonly sources: readonly SourceRef[]
+  readonly keywords: string[]
+  readonly sources: SourceRef[]
 }
 
 // ---------------------------------------------------------------------------
@@ -139,7 +139,7 @@ export interface Chunk {
   readonly seq: number
   readonly text: string
   /** 构建期注入的 jieba 分词结果，供端侧检索 */
-  readonly tokens: readonly string[]
+  readonly tokens: string[]
 }
 
 /** 图谱节点类型 */
@@ -199,7 +199,7 @@ export interface GraphNode {
   readonly id: string
   readonly type: GraphNodeType
   readonly name: string
-  readonly aliases: readonly string[]
+  readonly aliases: string[]
   /** PageRank 值，构建期计算，用于可视化节点大小与推荐排序 */
   readonly rank?: number
 }
@@ -227,7 +227,7 @@ export interface SimilarNeighbor {
 export interface SimilarEntry {
   readonly itemId: string
   /** 相似邻居，按相似度降序 */
-  readonly neighbors: readonly SimilarNeighbor[]
+  readonly neighbors: SimilarNeighbor[]
 }
 
 // ---------------------------------------------------------------------------
@@ -251,7 +251,7 @@ export interface Favorite extends SyncableRecord {
   readonly targetType: CollectTargetType
   /** site 为 itemId；artifact 为 artifactId */
   readonly targetId: string
-  readonly tagIds: readonly string[]
+  readonly tagIds: string[]
 }
 
 /** 笔记 */
@@ -272,7 +272,7 @@ export interface Tag extends SyncableRecord {
 export interface Theme extends SyncableRecord {
   readonly name: string
   /** 归入该主题的条目 ID（遗址或文物） */
-  readonly targetIds: readonly string[]
+  readonly targetIds: string[]
 }
 
 /** 学习进度：按时代分段的完成情况 */

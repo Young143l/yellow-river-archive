@@ -17,7 +17,7 @@ export interface PresetMeta {
   readonly chunkCount: number
   readonly imageCount: number
   /** 数据源声明，用于"关于页"展示 */
-  readonly sourceDeclarations: readonly string[]
+  readonly sourceDeclarations: string[]
   /** 生成该包的流水线版本 */
   readonly pipelineVersion: string
 }
@@ -27,11 +27,11 @@ export type PresetChunkLine = Chunk
 
 /** graph.json */
 export interface PresetGraph {
-  readonly nodes: readonly GraphNode[]
-  readonly edges: readonly GraphEdge[]
+  readonly nodes: GraphNode[]
+  readonly edges: GraphEdge[]
 }
 
 /** similar.json */
 export interface PresetSimilar {
-  readonly entries: readonly SimilarEntry[]
+  readonly entries: SimilarEntry[]
 }
