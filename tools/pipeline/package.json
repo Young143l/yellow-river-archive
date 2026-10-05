@@ -10,7 +10,8 @@
     "sites": "tsx src/index.ts sites",
     "verify": "tsx src/index.ts verify",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "ai:check": "tsx src/ai-check.ts"
+    "ai:check": "tsx src/ai-check.ts",
+    "embed": "tsx src/index.ts embed"
   },
   "dependencies": {
     "@yra/shared": "workspace:*",

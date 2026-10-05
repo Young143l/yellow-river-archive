@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildChunks } from './chunk'
+import { runEmbedding, type EmbedReport } from './embed'
 import { exportPreset } from './export'
 import { buildGraph } from './graph'
 import { computeDistribution, loadSites, type Distribution, type LoadIssue } from './load-sites'
@@ -33,6 +34,10 @@ const LEXICON: string = join(REPO_ROOT, 'packages', 'data', 'lexicon.txt')
 
 /** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
 const VOCAB_TOP_N: number = 12000
+
+/** 嵌入缓存与产物路径（derived 与 .cache 均已 gitignore） */
+const CACHE_FILE: string = join(REPO_ROOT, 'packages', 'data', '.cache', 'embeddings.jsonl')
+const EMBED_OUT_DIR: string = join(REPO_ROOT, 'packages', 'data', 'derived', 'embeddings')
 const RAW_OUT_DIR: string = join(
   REPO_ROOT,
   'harmony',
@@ -86,6 +91,40 @@ async function main(): Promise<void> {
     } else {
       console.log('')
       console.log('[pipeline] 清单体检全部通过')
+    }
+    return
+  }
+
+  // embed 子命令：只跑嵌入，不重建预置包（供分段试跑与补跑）
+  if (command === 'embed') {
+    const limitArg: string | undefined = process.argv.find((a) => a.startsWith('--limit='))
+    const limit: number | undefined =
+      limitArg !== undefined ? Number.parseInt(limitArg.slice('--limit='.length), 10) : undefined
+
+    const loaded = await loadSites(SITES_DIR)
+    if (loaded.issues.length > 0) {
+      printIssues(loaded.issues)
+      console.error('[pipeline] 档案校验未通过，已中止嵌入')
+      process.exit(1)
+    }
+
+    const chunksForEmbed = buildChunks(loaded.items)
+    const report: EmbedReport = await runEmbedding({
+      items: loaded.items,
+      chunks: chunksForEmbed,
+      cacheFile: CACHE_FILE,
+      outDir: EMBED_OUT_DIR,
+      limit,
+    })
+    console.log(
+      `[embed] 完成：共 ${report.total} 个片段，缓存命中 ${report.cached}，本次编码 ${report.embedded}，失败 ${report.failed}`
+    )
+    console.log(
+      `[embed] 模型 ${report.model} @ ${report.dim} 维 ｜ 耗时 ${(report.elapsedMs / 1000).toFixed(1)}s ｜ token ${report.tokens}`
+    )
+    console.log(`[embed] 产物 -> ${EMBED_OUT_DIR.replace(REPO_ROOT + '/', '')}`)
+    if (report.failed > 0) {
+      process.exit(1)
     }
     return
   }
