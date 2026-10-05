@@ -14,7 +14,7 @@
 | D0-V 技术验证 | 5 | 5 | **完成**（跨设备同步待第二台设备补验） |
 | D1 垂直切片 | 10 | 10 | **完成** |
 | D2 数据工程 | 9 | 13 | 技术任务完成，待团队产出内容 |
-| D3 后端与检索 | 2 | 12 | 进行中（provider 层与实测已完成） |
+| D3 后端与检索 | 4 | 12 | 进行中 |
 | D4 同步 | 0 | 11 | 未开始 |
 | D5 AI 助手 | 0 | 5 | 未开始 |
 | D6 图谱可视化 | 0 | 5 | 未开始 |
@@ -122,12 +122,12 @@
 
 | # | 任务 | 产出 | 依赖 |
 |---|---|---|---|
-| D3-1 | `apps/server` 骨架：Fastify + pino + Zod + env 加载 + `/api/health` | 服务可启动 | D0-2 |
+| D3-1 | `apps/server` 骨架：Fastify + pino + Zod + env 加载 + `/api/health` | 服务可启动 | **已完成** |
 | D3-2 | provider 层：`EmbeddingProvider`（百炼） | `ai/embedding/` | **已完成**（packages/ai） |
 | D3-3 | provider 层：`RerankProvider`（百炼） | `ai/rerank/` | **已完成**（packages/ai） |
 | D3-4 | provider 层：`LlmProvider`（DeepSeek，流式） | `ai/llm/` | **已完成**（packages/ai） |
 | D3-5 | 连通性与限额实测脚本 + 记录 | `docs/ai-providers.md` | **已完成** |
-| D3-6 | 服务端数据导入：chunk 文本 + FTS5 索引 + 向量索引 + 图谱表 | `data/import.ts` | D2-13, D3-1 |
+| D3-6 | 服务端数据导入：chunk 文本 + FTS5 索引 + 向量索引 + 图谱表 | `data/import.ts` | **已完成**（导入 5 条用时 4ms） |
 | D3-7 | `/api/items`、`/api/items/:id`、`/api/items/:id/related` | 只读接口 | D3-6 |
 | D3-8 | `/api/search` BM25 版（含维度过滤） | 关键词检索 | D3-6 |
 | D3-9 | 查询理解：实体词典识别（5 城 / 6 时代 / 类型 / 别名） | `search/query-understanding.ts` | D0-4 |

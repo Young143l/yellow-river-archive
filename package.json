@@ -22,7 +22,9 @@
     "data:build": "pnpm --filter @yra/pipeline run build",
     "data:status": "pnpm --filter @yra/pipeline run status",
     "data:sites": "pnpm --filter @yra/pipeline run sites",
-    "data:verify": "pnpm --filter @yra/pipeline run verify"
+    "data:verify": "pnpm --filter @yra/pipeline run verify",
+    "server": "pnpm --filter @yra/server run start",
+    "server:dev": "pnpm --filter @yra/server run dev"
   },
   "devDependencies": {
     "@types/node": "26.6.4",

@@ -1,0 +1,17 @@
+{
+  "name": "@yra/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "云侧服务：检索、问答、图谱、同步（不参与端侧基础功能闭环）",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@yra/ai": "workspace:*",
+    "@yra/shared": "workspace:*",
+    "fastify": "5.12.5"
+  }
+}

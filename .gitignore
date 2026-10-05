@@ -62,3 +62,6 @@ logs/
 
 # 测试与覆盖率
 coverage/
+
+# 服务端运行数据（SQLite 与个人数据存储）
+apps/server/data/

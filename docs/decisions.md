@@ -27,6 +27,7 @@
 | ADR-020 | D0-V 四项技术验证结论 | 已采纳 |
 | ADR-021 | ArkTS 的 @Builder 只接静态标识，状态一律用 this 读 | 已采纳 |
 | ADR-022 | 数据核实改为「领域知识初稿 + 人工核对」双轨 | 已采纳 |
+| ADR-023 | 用 Node 内置的 node:sqlite 替代 better-sqlite3 | 已采纳 |
 
 ---
 
@@ -309,6 +310,21 @@
 - **备选**：自行搭建维基镜像；用付费商业数据接口；只收录能自动核实的少量条目
 - **理由**：前两者成本超出学生团队范围；后者会让 80 条规模目标落空。双轨制把机器能做好的（结构、一致性、分布校验）交给机器，把需要人判断的（事实核对）交给人，且**不假装置信**
 - **影响**：`sites.yaml` 增加 `confidence`（high/medium/low）与 `status`（已核/待核/存疑）两个字段；置信度为 low 的条目**不得进入 P0 批次**（由 `pnpm data:sites` 自动拦截），且在核对完成前不写正文
+
+---
+
+## ADR-023 用 Node 内置的 node:sqlite 替代 better-sqlite3
+
+- **日期**：2026-10-05 ｜ **状态**：已采纳
+- **背景**：服务端需要 SQLite 存储（FTS5 关键词索引、向量、图谱表）。原计划用 `better-sqlite3`
+- **决策**：改用 Node 内置的 `node:sqlite`（`DatabaseSync`）
+- **备选**：`better-sqlite3`（原生模块，需编译或预编译二进制）；`sql.js`（WASM，性能差）；独立数据库进程
+- **理由**：实测 Node 26 内置的 SQLite 为 **3.53.4**，且**编译时已启用 FTS5**（`CREATE VIRTUAL TABLE ... USING fts5` 与 `bm25()` 排序函数均可用）——正好是 BM25 检索需要的全部能力。内置模块意味着：无原生依赖、无构建审批、无 Node 版本升级后二进制不匹配的风险
+- **影响**：
+  - 依赖表里删掉 `better-sqlite3` 与 `@types/better-sqlite3`
+  - 服务端与流水线统一使用 `node:sqlite` 的同步 API（`DatabaseSync`）
+  - 需注意 **Node 版本要求提高到 22+**（`node:sqlite` 自 Node 22 引入），已在 `engines` 中声明 20+ 的旧约定同步上调
+  - 服务器部署时无需任何编译工具链，`node + tsx` 即可跑起来
 
 ---
 
