@@ -1,0 +1,1049 @@
+# 档案清单与进度台账
+#
+# 这是 80 条档案的唯一事实来源：谁负责、核到什么程度、正文在哪，都看这里。
+# 正文内容在 packages/data/sites/<id>.yaml，本文件只存清单级元数据。
+#
+# 核实方式见 docs/data-verify-checklist.md；
+# 为什么采用「领域知识初稿 + 人工核对」双轨，见 docs/decisions.md 的 ADR-022。
+
+meta:
+  version: '0.1.0'
+  updatedAt: '2026-10-05'
+  totalTarget: 80
+  allocation:
+    洛阳: 20
+    郑州: 20
+    开封: 16
+    三门峡: 14
+    濮阳: 10
+  progress:
+    已核: 8
+    待核: 72
+    存疑: 0
+  confidenceLegend:
+    high: 城市、时代、类型、级别均有把握（世界遗产或早期批次国保、知名遗址）
+    medium: 主体信息有把握，批次或级别等某一项待确认
+    low: 仅知大概，需逐字段核实后才能写正文
+  statusLegend:
+    已核: 已按核对清单确认过
+    待核: 尚未人工确认
+    存疑: 核对中发现矛盾，待仲裁
+  rules:
+    - 置信度为 low 的条目不得进入 P0 批次，且在核对完成前不写正文
+    - 置信度为 medium 的条目可写正文，但必须在 notes 里写明待确认项
+    - 每条进入 P0/P1 的档案必须至少有一个可访问的来源链接
+
+# ---------------------------------------------------------------------------
+# 洛阳（20 条）
+# ---------------------------------------------------------------------------
+sites:
+  - id: ly-erlitou
+    name: 二里头遗址
+    city: 洛阳
+    era: 夏商
+    eraRange: [-1750, -1530]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 3
+    priority: P0
+    status: 已核
+    confidence: high
+    content: sites/ly-erlitou.yaml
+    notes: 学界多认为是夏代晚期都邑；见正文 sources
+
+  - id: ly-yanshi-shangcheng
+    name: 偃师商城遗址
+    city: 洛阳
+    era: 夏商
+    eraRange: [-1600, -1400]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 3
+    priority: P0
+    status: 已核
+    confidence: high
+
+  - id: ly-hanwei-gucheng
+    name: 汉魏洛阳故城
+    city: 洛阳
+    era: 汉唐
+    eraRange: [-202, 534]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 亦为世界遗产「丝绸之路」系列遗产点
+
+  - id: ly-suitang-cheng
+    name: 隋唐洛阳城遗址
+    city: 洛阳
+    era: 汉唐
+    eraRange: [605, 907]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 3
+    priority: P0
+    status: 已核
+    confidence: high
+
+  - id: ly-longmen-shiku
+    name: 龙门石窟
+    city: 洛阳
+    era: 汉唐
+    eraRange: [493, 1127]
+    types: [石窟寺]
+    level: 世界遗产
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 2000 年列入世界遗产名录；国保为第一批
+
+  - id: ly-baima-si
+    name: 白马寺
+    city: 洛阳
+    era: 汉唐
+    eraRange: [68, 960]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 已核
+    confidence: high
+    notes: 现存建筑多为元明清重建，时代按文化主体归类为汉唐
+
+  - id: ly-mangshan-lingmuqun
+    name: 邙山陵墓群
+    city: 洛阳
+    era: 汉唐
+    eraRange: [-202, 960]
+    types: [墓葬群]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: high
+
+  - id: ly-xinan-hanguan
+    name: 新安汉函谷关遗址
+    city: 洛阳
+    era: 汉唐
+    eraRange: [-114, 960]
+    types: [关隘遗址]
+    level: 全国重点文保
+    batch: 6
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否列入世界遗产「丝绸之路」名录
+
+  - id: ly-guanlin
+    name: 关林
+    city: 洛阳
+    era: 汉唐
+    eraRange: [1590, 1600]
+    types: [古建筑, 墓葬群]
+    level: 全国重点文保
+    batch: 6
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：现存建筑以明清为主，时代按文化主体归入汉唐
+
+  - id: ly-dongzhou-wangcheng
+    name: 东周王城遗址
+    city: 洛阳
+    era: 周
+    eraRange: [-770, -256]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+
+  - id: ly-hanjia-cang
+    name: 含嘉仓遗址
+    city: 洛阳
+    era: 汉唐
+    eraRange: [605, 907]
+    types: [仓储遗址]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否随「大运河」列入世界遗产点
+
+  - id: ly-huoluo-cang
+    name: 回洛仓遗址
+    city: 洛阳
+    era: 汉唐
+    eraRange: [605, 618]
+    types: [仓储遗址]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: ly-zhougong-miao
+    name: 洛阳周公庙
+    city: 洛阳
+    era: 周
+    eraRange: [-1046, -770]
+    types: [古建筑, 祭祀址]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: ly-qiyun-ta
+    name: 齐云塔
+    city: 洛阳
+    era: 汉唐
+    eraRange: [960, 1127]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 1
+    priority: P2
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否作为白马寺国保范围的一部分；塔为金代重建
+
+  - id: ly-shan-shaan-huiguan
+    name: 洛阳山陕会馆
+    city: 洛阳
+    era: 宋以后
+    eraRange: [1700, 1800]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: ly-luze-huiguan
+    name: 洛阳潞泽会馆
+    city: 洛阳
+    era: 宋以后
+    eraRange: [1700, 1800]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: ly-jincun-muqun
+    name: 金村东周墓群
+    city: 洛阳
+    era: 周
+    eraRange: [-770, -256]
+    types: [墓葬群]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：国保批次；1928 年遭盗掘，文物流散海外
+
+  - id: ly-huangye-yao
+    name: 新安窑址
+    city: 洛阳
+    era: 宋
+    eraRange: [960, 1279]
+    types: [窑址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别与窑址具体分布
+
+  - id: ly-he-nan-fu-wenmiao
+    name: 河南府文庙
+    city: 洛阳
+    era: 宋以后
+    eraRange: [1300, 1900]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: ly-yiyang-yao
+    name: 宜阳窑址
+    city: 洛阳
+    era: 宋
+    eraRange: [960, 1279]
+    types: [窑址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别、窑址分布与烧造年代；用于补足赛题点名的「窑址」类型（见清单体检规则）
+
+# ---------------------------------------------------------------------------
+# 郑州（20 条）
+# ---------------------------------------------------------------------------
+
+  - id: zz-shangcheng
+    name: 郑州商城遗址
+    city: 郑州
+    era: 夏商
+    eraRange: [-1600, -1300]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+
+  - id: zz-dahecun
+    name: 大河村遗址
+    city: 郑州
+    era: 仰韶
+    eraRange: [-5000, -3000]
+    types: [聚落遗址]
+    level: 全国重点文保
+    batch: 5
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 文化层含仰韶、龙山与二里头时期，时代按主体归入仰韶
+
+  - id: zz-gongyi-yao
+    name: 巩义窑址
+    city: 郑州
+    era: 汉唐
+    eraRange: [386, 1127]
+    types: [窑址]
+    level: 全国重点文保
+    batch: 5
+    priority: P0
+    status: 已核
+    confidence: high
+    content: sites/zz-gongyi-yao.yaml
+    notes: 唐三彩主要产地
+
+  - id: zz-songyue-ta
+    name: 嵩岳寺塔
+    city: 郑州
+    era: 汉唐
+    eraRange: [520, 525]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 亦为世界遗产「天地之中」历史建筑群组成部分
+
+  - id: zz-wangchenggang
+    name: 王城岗遗址
+    city: 郑州
+    era: 龙山
+    eraRange: [-2200, -1900]
+    types: [城址]
+    level: 全国重点文保
+    batch: 5
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 发现龙山文化晚期城址，学界多认为与「禹都阳城」相关
+
+  - id: zz-gongyi-shiku-si
+    name: 巩义石窟寺
+    city: 郑州
+    era: 汉唐
+    eraRange: [471, 534]
+    types: [石窟寺]
+    level: 全国重点文保
+    batch: 2
+    priority: P1
+    status: 待核
+    confidence: high
+
+  - id: zz-shaolin-si
+    name: 少林寺常住院
+    city: 郑州
+    era: 汉唐
+    eraRange: [495, 960]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 3
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 亦为世界遗产「天地之中」组成部分
+
+  - id: zz-ta-lin
+    name: 少林寺塔林
+    city: 郑州
+    era: 汉唐
+    eraRange: [791, 1800]
+    types: [墓葬群, 古建筑]
+    level: 全国重点文保
+    batch: 4
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：国保批次
+
+  - id: zz-zhongyue-miao
+    name: 中岳庙
+    city: 郑州
+    era: 汉唐
+    eraRange: [-110, 1900]
+    types: [古建筑, 祭祀址]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 亦为世界遗产「天地之中」组成部分；现存建筑多为明清重建
+
+  - id: zz-taishi-que
+    name: 太室阙
+    city: 郑州
+    era: 汉唐
+    eraRange: [118, 123]
+    types: [碑刻]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 世界遗产「天地之中」组成部分
+
+  - id: zz-shaoshi-que
+    name: 少室阙
+    city: 郑州
+    era: 汉唐
+    eraRange: [118, 123]
+    types: [碑刻]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 世界遗产「天地之中」组成部分
+
+  - id: zz-qimu-que
+    name: 启母阙
+    city: 郑州
+    era: 汉唐
+    eraRange: [118, 123]
+    types: [碑刻]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 世界遗产「天地之中」组成部分
+
+  - id: zz-guancetai
+    name: 登封观星台
+    city: 郑州
+    era: 宋以后
+    eraRange: [1276, 1279]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 待核
+    confidence: high
+    notes: 元代建筑；世界遗产「天地之中」组成部分
+
+  - id: zz-xinzheng-hengguo
+    name: 郑韩故城
+    city: 郑州
+    era: 周
+    eraRange: [-770, -230]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 1
+    priority: P1
+    status: 待核
+    confidence: high
+
+  - id: zz-xiaoshuangqiao
+    name: 小双桥遗址
+    city: 郑州
+    era: 夏商
+    eraRange: [-1435, -1415]
+    types: [祭祀址]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: zz-guchengzhai
+    name: 古城寨遗址
+    city: 郑州
+    era: 龙山
+    eraRange: [-2200, -1900]
+    types: [城址]
+    level: 全国重点文保
+    batch: 5
+    priority: P2
+    status: 待核
+    confidence: medium
+
+  - id: zz-xinzhai
+    name: 新砦遗址
+    city: 郑州
+    era: 龙山
+    eraRange: [-1900, -1750]
+    types: [城址]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: medium
+    notes: 新砦期文化命名地，龙山晚期至二里头早期过渡
+
+  - id: zz-huangye-yao
+    name: 黄冶三彩窑址
+    city: 郑州
+    era: 汉唐
+    eraRange: [618, 907]
+    types: [窑址]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 巩义窑址群中最著名的一处，唐三彩主要产地；与「巩义窑址」为部分与整体的关系，条目各写各的侧重点
+
+  - id: zz-mixian-yao
+    name: 密县窑址
+    city: 郑州
+    era: 宋
+    eraRange: [618, 1279]
+    types: [窑址]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: zz-dengfeng-yao
+    name: 登封窑址
+    city: 郑州
+    era: 宋
+    eraRange: [618, 1279]
+    types: [窑址]
+    level: 全国重点文保
+    batch: 6
+    priority: P2
+    status: 待核
+    confidence: low
+
+# ---------------------------------------------------------------------------
+# 开封（16 条）
+# ---------------------------------------------------------------------------
+
+  - id: kf-beisong-dongjing
+    name: 北宋东京城遗址
+    city: 开封
+    era: 宋
+    eraRange: [960, 1127]
+    types: [都城遗址]
+    level: 全国重点文保
+    batch: 3
+    priority: P0
+    status: 已核
+    confidence: high
+
+  - id: kf-kaibaosi-ta
+    name: 开宝寺塔
+    city: 开封
+    era: 宋
+    eraRange: [1044, 1049]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+    content: sites/kf-kaibaosi-ta.yaml
+    notes: 俗称铁塔，我国现存最早的琉璃砖塔
+
+  - id: kf-fanta
+    name: 繁塔
+    city: 开封
+    era: 宋
+    eraRange: [974, 980]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 3
+    priority: P0
+    status: 已核
+    confidence: high
+
+  - id: kf-daxiangguo-si
+    name: 大相国寺
+    city: 开封
+    era: 宋
+    eraRange: [555, 960]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P0
+    status: 待核
+    confidence: medium
+    notes: 待确认：国保批次；现存建筑多为清代重建，时代按文化主体归入宋
+
+  - id: kf-zhouqiao
+    name: 州桥遗址
+    city: 开封
+    era: 宋
+    eraRange: [960, 1127]
+    types: [城址]
+    level: 全国重点文保
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：国保批次；近年考古发掘取得重要收获
+
+  - id: kf-xinzheng-men
+    name: 新郑门遗址
+    city: 开封
+    era: 宋
+    eraRange: [960, 1127]
+    types: [城址]
+    level: 全国重点文保
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否含于北宋东京城遗址国保范围
+
+  - id: kf-bianhe
+    name: 汴河遗址
+    city: 开封
+    era: 宋
+    eraRange: [605, 1127]
+    types: [河道遗址]
+    level: 全国重点文保
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否随「大运河」列入世界遗产点
+
+  - id: kf-chengqiang
+    name: 开封城墙
+    city: 开封
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 4
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：批次；现存城墙主体为明清
+
+  - id: kf-shanshangan-huiguan
+    name: 山陕甘会馆
+    city: 开封
+    era: 宋以后
+    eraRange: [1776, 1800]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+
+  - id: kf-yanqingguan
+    name: 延庆观
+    city: 开封
+    era: 宋以后
+    eraRange: [1233, 1368]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+
+  - id: kf-longting
+    name: 龙亭
+    city: 开封
+    era: 宋
+    eraRange: [960, 1127]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；现存建筑为清代所建，其下叠压北宋皇宫遗址
+
+  - id: kf-yuwangtai
+    name: 禹王台
+    city: 开封
+    era: 宋以后
+    eraRange: [1500, 1900]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；相传为春秋师旷吹台遗址
+
+  - id: kf-yuefei-miao
+    name: 朱仙镇岳飞庙
+    city: 开封
+    era: 宋以后
+    eraRange: [1470, 1600]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: kf-zhenhe-tiexi
+    name: 镇河铁犀
+    city: 开封
+    era: 宋以后
+    eraRange: [1446, 1446]
+    types: [碑刻]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；于谦主持铸造的镇河铁牛
+
+  - id: kf-fu-wenmiao
+    name: 开封府文庙
+    city: 开封
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: kf-dongdasi
+    name: 开封东大寺
+    city: 开封
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: low
+
+# ---------------------------------------------------------------------------
+# 三门峡（14 条）
+# ---------------------------------------------------------------------------
+
+  - id: sms-yangshao
+    name: 仰韶村遗址
+    city: 三门峡
+    era: 仰韶
+    eraRange: [-5000, -3000]
+    types: [聚落遗址]
+    level: 全国重点文保
+    batch: 1
+    priority: P0
+    status: 已核
+    confidence: high
+    content: sites/sms-yangshao.yaml
+    notes: 仰韶文化命名地，中国现代考古学开端
+
+  - id: sms-miaodigou
+    name: 庙底沟遗址
+    city: 三门峡
+    era: 仰韶
+    eraRange: [-4000, -3000]
+    types: [聚落遗址]
+    level: 全国重点文保
+    batch: 5
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 庙底沟类型命名地
+
+  - id: sms-guoguo-mudi
+    name: 虢国墓地
+    city: 三门峡
+    era: 周
+    eraRange: [-900, -700]
+    types: [墓葬群]
+    level: 全国重点文保
+    batch: 4
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 两周之际虢国贵族墓地，出土大量青铜器与玉器
+
+  - id: sms-hanguan
+    name: 函谷关
+    city: 三门峡
+    era: 周
+    eraRange: [-350, -200]
+    types: [关隘遗址]
+    level: 全国重点文保
+    batch: 7
+    priority: P0
+    status: 待核
+    confidence: medium
+    notes: 待确认：国保批次；指灵宝秦函谷关
+
+  - id: sms-xipo
+    name: 西坡遗址
+    city: 三门峡
+    era: 仰韶
+    eraRange: [-4000, -3500]
+    types: [聚落遗址]
+    level: 全国重点文保
+    batch: 6
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 发现仰韶中期大型房址
+
+  - id: sms-xiaohan-gudao
+    name: 崤函古道石壕段
+    city: 三门峡
+    era: 汉唐
+    eraRange: [-202, 960]
+    types: [道路遗址]
+    level: 全国重点文保
+    batch: 7
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：是否随「丝绸之路」列入世界遗产点
+
+  - id: sms-baolunsi-ta
+    name: 宝轮寺塔
+    city: 三门峡
+    era: 宋以后
+    eraRange: [1177, 1177]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 金代建筑，俗称「蛤蟆塔」
+
+  - id: sms-hongqing-si
+    name: 鸿庆寺石窟
+    city: 三门峡
+    era: 汉唐
+    eraRange: [500, 800]
+    types: [石窟寺]
+    level: 全国重点文保
+    batch: 5
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 位于义马市
+
+  - id: sms-shanzhou-gucheng
+    name: 陕州故城
+    city: 三门峡
+    era: 汉唐
+    eraRange: [-114, 1368]
+    types: [城址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别与现存遗存范围
+
+  - id: sms-jingshan
+    name: 荆山黄帝铸鼎原
+    city: 三门峡
+    era: 龙山
+    eraRange: [-2500, -2000]
+    types: [祭祀址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；传为黄帝铸鼎处，含仰韶文化遗址
+
+  - id: sms-anguo-si
+    name: 陕州安国寺
+    city: 三门峡
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 全国重点文保
+    batch: 7
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: sms-lushi-chenghuang-miao
+    name: 卢氏城隍庙
+    city: 三门峡
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: sms-qinzhao-tai
+    name: 秦赵会盟台
+    city: 三门峡
+    era: 周
+    eraRange: [-279, -279]
+    types: [祭祀址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；传为渑池之会故址，现存台址为后世重修
+
+  - id: sms-lingbao-wenmiao
+    name: 灵宝文庙
+    city: 三门峡
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+
+# ---------------------------------------------------------------------------
+# 濮阳（10 条）
+# ---------------------------------------------------------------------------
+
+  - id: py-xishuipo
+    name: 西水坡遗址
+    city: 濮阳
+    era: 仰韶
+    eraRange: [-4500, -4300]
+    types: [聚落遗址, 墓葬群]
+    level: 全国重点文保
+    batch: 7
+    priority: P0
+    status: 已核
+    confidence: high
+    content: sites/py-xishuipo.yaml
+    notes: 蚌塑龙虎图案出处，「中华第一龙」；国保批次待最终确认
+
+  - id: py-qicheng
+    name: 戚城遗址
+    city: 濮阳
+    era: 周
+    eraRange: [-700, -221]
+    types: [城址]
+    level: 全国重点文保
+    batch: 4
+    priority: P0
+    status: 已核
+    confidence: high
+    notes: 春秋卫国城邑，诸侯会盟之地
+
+  - id: py-huiluan-bei
+    name: 回銮碑
+    city: 濮阳
+    era: 宋
+    eraRange: [1004, 1004]
+    types: [碑刻]
+    level: 全国重点文保
+    batch: 7
+    priority: P1
+    status: 待核
+    confidence: medium
+    notes: 待确认：国保批次；澶渊之盟相关碑刻
+
+  - id: py-weiguo-gucheng
+    name: 卫国故城
+    city: 濮阳
+    era: 周
+    eraRange: [-1046, -209]
+    types: [城址]
+    level: 全国重点文保
+    priority: P1
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别与批次
+
+  - id: py-xiaqiu
+    name: 瑕丘遗址
+    city: 濮阳
+    era: 龙山
+    eraRange: [-2500, -2000]
+    types: [聚落遗址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: py-kuaikui-tai
+    name: 蒯聩台遗址
+    city: 濮阳
+    era: 周
+    eraRange: [-700, -221]
+    types: [祭祀址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: py-cangjie-ling
+    name: 仓颉陵
+    city: 濮阳
+    era: 龙山
+    eraRange: [-2500, -2000]
+    types: [祭祀址]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；传说性遗存，位于南乐县
+
+  - id: py-nanle-wenmiao
+    name: 南乐文庙
+    city: 濮阳
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+
+  - id: py-puzhaosi
+    name: 普照寺大雄宝殿
+    city: 濮阳
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low
+    notes: 待确认：保护级别；位于清丰县
+
+  - id: py-chenghuang-miao
+    name: 濮阳城隍庙
+    city: 濮阳
+    era: 宋以后
+    eraRange: [1368, 1911]
+    types: [古建筑]
+    level: 省级文保
+    priority: P2
+    status: 待核
+    confidence: low

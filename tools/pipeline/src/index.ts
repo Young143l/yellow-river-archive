@@ -16,10 +16,12 @@ import { exportPreset } from './export'
 import { buildGraph } from './graph'
 import { computeDistribution, loadSites, type Distribution, type LoadIssue } from './load-sites'
 import { buildSimilar } from './similar'
+import { loadSitesDoc, reportSites, type SitesReport } from './sites'
 
 const HERE: string = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT: string = resolve(HERE, '..', '..', '..')
 const SITES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sites')
+const SITES_INDEX: string = join(REPO_ROOT, 'packages', 'data', 'sites.yaml')
 const RAW_OUT_DIR: string = join(
   REPO_ROOT,
   'harmony',
@@ -55,6 +57,27 @@ function printDistribution(d: Distribution): void {
 
 async function main(): Promise<void> {
   const command: string = process.argv[2] ?? 'build'
+
+  // sites 子命令：只体检清单台账，不碰正文
+  if (command === 'sites') {
+    const doc = await loadSitesDoc(SITES_INDEX)
+    const report: SitesReport = reportSites(doc, SITES_DIR)
+    console.log('[pipeline] 清单体检')
+    for (const line of report.lines) {
+      console.log(`  ${line}`)
+    }
+    if (report.problems.length > 0) {
+      console.log('')
+      console.log('[pipeline] 待处理事项：')
+      for (const p of report.problems) {
+        console.log(`  - ${p}`)
+      }
+    } else {
+      console.log('')
+      console.log('[pipeline] 清单体检全部通过')
+    }
+    return
+  }
 
   const { items, issues } = await loadSites(SITES_DIR)
   console.log(`[pipeline] 读取 ${SITES_DIR.replace(REPO_ROOT + '/', '')}`)

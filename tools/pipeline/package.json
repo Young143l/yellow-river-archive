@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsx src/index.ts build",
     "status": "tsx src/index.ts status",
+    "sites": "tsx src/index.ts sites",
     "verify": "tsx src/index.ts verify",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
