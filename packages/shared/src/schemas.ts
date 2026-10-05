@@ -192,6 +192,7 @@ export const PresetMetaSchema = z.object({
   itemCount: z.number().int().min(0),
   chunkCount: z.number().int().min(0),
   imageCount: z.number().int().min(0),
+  vocabSize: z.number().int().min(0),
   sourceDeclarations: z.array(z.string()).readonly(),
   pipelineVersion: z.string().min(1),
 })

@@ -17,11 +17,22 @@ import { buildGraph } from './graph'
 import { computeDistribution, loadSites, type Distribution, type LoadIssue } from './load-sites'
 import { buildSimilar } from './similar'
 import { loadSitesDoc, reportSites, type SitesReport } from './sites'
+import {
+  buildVocab,
+  extractTermsFromItems,
+  loadLexicon,
+  Tokenizer,
+  type VocabEntry,
+} from './tokenize'
 
 const HERE: string = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT: string = resolve(HERE, '..', '..', '..')
 const SITES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sites')
 const SITES_INDEX: string = join(REPO_ROOT, 'packages', 'data', 'sites.yaml')
+const LEXICON: string = join(REPO_ROOT, 'packages', 'data', 'lexicon.txt')
+
+/** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
+const VOCAB_TOP_N: number = 12000
 const RAW_OUT_DIR: string = join(
   REPO_ROOT,
   'harmony',
@@ -106,20 +117,40 @@ async function main(): Promise<void> {
   }
 
   const chunks = buildChunks(items)
+
+  // 分词：jieba + 领域词典前向最大匹配
+  const lexicon: string[] = await loadLexicon(LEXICON)
+  const autoTerms: string[] = extractTermsFromItems(items)
+  const allTerms: string[] = Array.from(new Set<string>([...lexicon, ...autoTerms]))
+  const tokenizer: Tokenizer = Tokenizer.create(allTerms)
+  const tokenized = chunks.map((c) => ({ ...c, tokens: tokenizer.tokenize(c.text) }))
+  const vocab: VocabEntry[] = buildVocab(
+    tokenized.map((c) => [...c.tokens]),
+    VOCAB_TOP_N
+  )
+  const avgTokens: number =
+    tokenized.length > 0
+      ? Math.round(tokenized.reduce((sum, c) => sum + c.tokens.length, 0) / tokenized.length)
+      : 0
+
   const graph = buildGraph(items)
   const similar = buildSimilar(items)
 
   console.log(
-    `[pipeline] 分块 ${chunks.length} 个 ｜ 图谱 ${graph.nodes.length} 节点 / ${graph.edges.length} 连边 ｜ 相似条目 ${similar.length} 条`
+    `[pipeline] 分块 ${chunks.length} 个 ｜ 领域词 ${allTerms.length} 条 ｜ 平均 ${avgTokens} 词/片段 ｜ 词表 ${vocab.length} 词`
+  )
+  console.log(
+    `[pipeline] 图谱 ${graph.nodes.length} 节点 / ${graph.edges.length} 连边 ｜ 相似条目 ${similar.length} 条`
   )
 
   const imageCount: number = items.reduce((sum, i) => sum + i.images.length, 0)
   const result = await exportPreset({
     items,
-    chunks,
+    chunks: tokenized,
     nodes: graph.nodes,
     edges: graph.edges,
     similar,
+    vocab,
     imageCount,
     outDir: RAW_OUT_DIR,
   })

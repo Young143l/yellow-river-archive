@@ -16,6 +16,8 @@ export interface PresetMeta {
   readonly itemCount: number
   readonly chunkCount: number
   readonly imageCount: number
+  /** 词表规模，供端侧自检 */
+  readonly vocabSize: number
   /** 数据源声明，用于"关于页"展示 */
   readonly sourceDeclarations: string[]
   /** 生成该包的流水线版本 */
@@ -34,4 +36,15 @@ export interface PresetGraph {
 /** similar.json */
 export interface PresetSimilar {
   readonly entries: SimilarEntry[]
+}
+
+/** 词表条目：端侧用它对查询串做词典最大匹配 */
+export interface VocabEntry {
+  readonly word: string
+  readonly freq: number
+}
+
+/** vocab.json */
+export interface PresetVocab {
+  readonly entries: VocabEntry[]
 }

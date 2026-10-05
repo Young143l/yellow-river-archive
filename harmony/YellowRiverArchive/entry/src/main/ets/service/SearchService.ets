@@ -3,6 +3,7 @@ import { relationalStore } from '@kit.ArkData'
 
 import type { HeritageItem } from '../shared'
 import { Tables } from '../model/Schema'
+import { TextTokenizer } from '../utils/TextTokenizer'
 import { DataImportService } from './DataImportService'
 import { HeritageDao, type HeritageFilter, type HeritageSummary } from './HeritageDao'
 
@@ -15,23 +16,73 @@ export interface SearchHit {
   readonly section: string
   readonly snippet: string
   readonly score: number
-  /** 命中来源：字段命中 / 正文命中 / 两者 */
+  /** 命中来源：字段 / 正文 / 两者 / 筛选 */
   readonly channel: string
   /** 可解释的命中理由 */
   readonly reason: string
 }
 
-const MAX_HITS: number = 30;
+const MAX_HITS: number = 30
+
+/** 正文片段的内存副本 */
+interface ChunkRow {
+  readonly itemId: string
+  readonly section: string
+  readonly text: string
+  readonly tokens: string[]
+}
 
 /**
  * 端侧关键词检索。
  *
- * D1 实现：条目字段匹配（名称 > 别名 > 关键词 > 概述）+ 正文片段子串匹配。
- * 分词结果（tokens）在 D2 阶段由流水线注入，D1 阶段 tokens 为空，
- * 因此这里以"原文子串"为主通道 —— 这正是设计文档里要求的兜底路径。
+ * 两路并用：
+ *   1. **分词匹配** —— 查询串经词典最大匹配切词后与片段 tokens 求交，权重高
+ *   2. **原文子串兜底** —— 未登录词、错字、单字输入也能命中，权重低
+ *
+ * 片段在首次检索时一次性读进内存：80 条档案约 1500 个片段、不足 1MB，
+ * 换取每次检索的零 IO 与更细的打分能力。
  */
 export class SearchService {
-  /** 判断查询串是否命中某个文本，返回命中位置（-1 表示未命中） */
+  private static chunks: ChunkRow[] | undefined = undefined
+  private static tokenizer: TextTokenizer | undefined = undefined
+
+  /** 预热：加载片段与词表（幂等） */
+  static async ready(context: common.Context): Promise<void> {
+    await HeritageDao.ready(context)
+    if (SearchService.chunks !== undefined && SearchService.tokenizer !== undefined) {
+      return
+    }
+
+    const vocabBytes: Uint8Array = await context.resourceManager.getRawFileContent('data/vocab.json')
+    SearchService.tokenizer = TextTokenizer.fromVocabBytes(vocabBytes)
+
+    const store: relationalStore.RdbStore = await DataImportService.open(context)
+    const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates(Tables.CHUNKS)
+    const rs: relationalStore.ResultSet = await store.query(predicates, [
+      'item_id',
+      'section',
+      'text',
+      'tokens',
+    ])
+    const itemCol: number = rs.getColumnIndex('item_id')
+    const sectionCol: number = rs.getColumnIndex('section')
+    const textCol: number = rs.getColumnIndex('text')
+    const tokensCol: number = rs.getColumnIndex('tokens')
+
+    const loaded: ChunkRow[] = []
+    while (rs.goToNextRow()) {
+      const rawTokens: string = rs.getString(tokensCol)
+      loaded.push({
+        itemId: rs.getString(itemCol),
+        section: rs.getString(sectionCol),
+        text: rs.getString(textCol),
+        tokens: rawTokens.length > 0 ? rawTokens.split(' ') : [],
+      })
+    }
+    rs.close()
+    SearchService.chunks = loaded
+  }
+
   private static indexOf(haystack: string, needle: string): number {
     return haystack.toLowerCase().indexOf(needle.toLowerCase())
   }
@@ -100,42 +151,43 @@ export class SearchService {
     return { score, reason: reasons.length > 0 ? reasons[0] : '', snippet }
   }
 
-  /** 正文片段命中（走 RDB 的 LIKE，避免把全部正文读进内存） */
-  private static async scoreChunks(
-    context: common.Context,
-    query: string
-  ): Promise<Map<string, ChunkHit>> {
-    const store: relationalStore.RdbStore = await DataImportService.open(context)
-    const pattern: string = `%${query}%`
-    const rs: relationalStore.ResultSet = await store.querySql(
-      `SELECT item_id, section, text FROM ${Tables.CHUNKS} WHERE text LIKE ? LIMIT 60`,
-      [pattern]
-    )
-
+  /** 正文片段命中：分词匹配（高权重）+ 子串兜底（低权重） */
+  private static scoreChunks(query: string, queryTokens: string[]): Map<string, ChunkHit> {
     const hits: Map<string, ChunkHit> = new Map<string, ChunkHit>()
-    const itemCol: number = rs.getColumnIndex('item_id')
-    const sectionCol: number = rs.getColumnIndex('section')
-    const textCol: number = rs.getColumnIndex('text')
-    while (rs.goToNextRow()) {
-      const itemId: string = rs.getString(itemCol)
-      const text: string = rs.getString(textCol)
-      const at: number = SearchService.indexOf(text, query)
-      const hit: ChunkHit = {
-        itemId,
-        section: rs.getString(sectionCol),
-        snippet: SearchService.snippet(text, at >= 0 ? at : 0, query.length),
+    const chunks: ChunkRow[] = SearchService.chunks !== undefined ? SearchService.chunks : []
+
+    for (const chunk of chunks) {
+      let tokenHits: number = 0
+      for (const qt of queryTokens) {
+        if (qt.length >= 2 && chunk.tokens.includes(qt)) {
+          tokenHits += 1
+        }
       }
-      if (!hits.has(itemId)) {
-        hits.set(itemId, hit)
+
+      const subAt: number = SearchService.indexOf(chunk.text, query)
+      const matched: boolean = tokenHits > 0 || subAt >= 0
+      if (!matched) {
+        continue
+      }
+
+      const base: number = tokenHits * 22 + (subAt >= 0 ? 18 : 0)
+      const existing: ChunkHit | undefined = hits.get(chunk.itemId)
+      if (existing === undefined || base > existing.weight) {
+        hits.set(chunk.itemId, {
+          itemId: chunk.itemId,
+          section: chunk.section,
+          snippet: SearchService.snippet(chunk.text, subAt >= 0 ? subAt : 0, query.length),
+          weight: base,
+          tokenHits,
+        })
       }
     }
-    rs.close()
     return hits
   }
 
   /**
-   * 执行检索。
-   * 结果按分数降序；同分时优先"字段命中"的条目。
+   * 执行检索。结果按分数降序。
+   * 查询串与筛选条件在函数入口即锁定，避免异步过程中状态变化导致结果与展示不一致。
    */
   static async search(
     context: common.Context,
@@ -143,14 +195,13 @@ export class SearchService {
     filter?: HeritageFilter
   ): Promise<SearchHit[]> {
     const trimmed: string = query.trim()
-    await HeritageDao.ready(context)
+    await SearchService.ready(context)
 
-    // 无关键词时退化为纯筛选
     const candidates: HeritageSummary[] = HeritageDao.list(filter)
     if (trimmed.length === 0) {
-      const result: SearchHit[] = []
+      const filtered: SearchHit[] = []
       for (const c of candidates) {
-        result.push({
+        filtered.push({
           itemId: c.id,
           name: c.name,
           city: c.city as string,
@@ -162,12 +213,14 @@ export class SearchService {
           reason: '符合筛选条件',
         })
       }
-      return result.slice(0, MAX_HITS)
+      return filtered.slice(0, MAX_HITS)
     }
 
-    const chunkHits: Map<string, ChunkHit> = await SearchService.scoreChunks(context, trimmed)
-    const scored: SearchHit[] = []
+    const tokenizer: TextTokenizer | undefined = SearchService.tokenizer
+    const queryTokens: string[] = tokenizer !== undefined ? tokenizer.tokenize(trimmed) : [trimmed]
+    const chunkHits: Map<string, ChunkHit> = SearchService.scoreChunks(trimmed, queryTokens)
 
+    const scored: SearchHit[] = []
     for (const summary of candidates) {
       const item: HeritageItem | undefined = HeritageDao.detail(summary.id)
       if (item === undefined) {
@@ -182,13 +235,13 @@ export class SearchService {
       let reason: string = fieldScore.reason
 
       if (chunk !== undefined) {
-        score += 30
+        score += chunk.weight
         channel = channel === 'field' ? 'both' : 'text'
         if (snippet.length === 0) {
           snippet = chunk.snippet
         }
         if (reason.length === 0) {
-          reason = '正文命中'
+          reason = chunk.tokenHits > 0 ? `正文含「${trimmed}」` : '正文命中'
         }
       }
 
@@ -222,4 +275,6 @@ interface ChunkHit {
   readonly itemId: string
   readonly section: string
   readonly snippet: string
+  readonly weight: number
+  readonly tokenHits: number
 }

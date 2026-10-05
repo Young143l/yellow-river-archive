@@ -10,7 +10,15 @@ import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { Chunk, GraphEdge, GraphNode, HeritageItem, PresetMeta, SimilarEntry } from '@yra/shared'
+import type {
+  Chunk,
+  GraphEdge,
+  GraphNode,
+  HeritageItem,
+  PresetMeta,
+  SimilarEntry,
+  VocabEntry,
+} from '@yra/shared'
 
 /** 流水线自身版本，写入 meta 便于排查产物来源 */
 const PIPELINE_VERSION: string = '0.1.0'
@@ -21,6 +29,7 @@ export interface ExportInput {
   readonly nodes: readonly GraphNode[]
   readonly edges: readonly GraphEdge[]
   readonly similar: readonly SimilarEntry[]
+  readonly vocab: readonly VocabEntry[]
   readonly imageCount: number
   readonly outDir: string
   readonly now?: Date
@@ -58,6 +67,7 @@ export async function exportPreset(input: ExportInput): Promise<ExportResult> {
     itemCount: input.items.length,
     chunkCount: input.chunks.length,
     imageCount: input.imageCount,
+    vocabSize: input.vocab.length,
     sourceDeclarations: Array.from(sourceTitles).sort(),
     pipelineVersion: PIPELINE_VERSION,
   }
@@ -70,6 +80,7 @@ export async function exportPreset(input: ExportInput): Promise<ExportResult> {
       content: JSON.stringify({ nodes: input.nodes, edges: input.edges }, null, 2),
     },
     { name: 'similar.json', content: JSON.stringify({ entries: input.similar }, null, 2) },
+    { name: 'vocab.json', content: JSON.stringify({ entries: input.vocab }, null, 2) },
     { name: 'meta.json', content: JSON.stringify(meta, null, 2) },
   ]
 
