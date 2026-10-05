@@ -14,6 +14,7 @@
     "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md,yaml,yml}\"",
     "data:embed": "pnpm --filter @yra/pipeline run embed",
+    "env:init": "pnpm --filter @yra/pipeline run env:init",
     "ai:check": "pnpm --filter @yra/pipeline run ai:check",
     "gen:arkts": "pnpm --filter @yra/gen run gen",
     "data:build": "pnpm --filter @yra/pipeline run build",

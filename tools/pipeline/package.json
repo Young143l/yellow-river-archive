@@ -11,7 +11,8 @@
     "verify": "tsx src/index.ts verify",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "ai:check": "tsx src/ai-check.ts",
-    "embed": "tsx src/index.ts embed"
+    "embed": "tsx src/index.ts embed",
+    "env:init": "tsx src/env-init.ts"
   },
   "dependencies": {
     "@yra/shared": "workspace:*",

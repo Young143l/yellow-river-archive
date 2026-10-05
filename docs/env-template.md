@@ -5,6 +5,17 @@
 
 ## 创建方式
 
+**推荐：用初始化脚本**（单行命令，不会像 heredoc 那样在粘贴时出问题）
+
+```bash
+cd <仓库根目录>
+pnpm env:init -- --dashscope=<百炼Key> --deepseek=<DeepSeekKey>
+```
+
+脚本会写入 `.env` 并回显脱敏后的 Key 用于核对；已有 `.env` 时需加 `--force` 才覆盖。
+
+**备选：手写文件**
+
 ```bash
 cd <仓库根目录>
 cat > .env <<'EOF'
@@ -20,6 +31,8 @@ RERANK_MODEL=gte-rerank-v2
 DEEPSEEK_MODEL=deepseek-chat
 EOF
 ```
+
+写完后用 `pnpm ai:check` 验证连通性。
 
 ## 变量说明
 
