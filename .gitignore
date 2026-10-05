@@ -54,5 +54,8 @@ packages/data/assets/img/**/thumb/
 *.log
 logs/
 
+# 真机验证截图（本地留存，用于设计方案 docx 的测试记录，不入版本库）
+.shots/
+
 # 测试与覆盖率
 coverage/

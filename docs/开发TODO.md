@@ -10,7 +10,7 @@
 
 | 阶段 | 已完成 | 总计 | 状态 |
 |---|---|---|---|
-| D0 地基 | 9 | 10 | 进行中（仅剩 D0-10 需真机） |
+| D0 地基 | 10 | 10 | **完成** |
 | D0-V 技术验证 | 0 | 5 | 待开始 |
 | D1 垂直切片 | 0 | 10 | 未开始 |
 | D2 数据工程 | 0 | 13 | 未开始 |
@@ -37,9 +37,13 @@
 | D0-7 | 建鸿蒙工程 `YellowRiverArchive`（`com.yellowriver.archive`，`compatibleSdkVersion` = 5.0.5(17)） | DevEco 工程可构建 | D0-2 | 完成 |
 | D0-8 | 工程目录规范落地：`pages/ components/ model/ service/ utils/ constants/ shared/` | 目录与占位文件 | D0-7 | 完成 |
 | D0-9 | 底部 Tab 路由骨架（首页 / 检索 / 图谱 / 助手 / 我的） | 可运行的空壳 App（`devecocli build` 成功） | D0-8 | 完成 |
-| D0-10 | 签名配置：`devecocli auth login` → `signature generate` → `devecocli run` 上真机 | 真机能跑空壳 | D0-9 | **阻塞**（无真机连接，见看板 B2） |
+| D0-10 | 签名配置：`devecocli auth login` → `signature generate` → `devecocli run` 上真机 | 真机能跑空壳 | D0-9 | 完成（华为畅享 90 Pro Max，`Smoke: PASS`） |
 
-**出口**：`devecocli run` 输出 `Smoke: PASS`；`packages/shared` 的类型两端都能引到。
+**出口**：`devecocli run` 输出 `Smoke: PASS` ✓；`packages/shared` 的类型两端都能引到 ✓。**D0 阶段已全部完成。**
+
+> 验证记录：真机 华为畅享 90 Pro Max（API 26），应用安装并启动成功，五个 Tab 正常渲染（截图存本地 `.shots/d0-tab.png`）。
+>
+> 签名材料由 `devecocli signature generate` 生成，写入 `build-profile.json5`（加密密码）与 `~/.ohos/config/`（证书）。**其他队友首次构建前需自己跑一次 `devecocli auth login` + `signature generate`**，因为证书是绑定账号与本机路径的。
 
 > D0 已提前完成的一件事：发现端侧 ArkTS 是 TypeScript 的**子集**，据此重写了共享契约（见 [决策日志 ADR-019](./decisions.md)），42 个编译错误归零。
 
