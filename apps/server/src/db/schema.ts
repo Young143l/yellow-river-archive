@@ -9,7 +9,9 @@
  */
 
 export const SCHEMA_STATEMENTS: string[] = [
-  // ---- 条目（检索与列表用，非完整档案）----
+  // ---- 条目 ----
+  // 存法取舍：筛选/排序需要的字段单独建列，其余全部丢 payload JSON。
+  // 80 条量级下不需要再拆表；payload 直接就是端侧要的 HeritageItem 形状。
   `CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -19,7 +21,9 @@ export const SCHEMA_STATEMENTS: string[] = [
     era_max INTEGER,
     types TEXT NOT NULL,
     level TEXT,
-    summary TEXT NOT NULL
+    summary TEXT NOT NULL,
+    cover TEXT,
+    payload TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_items_city ON items(city)`,
   `CREATE INDEX IF NOT EXISTS idx_items_era ON items(era)`,

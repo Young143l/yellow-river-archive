@@ -78,6 +78,13 @@ export interface ItemListResponse {
   readonly items: readonly HeritageSummary[]
 }
 
+/**
+ * 条目详情响应。
+ *
+ * 完整条目（ADR-024 修正了 ADR-010 的边界：文字可以在服务端，**只有图片二进制**
+ * 属于端侧专属）。因此这里是完整的 HeritageItem，图片字段只是描述符（含授权信息），
+ * 不包含二进制。
+ */
 export type ItemDetailResponse = HeritageItem
 
 /** 关联推荐 */

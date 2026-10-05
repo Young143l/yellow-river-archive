@@ -4,6 +4,8 @@ import { readServerConfig, type ServerConfig } from './config'
 import { getMeta, openDb } from './db/index'
 import { importPreset } from './db/import'
 import { MetaKeys } from './db/schema'
+import { itemsRoutes } from './routes/items'
+import { VectorStore } from './search/vectors'
 
 export interface BuildOptions {
   /** 覆盖配置（测试用） */
@@ -29,6 +31,10 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
     )
   }
 
+  // ---- 向量库（启动时全部载入内存，暴力检索，见 ADR-005）----
+  const vectors: VectorStore = VectorStore.load(db)
+  app.log.info(`向量库就绪：${vectors.size} 条 / ${vectors.dimension} 维`)
+
   // ---- 健康检查 ----
   app.get('/api/health', async () => {
     return {
@@ -40,8 +46,12 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
       embeddingModel: getMeta(db, MetaKeys.EMBEDDING_MODEL) ?? '',
       embeddingDim: Number.parseInt(getMeta(db, MetaKeys.EMBEDDING_DIM) ?? '0', 10),
       uptimeMs: Math.round(process.uptime() * 1000),
+      vectorCount: vectors.size,
     }
   })
+
+  // ---- 业务路由 ----
+  await app.register(itemsRoutes, { db, vectors })
 
   return app
 }

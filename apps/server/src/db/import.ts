@@ -41,6 +41,7 @@ interface PresetItem {
   readonly types: string[]
   readonly level?: string
   readonly summary: string
+  readonly images?: { readonly path?: string }[]
 }
 
 interface PresetChunk {
@@ -136,8 +137,8 @@ export function importPreset(db: Db, presetDir: string, embeddingsDir: string): 
     }
 
     const insertItem = db.prepare(
-      `INSERT INTO items (id, name, city, era, era_min, era_max, types, level, summary)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO items (id, name, city, era, era_min, era_max, types, level, summary, cover, payload)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     for (const item of items) {
       insertItem.run(
@@ -149,7 +150,10 @@ export function importPreset(db: Db, presetDir: string, embeddingsDir: string): 
         item.eraRange?.[1] ?? 0,
         JSON.stringify(item.types),
         item.level ?? '',
-        item.summary
+        item.summary,
+        // 主图只存路径引用 —— 图片二进制是端侧专属（ADR-024）
+        item.images?.[0]?.path ?? '',
+        JSON.stringify(item)
       )
     }
 
