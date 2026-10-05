@@ -19,6 +19,13 @@ import { computeDistribution, loadSites, type Distribution, type LoadIssue } fro
 import { buildSimilar } from './similar'
 import { loadSitesDoc, reportSites, type SitesReport } from './sites'
 import {
+  lintAll,
+  lintChunks,
+  lintVocab,
+  type LintIssue,
+  type LintReport,
+} from './lint'
+import {
   buildVocab,
   extractTermsFromItems,
   loadLexicon,
@@ -30,6 +37,7 @@ const HERE: string = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT: string = resolve(HERE, '..', '..', '..')
 const SITES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sites')
 const SITES_INDEX: string = join(REPO_ROOT, 'packages', 'data', 'sites.yaml')
+const SOURCES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sources')
 const LEXICON: string = join(REPO_ROOT, 'packages', 'data', 'lexicon.txt')
 
 /** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
@@ -71,8 +79,74 @@ function printDistribution(d: Distribution): void {
   console.log(`  配图总数  ${d.imageCount}  ｜  含诗词条目  ${d.poemCovered}`)
 }
 
+function printLintIssues(issues: readonly LintIssue[], level: 'error' | 'warning'): void {
+  const selected: LintIssue[] = issues.filter((i) => i.level === level)
+  if (selected.length === 0) {
+    return
+  }
+  console.log('')
+  console.log(level === 'error' ? '[lint] 硬错误（必须修）' : '[lint] 软提醒（建议修）')
+  for (const issue of selected) {
+    console.log(`  ${issue.target} ・ ${issue.field}  ${issue.message}`)
+  }
+}
+
 async function main(): Promise<void> {
   const command: string = process.argv[2] ?? 'build'
+
+  // lint 子命令：质量体检，不写任何文件
+  if (command === 'lint') {
+    const phase: 'dev' | 'final' = process.argv.includes('--final') ? 'final' : 'dev'
+    const loaded = await loadSites(SITES_DIR)
+    const doc = await loadSitesDoc(SITES_INDEX)
+
+    const report: LintReport = await lintAll({
+      items: loaded.items,
+      allocation: doc.meta.allocation,
+      sourcesDir: SOURCES_DIR,
+      contentDir: SITES_DIR,
+      indexEntries: doc.sites,
+      phase,
+    })
+
+    const chunks = buildChunks(loaded.items)
+    const lexicon: string[] = await loadLexicon(LEXICON)
+    const allTerms: string[] = Array.from(
+      new Set<string>([...lexicon, ...extractTermsFromItems(loaded.items)])
+    )
+    const tokenizer: Tokenizer = Tokenizer.create(allTerms)
+    const tokenized = chunks.map((c) => ({ ...c, tokens: tokenizer.tokenize(c.text) }))
+    const vocab: VocabEntry[] = buildVocab(
+      tokenized.map((c) => [...c.tokens]),
+      VOCAB_TOP_N
+    )
+
+    const extras: LintIssue[] = [...lintChunks(tokenized), ...lintVocab(vocab)]
+    const allIssues: LintIssue[] = [...report.issues, ...extras]
+    const errorCount: number = allIssues.filter((i) => i.level === 'error').length
+    const warningCount: number = allIssues.filter((i) => i.level === 'warning').length
+
+    console.log('[lint] 数据质检')
+    console.log(`  阶段 ${phase === 'final' ? '交付期（覆盖度按硬错误计）' : '开发期（覆盖度按提醒计）'}`)
+    console.log(`  条目 ${report.stats.items} 条 ｜ 有来源摘录 ${report.stats.itemsWithSource} 条`)
+    console.log(`  分块 ${tokenized.length} 个 ｜ 词表 ${vocab.length} 词`)
+    console.log(`  查重命中 ${report.stats.ngramHits} 处 ｜ 含占位图条目 ${report.stats.placeholderItems} 条`)
+    if (report.stats.itemsWithSource === 0) {
+      console.log('')
+      console.log('  注意：尚无来源摘录（packages/data/sources/<id>.md），')
+      console.log('        本次未执行 n-gram 查重。写作阶段必须补齐摘录文件，否则无法把住抄袭线。')
+    }
+
+    printLintIssues(allIssues, 'error')
+    printLintIssues(allIssues, 'warning')
+
+    console.log('')
+    console.log(`[lint] 硬错误 ${errorCount} 项，软提醒 ${warningCount} 项`)
+    if (errorCount > 0) {
+      process.exit(1)
+    }
+    return
+  }
 
   // sites 子命令：只体检清单台账，不碰正文
   if (command === 'sites') {
