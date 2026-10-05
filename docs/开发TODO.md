@@ -13,7 +13,7 @@
 | D0 地基 | 10 | 10 | **完成** |
 | D0-V 技术验证 | 5 | 5 | **完成**（跨设备同步待第二台设备补验） |
 | D1 垂直切片 | 10 | 10 | **完成** |
-| D2 数据工程 | 0 | 13 | 未开始 |
+| D2 数据工程 | 3 | 13 | 进行中 |
 | D3 后端与检索 | 0 | 12 | 未开始 |
 | D4 同步 | 0 | 11 | 未开始 |
 | D5 AI 助手 | 0 | 5 | 未开始 |
@@ -98,21 +98,21 @@
 
 ## D2 数据工程（可与 D3 并行）
 
-| # | 任务 | 产出 | 依赖 |
+| # | 任务 | 产出 | 状态 |
 |---|---|---|---|
-| D2-1 | 联网核实 80 条清单（城市 / 年代 / 类型 / 级别 / 坐标） | `packages/data/sites.yaml` | — |
-| D2-2 | 写 `docs/data-spec.md`（字段 / 字数 / 来源 / 改写红线 / 图片规范 / 分工） | 数据规范 | D2-1 |
-| D2-3 | `tools/pipeline/chunk.ts`：语义分块（300-500 字，overlap 60） | 分块产物 | D2-1 |
-| D2-4 | `tools/pipeline/tokenize.ts`：jieba 分词 + 自定义词典 + 词表导出 | `tokens` 与 `vocab.json` | D2-3 |
-| D2-5 | `tools/pipeline/embed.ts`：批量 + 并发 + 退避重试 + sha256 缓存 + 断点续跑 | 向量文件 | D2-3 |
-| D2-6 | `tools/pipeline/graph.ts`：三元组生成 + 实体归一化 | `graph.json` | D2-1 |
-| D2-7 | `tools/pipeline/similar.ts`：条目间 top-20 相似度预计算 | `similar.json` | D2-5 |
-| D2-8 | `tools/pipeline/lint.ts`：schema / 字数 / license / 分布 / n-gram 查重 | 质检报告 | D2-1 |
-| D2-9 | `tools/pipeline/draft.ts`：AI 起草流水线（输出草稿，禁止直入库） | 草稿产出 | D2-2 |
-| D2-10 | 首批 20 条：来源摘录 → 起草 → 改写 → 交叉校对 | 20 条终稿 | D2-9 |
-| D2-11 | 图片采集：80 张主图，压缩转 WebP，登记 license 台账 | `assets/img/` + `license.md` | D2-10 |
-| D2-12 | 剩余 60 条按城市包干完成 | 80 条终稿 | D2-10 |
-| D2-13 | 全量质检 + 入库导出（端侧包 + 服务端索引） | 两份产物 | D2-12, D2-8 |
+| D2-1 | 核实 80 条清单（城市 / 年代 / 类型 / 级别） | `packages/data/sites.yaml` + `pnpm data:sites` 体检命令 | 完成（置信度已标注，逐项核对待人工） |
+| D2-2 | 写 `docs/data-spec.md`（字段 / 字数 / 来源 / 改写红线 / 图片规范 / 分工与核对） | 数据规范 | 完成 |
+| D2-3 | `tools/pipeline/chunk.ts`：语义分块 | 分块产物 | **D1-2 已完成** |
+| D2-4 | `tools/pipeline/tokenize.ts`：jieba 分词 + 自定义词典 + 词表导出 | `tokens` 与 `vocab.json` | 待开始 |
+| D2-5 | `tools/pipeline/embed.ts`：批量 + 并发 + 退避重试 + sha256 缓存 + 断点续跑 | 向量文件 | 待开始（需百炼 Key） |
+| D2-6 | `tools/pipeline/graph.ts`：三元组生成 + 实体归一化 | `graph.json` | **D1-2 已完成基础版** |
+| D2-7 | `tools/pipeline/similar.ts`：条目间 top-20 相似度预计算 | `similar.json` | **D1-2 已完成基础版**（待并入向量相似度） |
+| D2-8 | `tools/pipeline/lint.ts`：schema / 字数 / license / 分布 / n-gram 查重 | 质检报告 | 待开始 |
+| D2-9 | `tools/pipeline/draft.ts`：AI 起草流水线（输出草稿，禁止直入库） | 草稿产出 | 待开始（需 DeepSeek Key） |
+| D2-10 | 首批 20 条：来源摘录 → 起草 → 改写 → 交叉校对 | 20 条终稿 | 待开始（已写 5 条样例） |
+| D2-11 | 图片采集：80 张主图，压缩转 WebP，登记 license 台账 | `assets/img/` + `license.md` | 待开始 |
+| D2-12 | 剩余 60 条按城市包干完成 | 80 条终稿 | 待开始 |
+| D2-13 | 全量质检 + 入库导出（端侧包 + 服务端索引） | 两份产物 | 待开始 |
 
 **出口**：80 条通过质检，license 齐全，端侧包 ≤55MB。
 
