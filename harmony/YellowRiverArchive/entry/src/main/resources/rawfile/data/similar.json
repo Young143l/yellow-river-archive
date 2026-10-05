@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "itemId": "kf-kaibaosi-ta",
+      "neighbors": []
+    },
+    {
+      "itemId": "ly-erlitou",
+      "neighbors": []
+    },
+    {
+      "itemId": "py-xishuipo",
+      "neighbors": [
+        {
+          "id": "sms-yangshao",
+          "score": 0.67,
+          "reason": "同属仰韶时期"
+        }
+      ]
+    },
+    {
+      "itemId": "sms-yangshao",
+      "neighbors": [
+        {
+          "id": "py-xishuipo",
+          "score": 0.67,
+          "reason": "同属仰韶时期"
+        }
+      ]
+    },
+    {
+      "itemId": "zz-gongyi-yao",
+      "neighbors": []
+    }
+  ]
+}

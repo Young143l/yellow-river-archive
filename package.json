@@ -14,7 +14,9 @@
     "format": "prettier --write \"**/*.{ts,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md,yaml,yml}\"",
     "gen:arkts": "pnpm --filter @yra/gen run gen",
-    "data:status": "pnpm --filter @yra/pipeline run status"
+    "data:build": "pnpm --filter @yra/pipeline run build",
+    "data:status": "pnpm --filter @yra/pipeline run status",
+    "data:verify": "pnpm --filter @yra/pipeline run verify"
   },
   "devDependencies": {
     "@types/node": "26.6.4",

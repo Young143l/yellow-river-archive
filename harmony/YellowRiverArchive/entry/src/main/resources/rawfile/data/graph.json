@@ -1,0 +1,862 @@
+{
+  "nodes": [
+    {
+      "id": "kf-kaibaosi-ta",
+      "type": "Site",
+      "name": "开宝寺塔",
+      "aliases": [
+        "铁塔",
+        "开封铁塔",
+        "开宝寺琉璃塔"
+      ],
+      "rank": 0.9
+    },
+    {
+      "id": "city:开封",
+      "type": "City",
+      "name": "开封",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "era:宋",
+      "type": "Era",
+      "name": "宋",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "type:古建筑",
+      "type": "Type",
+      "name": "古建筑",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "kf-kaibaosi-ta#1",
+      "type": "Artifact",
+      "name": "琉璃佛像砖",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:铁塔公园内陈列",
+      "type": "Museum",
+      "name": "铁塔公园内陈列",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "figure:喻皓",
+      "type": "Figure",
+      "name": "喻皓",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:kf-kaibaosi-ta:1044",
+      "type": "Event",
+      "name": "灵感木塔毁于雷火",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:kf-kaibaosi-ta:1049",
+      "type": "Event",
+      "name": "改建琉璃砖塔落成",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:kf-kaibaosi-ta:1961",
+      "type": "Event",
+      "name": "列为第一批全国重点文物保护单位",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "poem:kf-kaibaosi-ta:0",
+      "type": "Poem",
+      "name": "铁塔燃灯",
+      "aliases": [
+        "佚名"
+      ],
+      "rank": 0.1
+    },
+    {
+      "id": "ly-erlitou",
+      "type": "Site",
+      "name": "二里头遗址",
+      "aliases": [
+        "偃师二里头",
+        "二里头文化遗址"
+      ],
+      "rank": 1
+    },
+    {
+      "id": "city:洛阳",
+      "type": "City",
+      "name": "洛阳",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "era:夏商",
+      "type": "Era",
+      "name": "夏商",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "type:都城遗址",
+      "type": "Type",
+      "name": "都城遗址",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "ly-erlitou#1",
+      "type": "Artifact",
+      "name": "乳钉纹铜爵",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:二里头夏都遗址博物馆",
+      "type": "Museum",
+      "name": "二里头夏都遗址博物馆",
+      "aliases": [],
+      "rank": 0.3
+    },
+    {
+      "id": "ly-erlitou#2",
+      "type": "Artifact",
+      "name": "绿松石龙形器",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "ly-erlitou#3",
+      "type": "Artifact",
+      "name": "七孔玉刀",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "figure:徐旭生",
+      "type": "Figure",
+      "name": "徐旭生",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:ly-erlitou:1959",
+      "type": "Event",
+      "name": "遗址被发现",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:ly-erlitou:1988",
+      "type": "Event",
+      "name": "列为全国重点文物保护单位",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:ly-erlitou:2019",
+      "type": "Event",
+      "name": "二里头夏都遗址博物馆开放",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "py-xishuipo",
+      "type": "Site",
+      "name": "西水坡遗址",
+      "aliases": [
+        "濮阳西水坡遗址",
+        "中华第一龙出土地"
+      ],
+      "rank": 1
+    },
+    {
+      "id": "city:濮阳",
+      "type": "City",
+      "name": "濮阳",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "era:仰韶",
+      "type": "Era",
+      "name": "仰韶",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "type:聚落遗址",
+      "type": "Type",
+      "name": "聚落遗址",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "type:墓葬群",
+      "type": "Type",
+      "name": "墓葬群",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "py-xishuipo#1",
+      "type": "Artifact",
+      "name": "蚌塑龙",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:濮阳市博物馆",
+      "type": "Museum",
+      "name": "濮阳市博物馆",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "py-xishuipo#2",
+      "type": "Artifact",
+      "name": "蚌塑虎",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "figure:濮阳西水坡考古队",
+      "type": "Figure",
+      "name": "濮阳西水坡考古队",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:py-xishuipo:1987",
+      "type": "Event",
+      "name": "遗址发现并发掘",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:py-xishuipo:1995",
+      "type": "Event",
+      "name": "蚌塑龙被誉称\"中华第一龙\"",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:py-xishuipo:2013",
+      "type": "Event",
+      "name": "列为全国重点文物保护单位",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "sms-yangshao",
+      "type": "Site",
+      "name": "仰韶村遗址",
+      "aliases": [
+        "渑池仰韶村遗址",
+        "仰韶遗址"
+      ],
+      "rank": 1
+    },
+    {
+      "id": "city:三门峡",
+      "type": "City",
+      "name": "三门峡",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "sms-yangshao#1",
+      "type": "Artifact",
+      "name": "彩陶盆",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:渑池县仰韶文化博物馆",
+      "type": "Museum",
+      "name": "渑池县仰韶文化博物馆",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "sms-yangshao#2",
+      "type": "Artifact",
+      "name": "小口尖底瓶",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "figure:安特生",
+      "type": "Figure",
+      "name": "安特生",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:sms-yangshao:1921",
+      "type": "Event",
+      "name": "安特生主持首次发掘",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:sms-yangshao:1961",
+      "type": "Event",
+      "name": "列为第一批全国重点文物保护单位",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:sms-yangshao:2021",
+      "type": "Event",
+      "name": "仰韶村国家考古遗址公园开放",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "poem:sms-yangshao:0",
+      "type": "Poem",
+      "name": "渑池",
+      "aliases": [
+        "佚名"
+      ],
+      "rank": 0.1
+    },
+    {
+      "id": "zz-gongyi-yao",
+      "type": "Site",
+      "name": "巩义窑址",
+      "aliases": [
+        "巩县窑",
+        "黄冶三彩窑址"
+      ],
+      "rank": 0.9
+    },
+    {
+      "id": "city:郑州",
+      "type": "City",
+      "name": "郑州",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "era:汉唐",
+      "type": "Era",
+      "name": "汉唐",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "type:窑址",
+      "type": "Type",
+      "name": "窑址",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "zz-gongyi-yao#1",
+      "type": "Artifact",
+      "name": "三彩马",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:河南博物院",
+      "type": "Museum",
+      "name": "河南博物院",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "zz-gongyi-yao#2",
+      "type": "Artifact",
+      "name": "绞胎瓷枕",
+      "aliases": [],
+      "rank": 0.2
+    },
+    {
+      "id": "museum:河南省文物考古研究院",
+      "type": "Museum",
+      "name": "河南省文物考古研究院",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "figure:冯先铭",
+      "type": "Figure",
+      "name": "冯先铭",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:zz-gongyi-yao:2001",
+      "type": "Event",
+      "name": "列为全国重点文物保护单位",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "event:zz-gongyi-yao:2021",
+      "type": "Event",
+      "name": "黄冶三彩窑址展示馆开放",
+      "aliases": [],
+      "rank": 0.1
+    },
+    {
+      "id": "poem:zz-gongyi-yao:0",
+      "type": "Poem",
+      "name": "咏三彩",
+      "aliases": [
+        "佚名"
+      ],
+      "rank": 0.1
+    }
+  ],
+  "edges": [
+    {
+      "id": "e:kf-kaibaosi-ta|locatedIn|city:开封",
+      "from": "kf-kaibaosi-ta",
+      "to": "city:开封",
+      "rel": "locatedIn",
+      "weight": 1
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|belongsToEra|era:宋",
+      "from": "kf-kaibaosi-ta",
+      "to": "era:宋",
+      "rel": "belongsToEra",
+      "weight": 1
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|hasType|type:古建筑",
+      "from": "kf-kaibaosi-ta",
+      "to": "type:古建筑",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|unearthed|kf-kaibaosi-ta#1",
+      "from": "kf-kaibaosi-ta",
+      "to": "kf-kaibaosi-ta#1",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "塔身外壁的标准构件之一，砖面浮雕佛像，胎质灰白、施褐釉，是宋代琉璃工艺的代表。"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta#1|collectedAt|museum:铁塔公园内陈列",
+      "from": "kf-kaibaosi-ta#1",
+      "to": "museum:铁塔公园内陈列",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|relatedFigure|figure:喻皓",
+      "from": "kf-kaibaosi-ta",
+      "to": "figure:喻皓",
+      "rel": "relatedFigure",
+      "weight": 0.6,
+      "evidence": "北宋建筑工匠"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|occurredEvent|event:kf-kaibaosi-ta:1044",
+      "from": "kf-kaibaosi-ta",
+      "to": "event:kf-kaibaosi-ta:1044",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1044"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|occurredEvent|event:kf-kaibaosi-ta:1049",
+      "from": "kf-kaibaosi-ta",
+      "to": "event:kf-kaibaosi-ta:1049",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1049"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|occurredEvent|event:kf-kaibaosi-ta:1961",
+      "from": "kf-kaibaosi-ta",
+      "to": "event:kf-kaibaosi-ta:1961",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1961"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|hasPoem|poem:kf-kaibaosi-ta:0",
+      "from": "kf-kaibaosi-ta",
+      "to": "poem:kf-kaibaosi-ta:0",
+      "rel": "hasPoem",
+      "weight": 0.4
+    },
+    {
+      "id": "e:ly-erlitou|locatedIn|city:洛阳",
+      "from": "ly-erlitou",
+      "to": "city:洛阳",
+      "rel": "locatedIn",
+      "weight": 1
+    },
+    {
+      "id": "e:ly-erlitou|belongsToEra|era:夏商",
+      "from": "ly-erlitou",
+      "to": "era:夏商",
+      "rel": "belongsToEra",
+      "weight": 1
+    },
+    {
+      "id": "e:ly-erlitou|hasType|type:都城遗址",
+      "from": "ly-erlitou",
+      "to": "type:都城遗址",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:ly-erlitou|unearthed|ly-erlitou#1",
+      "from": "ly-erlitou",
+      "to": "ly-erlitou#1",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "迄今发现最早的青铜酒器之一，器身饰乳钉纹，被称为\"华夏第一爵\"。"
+    },
+    {
+      "id": "e:ly-erlitou#1|collectedAt|museum:二里头夏都遗址博物馆",
+      "from": "ly-erlitou#1",
+      "to": "museum:二里头夏都遗址博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:ly-erlitou|unearthed|ly-erlitou#2",
+      "from": "ly-erlitou",
+      "to": "ly-erlitou#2",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "由两千余片绿松石片粘嵌而成，全长约六十余厘米，是研究早期龙崇拜的重要物证。"
+    },
+    {
+      "id": "e:ly-erlitou#2|collectedAt|museum:二里头夏都遗址博物馆",
+      "from": "ly-erlitou#2",
+      "to": "museum:二里头夏都遗址博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:ly-erlitou|unearthed|ly-erlitou#3",
+      "from": "ly-erlitou",
+      "to": "ly-erlitou#3",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "长条形玉制礼器，器身钻有七个圆孔，是二里头文化玉器中的代表器形。"
+    },
+    {
+      "id": "e:ly-erlitou#3|collectedAt|museum:二里头夏都遗址博物馆",
+      "from": "ly-erlitou#3",
+      "to": "museum:二里头夏都遗址博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:ly-erlitou|relatedFigure|figure:徐旭生",
+      "from": "ly-erlitou",
+      "to": "figure:徐旭生",
+      "rel": "relatedFigure",
+      "weight": 0.6,
+      "evidence": "考古学家"
+    },
+    {
+      "id": "e:ly-erlitou|occurredEvent|event:ly-erlitou:1959",
+      "from": "ly-erlitou",
+      "to": "event:ly-erlitou:1959",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1959"
+    },
+    {
+      "id": "e:ly-erlitou|occurredEvent|event:ly-erlitou:1988",
+      "from": "ly-erlitou",
+      "to": "event:ly-erlitou:1988",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1988"
+    },
+    {
+      "id": "e:ly-erlitou|occurredEvent|event:ly-erlitou:2019",
+      "from": "ly-erlitou",
+      "to": "event:ly-erlitou:2019",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "2019"
+    },
+    {
+      "id": "e:py-xishuipo|locatedIn|city:濮阳",
+      "from": "py-xishuipo",
+      "to": "city:濮阳",
+      "rel": "locatedIn",
+      "weight": 1
+    },
+    {
+      "id": "e:py-xishuipo|belongsToEra|era:仰韶",
+      "from": "py-xishuipo",
+      "to": "era:仰韶",
+      "rel": "belongsToEra",
+      "weight": 1
+    },
+    {
+      "id": "e:py-xishuipo|hasType|type:聚落遗址",
+      "from": "py-xishuipo",
+      "to": "type:聚落遗址",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:py-xishuipo|hasType|type:墓葬群",
+      "from": "py-xishuipo",
+      "to": "type:墓葬群",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:py-xishuipo|unearthed|py-xishuipo#1",
+      "from": "py-xishuipo",
+      "to": "py-xishuipo#1",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "以蚌壳逐片摆塑而成的龙形图案，长一米七〇余，是迄今发现年代最早的龙形象之一。"
+    },
+    {
+      "id": "e:py-xishuipo#1|collectedAt|museum:濮阳市博物馆",
+      "from": "py-xishuipo#1",
+      "to": "museum:濮阳市博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:py-xishuipo|unearthed|py-xishuipo#2",
+      "from": "py-xishuipo",
+      "to": "py-xishuipo#2",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "与蚌塑龙相对摆塑于墓主人西侧，作行走状，与龙共同构成一组完整的墓上遗迹。"
+    },
+    {
+      "id": "e:py-xishuipo#2|collectedAt|museum:濮阳市博物馆",
+      "from": "py-xishuipo#2",
+      "to": "museum:濮阳市博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:py-xishuipo|relatedFigure|figure:濮阳西水坡考古队",
+      "from": "py-xishuipo",
+      "to": "figure:濮阳西水坡考古队",
+      "rel": "relatedFigure",
+      "weight": 0.6,
+      "evidence": "考古发掘团队"
+    },
+    {
+      "id": "e:py-xishuipo|occurredEvent|event:py-xishuipo:1987",
+      "from": "py-xishuipo",
+      "to": "event:py-xishuipo:1987",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1987"
+    },
+    {
+      "id": "e:py-xishuipo|occurredEvent|event:py-xishuipo:1995",
+      "from": "py-xishuipo",
+      "to": "event:py-xishuipo:1995",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1995"
+    },
+    {
+      "id": "e:py-xishuipo|occurredEvent|event:py-xishuipo:2013",
+      "from": "py-xishuipo",
+      "to": "event:py-xishuipo:2013",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "2013"
+    },
+    {
+      "id": "e:sms-yangshao|locatedIn|city:三门峡",
+      "from": "sms-yangshao",
+      "to": "city:三门峡",
+      "rel": "locatedIn",
+      "weight": 1
+    },
+    {
+      "id": "e:sms-yangshao|belongsToEra|era:仰韶",
+      "from": "sms-yangshao",
+      "to": "era:仰韶",
+      "rel": "belongsToEra",
+      "weight": 1
+    },
+    {
+      "id": "e:sms-yangshao|hasType|type:聚落遗址",
+      "from": "sms-yangshao",
+      "to": "type:聚落遗址",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:sms-yangshao|unearthed|sms-yangshao#1",
+      "from": "sms-yangshao",
+      "to": "sms-yangshao#1",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "红陶质，器表施黑彩，绘弧线三角纹与花瓣纹，是仰韶文化彩陶的典型器类。"
+    },
+    {
+      "id": "e:sms-yangshao#1|collectedAt|museum:渑池县仰韶文化博物馆",
+      "from": "sms-yangshao#1",
+      "to": "museum:渑池县仰韶文化博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:sms-yangshao|unearthed|sms-yangshao#2",
+      "from": "sms-yangshao",
+      "to": "sms-yangshao#2",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "仰韶文化代表性汲水器，小口、深腹、尖底，重心设计便于倾倒取水。"
+    },
+    {
+      "id": "e:sms-yangshao#2|collectedAt|museum:渑池县仰韶文化博物馆",
+      "from": "sms-yangshao#2",
+      "to": "museum:渑池县仰韶文化博物馆",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:sms-yangshao|relatedFigure|figure:安特生",
+      "from": "sms-yangshao",
+      "to": "figure:安特生",
+      "rel": "relatedFigure",
+      "weight": 0.6,
+      "evidence": "瑞典地质学家、考古学家"
+    },
+    {
+      "id": "e:sms-yangshao|occurredEvent|event:sms-yangshao:1921",
+      "from": "sms-yangshao",
+      "to": "event:sms-yangshao:1921",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1921"
+    },
+    {
+      "id": "e:sms-yangshao|occurredEvent|event:sms-yangshao:1961",
+      "from": "sms-yangshao",
+      "to": "event:sms-yangshao:1961",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "1961"
+    },
+    {
+      "id": "e:sms-yangshao|occurredEvent|event:sms-yangshao:2021",
+      "from": "sms-yangshao",
+      "to": "event:sms-yangshao:2021",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "2021"
+    },
+    {
+      "id": "e:sms-yangshao|hasPoem|poem:sms-yangshao:0",
+      "from": "sms-yangshao",
+      "to": "poem:sms-yangshao:0",
+      "rel": "hasPoem",
+      "weight": 0.4
+    },
+    {
+      "id": "e:zz-gongyi-yao|locatedIn|city:郑州",
+      "from": "zz-gongyi-yao",
+      "to": "city:郑州",
+      "rel": "locatedIn",
+      "weight": 1
+    },
+    {
+      "id": "e:zz-gongyi-yao|belongsToEra|era:汉唐",
+      "from": "zz-gongyi-yao",
+      "to": "era:汉唐",
+      "rel": "belongsToEra",
+      "weight": 1
+    },
+    {
+      "id": "e:zz-gongyi-yao|hasType|type:窑址",
+      "from": "zz-gongyi-yao",
+      "to": "type:窑址",
+      "rel": "hasType",
+      "weight": 0.8
+    },
+    {
+      "id": "e:zz-gongyi-yao|unearthed|zz-gongyi-yao#1",
+      "from": "zz-gongyi-yao",
+      "to": "zz-gongyi-yao#1",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "唐三彩代表性雕塑作品，马身健硕，釉色以黄、绿、白三色交融，常见于唐代墓葬随葬。"
+    },
+    {
+      "id": "e:zz-gongyi-yao#1|collectedAt|museum:河南博物院",
+      "from": "zz-gongyi-yao#1",
+      "to": "museum:河南博物院",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:zz-gongyi-yao|unearthed|zz-gongyi-yao#2",
+      "from": "zz-gongyi-yao",
+      "to": "zz-gongyi-yao#2",
+      "rel": "unearthed",
+      "weight": 1,
+      "evidence": "用两色或多色瓷土揉合拉坯成型，器表呈羽毛状纹理，是巩义窑的特色品种。"
+    },
+    {
+      "id": "e:zz-gongyi-yao#2|collectedAt|museum:河南省文物考古研究院",
+      "from": "zz-gongyi-yao#2",
+      "to": "museum:河南省文物考古研究院",
+      "rel": "collectedAt",
+      "weight": 0.6
+    },
+    {
+      "id": "e:zz-gongyi-yao|relatedFigure|figure:冯先铭",
+      "from": "zz-gongyi-yao",
+      "to": "figure:冯先铭",
+      "rel": "relatedFigure",
+      "weight": 0.6,
+      "evidence": "陶瓷考古学家"
+    },
+    {
+      "id": "e:zz-gongyi-yao|occurredEvent|event:zz-gongyi-yao:2001",
+      "from": "zz-gongyi-yao",
+      "to": "event:zz-gongyi-yao:2001",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "2001"
+    },
+    {
+      "id": "e:zz-gongyi-yao|occurredEvent|event:zz-gongyi-yao:2021",
+      "from": "zz-gongyi-yao",
+      "to": "event:zz-gongyi-yao:2021",
+      "rel": "occurredEvent",
+      "weight": 0.5,
+      "evidence": "2021"
+    },
+    {
+      "id": "e:zz-gongyi-yao|hasPoem|poem:zz-gongyi-yao:0",
+      "from": "zz-gongyi-yao",
+      "to": "poem:zz-gongyi-yao:0",
+      "rel": "hasPoem",
+      "weight": 0.4
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@yra/pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "档案数据流水线：校验、分块、构图、预计算相似度、导出端侧预置包",
+  "scripts": {
+    "build": "tsx src/index.ts build",
+    "status": "tsx src/index.ts status",
+    "verify": "tsx src/index.ts verify",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@yra/shared": "workspace:*",
+    "yaml": "2.8.1"
+  }
+}
