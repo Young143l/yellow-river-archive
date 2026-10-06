@@ -1,9 +1,10 @@
 import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
-import { SECTION_LABELS, type HeritageItem } from '../shared'
+import { SECTION_LABELS, type HeritageItem, type Note } from '../shared'
 import { AppColor, AppFont, AppSize } from '../constants/Theme'
 import { HeritageDao, type RelatedItem } from '../service/HeritageDao'
+import { PersonalDao } from '../service/PersonalDao'
 
 /** 路由参数 */
 interface DetailParams {
@@ -22,6 +23,11 @@ struct DetailPage {
   @State loading: boolean = true
   @State error: string = ''
   @State activeIndex: number = 0
+  // ---- 个人记录 ----
+  @State favorited: boolean = false
+  @State notes: Note[] = []
+  @State noteDraft: string = ''
+  @State saving: boolean = false
 
   private itemId: string = ''
 
@@ -43,10 +49,60 @@ struct DetailPage {
       } else {
         this.related = await HeritageDao.related(context, this.itemId)
       }
+      await this.loadPersonal()
     } catch (err) {
       this.error = `加载失败：${(err as Error).message}`
     }
     this.loading = false
+  }
+
+  /** 读收藏状态与笔记 */
+  private async loadPersonal(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      this.favorited = await PersonalDao.isFavorite(context, 'site', this.itemId)
+      this.notes = await PersonalDao.listNotes(context, this.itemId)
+      // 打开详情页即视为已读（进度统计的数据来源）
+      await PersonalDao.recordVisit(context, this.itemId)
+    } catch (err) {
+      // 个人数据读失败不该阻断档案浏览
+    }
+  }
+
+  private async toggleFavorite(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      this.favorited = await PersonalDao.toggleFavorite(context, 'site', this.itemId)
+    } catch (err) {
+      this.error = `收藏失败：${(err as Error).message}`
+    }
+  }
+
+  private async submitNote(): Promise<void> {
+    const content: string = this.noteDraft.trim()
+    if (content.length === 0 || this.saving) {
+      return
+    }
+    this.saving = true
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      await PersonalDao.addNote(context, 'site', this.itemId, content)
+      this.noteDraft = ''
+      this.notes = await PersonalDao.listNotes(context, this.itemId)
+    } catch (err) {
+      this.error = `保存笔记失败：${(err as Error).message}`
+    }
+    this.saving = false
+  }
+
+  private async removeNote(id: string): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      await PersonalDao.deleteNote(context, id)
+      this.notes = await PersonalDao.listNotes(context, this.itemId)
+    } catch (err) {
+      this.error = `删除笔记失败：${(err as Error).message}`
+    }
   }
 
   private openDetail(id: string): void {
@@ -60,6 +116,102 @@ struct DetailPage {
       .fontColor(AppColor.textPrimary)
       .lineHeight(24)
       .width('100%')
+  }
+
+  /**
+   * 个人记录卡片：收藏按钮 + 笔记。
+   *
+   * 放在头部下方而不是作为第六个 Tab：五个 Tab 是「公共档案内容」，
+   * 个人记录是「我对此条目的动作」，性质不同，混进 Tab 会混淆两者的边界。
+   */
+  @Builder
+  personalCard() {
+    Column({ space: 10 }) {
+      Row({ space: 10 }) {
+        Button(this.favorited ? '已收藏' : '收藏')
+          .fontSize(AppFont.body)
+          .fontColor(this.favorited ? AppColor.surface : AppColor.primary)
+          .backgroundColor(this.favorited ? AppColor.primary : AppColor.surface)
+          .borderWidth(1)
+          .borderColor(AppColor.primary)
+          .borderRadius(AppSize.cardRadius)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.toggleFavorite()
+          })
+
+        Text(`笔记 ${this.notes.length}`)
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.textSecondary)
+          .padding({ left: 12, right: 12 })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        TextInput({ text: this.noteDraft, placeholder: '写一条笔记…' })
+          .fontSize(AppFont.body)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onChange((value: string) => {
+            this.noteDraft = value
+          })
+          .onSubmit(() => {
+            this.submitNote()
+          })
+        Button(this.saving ? '…' : '添加')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.surface)
+          .backgroundColor(this.noteDraft.trim().length > 0 ? AppColor.primary : AppColor.textTertiary)
+          .borderRadius(8)
+          .onClick(() => {
+            this.submitNote()
+          })
+      }
+      .width('100%')
+
+      if (this.notes.length === 0) {
+        Text('还没有笔记')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.textTertiary)
+          .width('100%')
+      } else {
+        ForEach(
+          this.notes,
+          (note: Note) => {
+            Row({ space: 8 }) {
+              Column({ space: 2 }) {
+                Text(note.content)
+                  .fontSize(AppFont.caption)
+                  .fontColor(AppColor.textPrimary)
+                  .width('100%')
+                Text(`${PersonalDao.formatTime(note.updatedAt)}${note.deviceId.length > 0 ? '' : ''}`)
+                  .fontSize(11)
+                  .fontColor(AppColor.textTertiary)
+                  .width('100%')
+              }
+              .layoutWeight(1)
+
+              Text('删除')
+                .fontSize(AppFont.caption)
+                .fontColor(AppColor.textTertiary)
+                .onClick(() => {
+                  this.removeNote(note.id)
+                })
+            }
+            .width('100%')
+            .padding(8)
+            .backgroundColor(AppColor.background)
+            .borderRadius(8)
+          },
+          (note: Note) => note.id
+        )
+      }
+    }
+    .width('100%')
+    .padding(AppSize.pagePadding)
+    .backgroundColor(AppColor.surface)
+    .borderRadius(AppSize.cardRadius)
   }
 
   @Builder
@@ -409,6 +561,8 @@ struct DetailPage {
         Scroll() {
           Column({ space: AppSize.cardGap }) {
             this.header(this.item)
+
+            this.personalCard()
 
             Tabs({ barPosition: BarPosition.Start, index: this.activeIndex }) {
               TabContent() {

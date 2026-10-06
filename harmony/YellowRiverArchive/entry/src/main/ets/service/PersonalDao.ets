@@ -816,8 +816,7 @@ export class PersonalDao {
   }
 
   /** 解析存成 JSON 文本的字符串数组（ArkTS 不允许直接 as string[]） */
-  static parseStringArray(text: string): string[] {
-    if (text.length === 0 || text === '[]') {
+  static parseStringArray(text: string): string[] {    if (text.length === 0 || text === '[]') {
       return []
     }
     const parsed: Object | null = JSON.parse(text) as Object | null
@@ -829,5 +828,21 @@ export class PersonalDao {
       out.push(String(item))
     }
     return out
+  }
+
+  /** 把毫秒时间戳格式化成「刚刚 / N 分钟前 / N 小时前 / M月D日」 */
+  static formatTime(ms: number): string {
+    const diff: number = new Date().getTime() - ms
+    if (diff < 60000) {
+      return '刚刚'
+    }
+    if (diff < 3600000) {
+      return `${Math.floor(diff / 60000)} 分钟前`
+    }
+    if (diff < 86400000) {
+      return `${Math.floor(diff / 3600000)} 小时前`
+    }
+    const d: Date = new Date(ms)
+    return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
   }
 }
