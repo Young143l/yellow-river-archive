@@ -282,8 +282,10 @@ async function main(): Promise<void> {
       ? Math.round(tokenized.reduce((sum, c) => sum + c.tokens.length, 0) / tokenized.length)
       : 0
 
-  const graph = buildGraph(items)
+  // 先算相似度再建图：条目间的关系边要由相似度生成，
+  // 否则图会是 N 个互不相连的星形，社区发现退化成平凡解
   const similar = buildSimilar(items)
+  const graph = buildGraph(items, similar)
 
   console.log(
     `[pipeline] 分块 ${chunks.length} 个 ｜ 领域词 ${allTerms.length} 条 ｜ 平均 ${avgTokens} 词/片段 ｜ 词表 ${vocab.length} 词`

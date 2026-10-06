@@ -20,6 +20,7 @@ import { getMeta, openDb } from './db/index'
 import { importPreset } from './db/import'
 import { MetaKeys } from './db/schema'
 import { buildEntityDictionary, describeDictionary } from './search/query-understanding'
+import { graphRoutes } from './routes/graph'
 import { itemsRoutes } from './routes/items'
 import { qaRoutes } from './routes/qa'
 import { searchRoutes } from './routes/search'
@@ -100,6 +101,7 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   // ---- 业务路由 ----
   await app.register(itemsRoutes, { db, vectors })
   await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel, rerankProvider })
+  await app.register(graphRoutes, { db })
   await app.register(statsRoutes, { db })
   await app.register(syncRoutes, { db })
   await app.register(qaRoutes, {

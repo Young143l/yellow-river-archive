@@ -1,12 +1,16 @@
 /**
  * 知识图谱构建。
  *
- * D1 版本：只从结构化字段生成节点与边（城市、时代、类型、文物、人物），
- * 不做实体归一化与关系抽取。D2 版本会在此基础上补充文化脉络、地理邻近等关系，
- * 并用 PageRank 计算节点权重。
+ * 两类边：
+ *   1. **结构性边**（条目 → 城市/时代/类型/文物/人物/事件/诗词）—— 由结构化字段直接生成
+ *   2. **条目间关系边**（culturalLink / nearby）—— 由嵌入相似度与地理距离生成
+ *
+ * 第 2 类不是可有可无的装饰。没有它，图就是 N 个互不相连的星形，
+ * 下游的「标签传播社区发现」（自动文化主题聚合）只能得到平凡解 ——
+ * 每个条目自成一个"主题"，等于没做聚合。实测在 5 条样例数据上就是如此。
  */
 
-import type { GraphEdge, GraphNode, HeritageItem } from '@yra/shared'
+import type { GraphEdge, GraphNode, HeritageItem, SimilarEntry } from '@yra/shared'
 
 export interface GraphResult {
   readonly nodes: GraphNode[]
@@ -28,7 +32,33 @@ class NodeSet {
   }
 }
 
-export function buildGraph(items: readonly HeritageItem[]): GraphResult {
+/**
+ * 条目间关系边的阈值。
+ *
+ * 0.5 是向量余弦的常用分界：低于它的"相似"在中文长文本上多半只是
+ * 共享了「遗址」「文化」这类通用词。宁可少连几条，也不要让图变成一团乱麻 ——
+ * 社区发现对稀疏噪声边很敏感。
+ */
+const CULTURAL_LINK_THRESHOLD: number = 0.5
+
+/** 地理邻近的阈值：同城且距离在 30km 内视为邻近 */
+const NEARBY_KM: number = 30
+
+/** 两点间球面距离（Haversine，公里） */
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (d: number): number => (d * Math.PI) / 180
+  const dLat: number = toRad(lat2 - lat1)
+  const dLng: number = toRad(lng2 - lng1)
+  const a: number =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+export function buildGraph(
+  items: readonly HeritageItem[],
+  similar: readonly SimilarEntry[] = []
+): GraphResult {
   const nodes: NodeSet = new NodeSet()
   const edges: GraphEdge[] = []
   const edgeSeen: Set<string> = new Set<string>()
@@ -123,6 +153,51 @@ export function buildGraph(items: readonly HeritageItem[]): GraphResult {
       })
       addEdge(siteId, poemId, 'hasPoem', 0.4)
     })
+  }
+
+  // ---- 条目间关系边 ----
+  // 文化脉络：由嵌入相似度生成。只保留高于阈值且单向（A→B 与 B→A 只留一条，
+  // 避免可视化里出现两条重叠的边）
+  const byId = new Map<string, HeritageItem>()
+  for (const item of items) {
+    byId.set(item.id, item)
+  }
+
+  for (const entry of similar) {
+    for (const neighbor of entry.neighbors) {
+      if (neighbor.score < CULTURAL_LINK_THRESHOLD) {
+        continue
+      }
+      const other: HeritageItem | undefined = byId.get(neighbor.id)
+      if (other === undefined) {
+        continue
+      }
+      // 相似度是对称的：A→B 与 B→A 是同一条关系。若不去重，
+      // 可视化里会出现两条完全重叠的边（看起来像一条更粗的），
+      // 度数统计也会翻倍，进而影响 PageRank 与社区发现。
+      // 用「字典序小的 id 在前」统一方向。
+      const fromId: string = entry.itemId < neighbor.id ? entry.itemId : neighbor.id
+      const toId: string = entry.itemId < neighbor.id ? neighbor.id : entry.itemId
+      addEdge(fromId, toId, 'culturalLink', Math.round(neighbor.score * 1000) / 1000, neighbor.reason)
+    }
+  }
+
+  // 地理邻近：同城且相距 30km 内
+  for (let i = 0; i < items.length; i += 1) {
+    const a: HeritageItem | undefined = items[i]
+    if (a === undefined) {
+      continue
+    }
+    for (let j = i + 1; j < items.length; j += 1) {
+      const b: HeritageItem | undefined = items[j]
+      if (b === undefined || a.city !== b.city) {
+        continue
+      }
+      const km: number = distanceKm(a.geo.lat, a.geo.lng, b.geo.lat, b.geo.lng)
+      if (km > 0 && km <= NEARBY_KM) {
+        addEdge(a.id, b.id, 'nearby', Math.round((1 - km / NEARBY_KM) * 100) / 100, `相距约 ${Math.round(km)} 公里`)
+      }
+    }
   }
 
   // 节点权重：D1 用归一化度数近似 PageRank
