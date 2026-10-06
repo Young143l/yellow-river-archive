@@ -6,6 +6,12 @@ import { AppColor, AppFont, AppSize } from '../constants/Theme'
 import { HeritageDao } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
 import { SyncService, type SyncProgressView, type SyncSummary } from '../service/sync/SyncService'
+import {
+  DocumentBuilder,
+  type DocumentEntry,
+  type DocumentSection,
+  type StructuredDocument,
+} from '../service/DocumentBuilder'
 
 /** 收藏项的展示形状（把 id 补成可读的名称） */
 interface FavoriteView {
@@ -41,6 +47,10 @@ export struct ProfilePage {
   @State favorites: FavoriteView[] = []
   @State notes: NoteView[] = []
   @State tags: Tag[] = []
+  // ---- 结构化文档（D7-1）----
+  @State doc: StructuredDocument | undefined = undefined
+  @State docText: string = ''
+  @State docExportMsg: string = ''
   @State loaded: boolean = false
   @State activePane: number = 0
   // ---- 同步 ----
@@ -112,6 +122,8 @@ export struct ProfilePage {
       this.notes = noteViews
 
       this.tags = await PersonalDao.listTags(context)
+      this.doc = await DocumentBuilder.build(context)
+      this.docText = DocumentBuilder.toMarkdown(this.doc)
       await this.refreshSyncStatus()
     } catch (err) {
       // 页面降级为空态，不弹错
@@ -615,6 +627,123 @@ export struct ProfilePage {
     .width('100%')
   }
 
+  /** 结构化知识文档视图：按「时代 → 遗址」两级聚合，可一键导出 */
+  @Builder
+  docView() {
+    Column({ space: 10 }) {
+      if (this.doc === undefined || this.doc.totalEntries === 0) {
+        Text('还没有内容。在档案详情页点「收藏」或写下笔记后，这里会自动汇总成一份结构化文档。')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.textTertiary)
+          .width('100%')
+      } else {
+        Row({ space: 8 }) {
+          Column({ space: 2 }) {
+            Text(`收录 ${this.doc.totalEntries} 条 · 笔记 ${this.doc.totalNotes} 条`)
+              .fontSize(AppFont.caption)
+              .fontColor(AppColor.textSecondary)
+              .width('100%')
+            Text(`生成于 ${DocumentBuilder.formatDate(this.doc.generatedAt)}`)
+              .fontSize(11)
+              .fontColor(AppColor.textTertiary)
+              .width('100%')
+          }
+          .layoutWeight(1)
+
+          Button(this.docExportMsg.length > 0 ? '已导出' : '导出 MD')
+            .fontSize(AppFont.caption)
+            .fontColor(AppColor.surface)
+            .backgroundColor(AppColor.primary)
+            .borderRadius(8)
+            .onClick(() => {
+              this.onExportDoc()
+            })
+        }
+        .width('100%')
+
+        if (this.docExportMsg.length > 0) {
+          Text(this.docExportMsg)
+            .fontSize(11)
+            .fontColor(AppColor.textSecondary)
+            .width('100%')
+        }
+
+        // 按时代分组渲染
+        ForEach(
+          this.doc.sections,
+          (section: DocumentSection) => {
+            Column({ space: 6 }) {
+              Text(section.era)
+                .fontSize(AppFont.body)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(AppColor.primary)
+                .width('100%')
+              ForEach(
+                section.entries,
+                (entry: DocumentEntry) => {
+                  Column({ space: 3 }) {
+                    Row() {
+                      Text(entry.name)
+                        .fontSize(AppFont.caption)
+                        .fontColor(AppColor.textPrimary)
+                        .layoutWeight(1)
+                      if (entry.favorited) {
+                        Text('已收藏')
+                          .fontSize(10)
+                          .fontColor(AppColor.primary)
+                      }
+                    }
+                    .width('100%')
+                    Text(`${entry.city}${entry.types.length > 0 ? ` · ${entry.types}` : ''}`)
+                      .fontSize(10)
+                      .fontColor(AppColor.textTertiary)
+                      .width('100%')
+                    ForEach(
+                      entry.notes,
+                      (note: string, i: number) => {
+                        Text(`· ${note}`)
+                          .fontSize(AppFont.caption)
+                          .fontColor(AppColor.textSecondary)
+                          .width('100%')
+                      },
+                      (note: string, i: number) => `${entry.itemId}-note-${i}`
+                    )
+                  }
+                  .width('100%')
+                  .padding(8)
+                  .backgroundColor(AppColor.background)
+                  .borderRadius(6)
+                  .onClick(() => {
+                    this.openItem(entry.itemId)
+                  })
+                },
+                (entry: DocumentEntry) => entry.itemId
+              )
+            }
+            .width('100%')
+            .margin({ bottom: 6 })
+          },
+          (section: DocumentSection) => section.era
+        )
+      }
+    }
+    .width('100%')
+  }
+
+  private async onExportDoc(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      if (this.doc === undefined) {
+        this.doc = await DocumentBuilder.build(context)
+      }
+      const path: string = await DocumentBuilder.exportToFile(context, this.doc)
+      const sizeKb: number = Math.max(1, Math.round(this.docText.length / 1024))
+      this.docExportMsg = `已导出 ${path.split('/').pop()}（约 ${sizeKb} KB）`
+    } catch (err) {
+      this.docExportMsg = '导出失败'
+    }
+  }
+
   @Builder
   tagList() {
     Column({ space: 8 }) {
@@ -676,6 +805,11 @@ export struct ProfilePage {
                 this.tagList()
               }
               .tabBar(`标签 ${this.tags.length}`)
+
+              TabContent() {
+                this.docView()
+              }
+              .tabBar('文档')
             }
             .barMode(BarMode.Fixed)
             .height(320)
