@@ -219,14 +219,28 @@ export class SyncSelfTest {
     }
   }
 
-  /** 清理自检数据（物理删除，不留软删墓碑污染同步） */
+  /**
+   * 清理自检数据（物理删除，不留软删墓碑污染同步）。
+   *
+   * 注意冲突表的匹配模式：record_id 是 `site:selftest-item` 这种**带目标类型前缀**的
+   * 形式，不是以 `selftest` 开头。最初用 `${TEST_PREFIX}%` 匹配不到，
+   * 结果每次自检都在冲突列表里堆一条，实测时把真实冲突挤出了可视范围。
+   * 因此这里用 `%selftest%` 做包含匹配。
+   */
   private static async cleanup(context: common.Context, targetId: string): Promise<void> {
     try {
       const store: relationalStore.RdbStore = await DataImportService.open(context)
       await store.executeSql(`DELETE FROM ${Tables.FAVORITES} WHERE target_id LIKE ?`, [`${TEST_PREFIX}%`])
       await store.executeSql(`DELETE FROM ${Tables.NOTES} WHERE target_id LIKE ?`, [`${TEST_PREFIX}%`])
       await store.executeSql(`DELETE FROM ${Tables.VISITS} WHERE item_id LIKE ?`, [`${TEST_PREFIX}%`])
-      await store.executeSql(`DELETE FROM ${Tables.CONFLICTS} WHERE record_id LIKE ?`, [`${TEST_PREFIX}%`])
+      await store.executeSql(`DELETE FROM ${Tables.CONFLICTS} WHERE record_id LIKE ?`, [`%${TEST_PREFIX}%`])
+      // 分布式 KV 里的探针也要清：否则会被后续 pull 当成「对端推来的数据」，
+      // 污染真实同步结果（实测踩到过：一次真实同步里拉回了这个残留）
+      const distributed = new DistributedSync()
+      if (await distributed.init(context)) {
+        await distributed.debugClearPrefix(Tables.FAVORITES)
+        await distributed.debugClearPrefix(Tables.CONFLICTS)
+      }
       void targetId
     } catch (err) {
       // 清理失败不该让自检结果失真

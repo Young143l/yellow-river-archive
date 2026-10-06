@@ -223,8 +223,16 @@ export class SyncService {
   static async sync(context: common.Context): Promise<SyncSummary> {
     const started: number = now()
     const deviceId: string = await PersonalDao.getDeviceId(context)
+    // 两个游标语义完全不同，必须分开存：
+    //   lastPushedAt —— 本机记录时间戳，用于「哪些本地改动还没推上去」
+    //   lastPulledAt —— 服务端自增序号，用于「服务端哪些变更还没拉下来」
+    // 曾把前者当后者传给服务端，量级差 12 个数量级（1.79e12 vs 1..N），
+    // 结果是首次同步之后**永远拉不到任何东西**且不报错。
     const lastPushed: number = SyncService.parseInt(
       await PersonalDao.getSyncMeta(context, SyncKeys.LAST_PUSHED_AT)
+    )
+    const lastPulled: number = SyncService.parseInt(
+      await PersonalDao.getSyncMeta(context, SyncKeys.LAST_PULLED_AT)
     )
 
     const localChanges: ChangeSet[] = await PersonalDao.collectChanges(context, lastPushed)
@@ -248,7 +256,7 @@ export class SyncService {
 
     if (distributedUsable && distributed !== undefined) {
       pushed = await distributed.push(localChanges, deviceId)
-      pulled = await distributed.pull(lastPushed, deviceId)
+      pulled = await distributed.pull(lastPulled, deviceId)
       channelName = distributed.name
       // 信任环内没有对端时推送不出去，此时退到云端。
       // 判据必须是「对端数量」而不是「pull 是否非空」—— 后者会把本地残留误判成对端。
@@ -264,7 +272,12 @@ export class SyncService {
       const cloud: CloudSync | undefined = SyncService.cloud
       if (cloudReady && cloud !== undefined) {
         const cloudPushed: number = await cloud.push(localChanges, deviceId)
-        const cloudPulled: ChangeSet[] = await cloud.pull(lastPushed, deviceId)
+        const cloudPulled: ChangeSet[] = await cloud.pull(lastPulled, deviceId)
+        // 服务端游标由服务端给出（自增序号），客户端只负责存下来
+        const serverCursor: number = cloud.takeCursor()
+        if (serverCursor > lastPulled) {
+          await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, `${serverCursor}`)
+        }
         channelName = cloud.name
         pushed = cloudPushed
         pulled = cloudPulled
@@ -290,7 +303,8 @@ export class SyncService {
     if (localChanges.length > 0 || pushed > 0) {
       await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PUSHED_AT, `${finished}`)
     }
-    await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, `${finished}`)
+    // 注意：这里**不能**写 LAST_PULLED_AT —— 它是服务端序号，只能由服务端返回值推进。
+    // 写成本机时间戳会让后续 pull 永远返回空。
     await PersonalDao.setSyncMeta(context, SyncKeys.LAST_SYNC_AT, `${finished}`)
 
     let pulledCount: number = 0
@@ -325,6 +339,7 @@ export class SyncService {
    * 给用户留一个重置出口，比让数据永远同步不出去要好。
    */
   static async resetCursor(context: common.Context): Promise<void> {
+    // 两个游标都要清：一个是本机时间戳、一个是服务端序号，各自的「从头开始」含义不同
     await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PUSHED_AT, '0')
     await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, '0')
   }
