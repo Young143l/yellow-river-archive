@@ -108,6 +108,13 @@ export interface SearchRequest {
   readonly filters?: SearchFilters
   /** 返回条数，默认 10 */
   readonly topK?: number
+  /**
+   * 是否启用重排精排（默认开启）。
+   *
+   * 精排会多一次网络往返（约 200-500ms）与一次计费。客户端在
+   * 「边输入边搜」这类场景可以关掉，等到用户停下再开。
+   */
+  readonly rerank?: boolean
 }
 
 /** 检索命中来源 */
@@ -122,10 +129,13 @@ export interface SearchHit {
   /**
    * 相关度分数。**只在同一次响应内可比**，不要跨响应或跨查询比较。
    *
-   * 量纲随通道数变化：单通道时是该通道的原始分数（BM25 无上界 / 余弦在 [0,1]），
-   * 双通道时是 RRF 融合分（约 0.01~0.05）。之所以不统一，是因为两种场景下
-   * 「分数量级」本身都有用 —— 单通道时光看绝对值就能判断命中强弱，
-   * 强行归一化反而会把这个信息抹掉。**排序始终可信，数值仅供展示参考。**
+   * 量纲取决于管线阶段：
+   *   - 启用精排且成功：精排相关度（0~1），最直观
+   *   - 单通道未精排：该通道的原始分数（BM25 无上界 / 余弦 0~1）
+   *   - 双通道未精排：RRF 融合分（约 0.01~0.05）
+   *
+   * 之所以不强行归一化：每种量纲的绝对值本身都有用（单通道时看绝对值就能判断
+   * 命中强弱），统一归一化反而会抹掉这个信息。**排序始终可信，数值仅供参考。**
    */
   readonly score: number
   readonly channel: SearchChannel
@@ -166,6 +176,37 @@ export interface SearchResponse {
    * 用户在界面上显式选择的筛选不会被放宽。
    */
   readonly relaxed?: boolean
+  /** 是否实际做了重排精排（请求了但失败时为 false） */
+  readonly reranked?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// 用量统计
+// ---------------------------------------------------------------------------
+
+/** 单个操作的用量 */
+export interface UsageStatsEntry {
+  readonly operation: string
+  readonly callCount: number
+  readonly tokens: number
+  readonly totalMs: number
+  readonly errorCount: number
+}
+
+/**
+ * 用量统计。
+ *
+ * 存在的意义是**成本可观测**：路演前能确认「演示一轮大概烧多少钱」，
+ * 出了异常也能从 errorCount 第一时间发现。
+ */
+export interface UsageStatsResponse {
+  /** 统计起始时间（毫秒时间戳） */
+  readonly since: number
+  readonly totalCalls: number
+  readonly totalTokens: number
+  readonly totalMs: number
+  readonly errorRate: number
+  readonly byOperation: readonly UsageStatsEntry[]
 }
 
 // ---------------------------------------------------------------------------

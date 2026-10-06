@@ -11,6 +11,8 @@
 
 import type { EmbeddingProvider } from '@yra/ai'
 
+import type { Db } from '../db/index'
+import { recordUsage } from './usage'
 import type { VectorStore } from './vectors'
 
 const DEFAULT_CACHE_SIZE: number = 256
@@ -50,6 +52,12 @@ class LruCache<V> {
   }
 }
 
+/** 读 provider 的累计 token（provider 不暴露时为 0） */
+function providerTokens(provider: unknown): number {
+  const usage = (provider as { usage?: { tokens: number } }).usage
+  return usage === undefined ? 0 : usage.tokens
+}
+
 /** 把向量归一化到单位长度（已归一化的输入不受影响） */
 function normalize(vector: readonly number[]): Float32Array {
   const out = new Float32Array(vector.length)
@@ -72,6 +80,8 @@ function normalize(vector: readonly number[]): Float32Array {
 export interface VectorChannelOptions {
   readonly provider: EmbeddingProvider
   readonly store: VectorStore
+  /** 传了就记账（缓存命中记 0 token，仍计入调用次数） */
+  readonly db?: Db
   readonly cacheSize?: number
 }
 
@@ -87,11 +97,13 @@ export interface VectorSearchResult {
 export class VectorChannel {
   private readonly provider: EmbeddingProvider
   private readonly store: VectorStore
+  private readonly db: Db | undefined
   private readonly cache: LruCache<Float32Array>
 
   constructor(options: VectorChannelOptions) {
     this.provider = options.provider
     this.store = options.store
+    this.db = options.db
     this.cache = new LruCache<Float32Array>(options.cacheSize ?? DEFAULT_CACHE_SIZE)
   }
 
@@ -111,13 +123,16 @@ export class VectorChannel {
     const cached: boolean = vector !== undefined
 
     if (vector === undefined) {
+      const tokensBefore: number = providerTokens(this.provider)
       try {
         const vectors: number[][] = await this.provider.embed([key])
         const first: number[] | undefined = vectors[0]
         if (first === undefined) {
+          this.log('embed_query', 0, started, false)
           return { ok: false, ranked: [], error: '嵌入服务返回空结果', cached: false, elapsedMs: Date.now() - started }
         }
         if (first.length !== this.store.dimension) {
+          this.log('embed_query', 0, started, false)
           return {
             ok: false,
             ranked: [],
@@ -128,7 +143,9 @@ export class VectorChannel {
         }
         vector = normalize(first)
         this.cache.set(key, vector)
+        this.log('embed_query', providerTokens(this.provider) - tokensBefore, started, true)
       } catch (err) {
+        this.log('embed_query', providerTokens(this.provider) - tokensBefore, started, false)
         return {
           ok: false,
           ranked: [],
@@ -137,9 +154,18 @@ export class VectorChannel {
           elapsedMs: Date.now() - started,
         }
       }
+    } else {
+      // 缓存命中：零 token，但仍计一次调用，否则统计看不出「省了多少次」
+      this.log('embed_query_cached', 0, started, true)
     }
 
     const hits = this.store.search(vector, topK, allow)
     return { ok: true, ranked: hits, cached, elapsedMs: Date.now() - started }
+  }
+
+  private log(operation: string, tokens: number, startedAt: number, ok: boolean): void {
+    if (this.db !== undefined) {
+      recordUsage(this.db, operation, tokens, Date.now() - startedAt, ok)
+    }
   }
 }

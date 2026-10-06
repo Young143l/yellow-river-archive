@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { DashScopeEmbedding, readEmbeddingEnv, type EmbeddingProvider } from '@yra/ai'
+import {
+  DashScopeEmbedding,
+  DashScopeRerank,
+  readEmbeddingEnv,
+  type EmbeddingProvider,
+  type RerankProvider,
+} from '@yra/ai'
 import { Tokenizer } from '@yra/nlp'
 import type { VocabEntry } from '@yra/shared'
 import Fastify, { type FastifyInstance } from 'fastify'
@@ -13,6 +19,7 @@ import { MetaKeys } from './db/schema'
 import { buildEntityDictionary, describeDictionary } from './search/query-understanding'
 import { itemsRoutes } from './routes/items'
 import { searchRoutes } from './routes/search'
+import { statsRoutes } from './routes/stats'
 import { createVectorChannel } from './search/service'
 import { VectorStore } from './search/vectors'
 
@@ -53,10 +60,12 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   const tokenizer: Tokenizer = Tokenizer.createFromVocab(vocabFile.entries)
   app.log.info(`分词器就绪：${vocabFile.entries.length} 个领域词`)
 
-  // ---- 语义通道 ----
+  // ---- 语义通道与精排 ----
   const embedding: EmbeddingProvider = new DashScopeEmbedding(readEmbeddingEnv())
-  const vectorChannel = createVectorChannel(embedding, vectors)
+  const vectorChannel = createVectorChannel(embedding, vectors, db)
+  const rerankProvider: RerankProvider = new DashScopeRerank(readEmbeddingEnv())
   app.log.info(`语义通道就绪：${embedding.model} @ ${embedding.dim} 维`)
+  app.log.info(`精排就绪：${rerankProvider.model}`)
 
   // ---- 实体词典（查询理解用）----
   const dict = buildEntityDictionary(db)
@@ -81,7 +90,8 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
 
   // ---- 业务路由 ----
   await app.register(itemsRoutes, { db, vectors })
-  await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel })
+  await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel, rerankProvider })
+  await app.register(statsRoutes, { db })
 
   return app
 }

@@ -12,7 +12,7 @@
  * 多通道时是 RRF 分数（量级 ~0.01）。客户端不应依赖绝对数值。
  */
 
-import type { EmbeddingProvider } from '@yra/ai'
+import type { EmbeddingProvider, RerankProvider } from '@yra/ai'
 import type { QueryUnderstanding, SearchChannel, SearchHit, SearchRequest, SearchResponse } from '@yra/shared'
 import type { Tokenizer } from '@yra/nlp'
 
@@ -21,6 +21,7 @@ import { searchBm25, type SearchFilter } from './bm25'
 import type { EntityDictionary } from './query-understanding'
 import { understandQuery } from './query-understanding'
 import { makeSnippet } from './snippet'
+import { withUsage } from './usage'
 import { VectorChannel } from './vector-channel'
 import type { VectorStore } from './vectors'
 
@@ -38,6 +39,7 @@ export interface SearchDeps {
   readonly tokenizer: Tokenizer
   readonly dict: EntityDictionary
   readonly vectorChannel: VectorChannel
+  readonly rerankProvider: RerankProvider
 }
 
 /** 单通道的召回结果 */
@@ -62,6 +64,14 @@ const RRF_K: number = 60
  * 1.5 是在「明显提权」与「不至于压掉所有其他结果」之间的折中。
  */
 const ENTITY_BOOST: number = 1.5
+
+/**
+ * 送去精排的候选数。
+ *
+ * 精排按候选数计费，且候选越多延迟越高。20 是在「给精排足够的重排空间」
+ * 与「不浪费钱」之间的折中：最终只取 top8 时，20 个候选已足够。
+ */
+const RERANK_CANDIDATES: number = 20
 
 function loadChunkMeta(db: Db, chunkIds: readonly string[]): Map<string, ChunkMeta> {
   if (chunkIds.length === 0) {
@@ -222,6 +232,86 @@ interface RoundResult {
   readonly vectorCached: boolean
 }
 
+/** 加权后的候选（精排的输入与输出都是这个形状） */
+interface RankedItem {
+  readonly chunkId: string
+  readonly score: number
+  readonly channels: SearchChannel[]
+  readonly hitEntity: boolean
+}
+
+/**
+ * 精排。
+ *
+ * 用交叉编码器（query 与文档一起过模型）对候选重新打分，比双塔召回准得多，
+ * 代价是慢且计费 —— 所以只对少量候选做。
+ *
+ * **失败不算错**：精排是锦上添花，超时/限流时退回融合顺序即可，
+ * 不应该让整个搜索请求失败。
+ *
+ * 精排成功后 `score` 变为精排相关度（0~1），量纲与融合分不同 ——
+ * 这一点已在契约里声明「只在同一次响应内可比」。
+ */
+async function applyRerank(
+  deps: SearchDeps,
+  query: string,
+  candidates: readonly RankedItem[],
+  meta: Map<string, ChunkMeta>,
+  topK: number
+): Promise<{ ranked: RankedItem[]; ok: boolean }> {
+  if (candidates.length === 0) {
+    return { ranked: [...candidates], ok: false }
+  }
+
+  // 池子至少覆盖 topK，否则精排会把用户要的条数截掉
+  const poolSize: number = Math.min(candidates.length, Math.max(RERANK_CANDIDATES, topK))
+  const pool: RankedItem[] = candidates.slice(0, poolSize)
+
+  const documents: string[] = []
+  const usable: RankedItem[] = []
+  for (const item of pool) {
+    const info: ChunkMeta | undefined = meta.get(item.chunkId)
+    if (info !== undefined) {
+      documents.push(info.text)
+      usable.push(item)
+    }
+  }
+  if (documents.length === 0) {
+    return { ranked: [...candidates], ok: false }
+  }
+
+  try {
+    const hits = await withUsage(deps.db, 'rerank', deps.rerankProvider, () =>
+      deps.rerankProvider.rerank(query, documents, documents.length)
+    )
+    if (hits.length === 0) {
+      return { ranked: [...candidates], ok: false }
+    }
+
+    const rerankedList: RankedItem[] = []
+    const seen: Set<string> = new Set<string>()
+    for (const hit of hits) {
+      const source: RankedItem | undefined = usable[hit.index]
+      if (source === undefined || seen.has(source.chunkId)) {
+        continue
+      }
+      seen.add(source.chunkId)
+      rerankedList.push({ ...source, score: hit.score })
+    }
+
+    // 未被精排覆盖的候选（理论上不会有，防御性保留）接在后面
+    for (const item of candidates) {
+      if (!seen.has(item.chunkId)) {
+        rerankedList.push(item)
+      }
+    }
+    return { ranked: rerankedList, ok: true }
+  } catch {
+    // withUsage 已记下失败，这里只需退回原顺序
+    return { ranked: [...candidates], ok: false }
+  }
+}
+
 /** 跑一轮双通道并融合 */
 async function runOnce(
   deps: SearchDeps,
@@ -294,17 +384,23 @@ export async function search(deps: SearchDeps, request: SearchRequest): Promise<
   )
   const matched: ReadonlySet<string> = new Set<string>(understanding.matchedItems)
 
-  const boosted = ranked
+  const boosted: RankedItem[] = ranked
     .map((item) => {
       const info: ChunkMeta | undefined = meta.get(item.chunkId)
       const hitEntity: boolean = info !== undefined && matched.has(info.itemId)
       return { ...item, hitEntity, score: hitEntity ? item.score * ENTITY_BOOST : item.score }
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, topK)
+
+  // ---- 精排（可选，失败不影响结果） ----
+  const wantRerank: boolean = request.rerank !== false
+  const reranked = wantRerank
+    ? await applyRerank(deps, request.query, boosted, meta, topK)
+    : { ranked: boosted, ok: false }
+  const finalRanked = reranked.ranked.slice(0, topK)
 
   const hits: SearchHit[] = []
-  for (const item of boosted) {
+  for (const item of finalRanked) {
     const info: ChunkMeta | undefined = meta.get(item.chunkId)
     if (info === undefined) {
       continue
@@ -329,10 +425,15 @@ export async function search(deps: SearchDeps, request: SearchRequest): Promise<
     channels: round.fusion.used,
     understanding,
     ...(relaxed ? { relaxed } : {}),
+    ...(reranked.ok ? { reranked: true } : {}),
   }
 }
 
 /** 供路由层构造依赖（避免在路由里直接 new） */
-export function createVectorChannel(provider: EmbeddingProvider, store: VectorStore): VectorChannel {
-  return new VectorChannel({ provider, store })
+export function createVectorChannel(
+  provider: EmbeddingProvider,
+  store: VectorStore,
+  db: Db
+): VectorChannel {
+  return new VectorChannel({ provider, store, db })
 }
