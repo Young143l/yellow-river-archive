@@ -122,7 +122,14 @@ export type SearchChannel = 'keyword' | 'vector' | 'both'
 
 export interface SearchHit {
   readonly itemId: string
-  readonly name: string
+  readonly name: string,
+  /**
+   * 命中的片段 id。
+   *
+   * 引用（Citation）需要它才能定位到具体片段 —— 只有 itemId + section
+   * 时，「同一分区有多个片段」的条目会指向错误的那个。
+   */
+  readonly chunkId: string
   readonly section: Section
   /** 高亮片段 */
   readonly snippet: string

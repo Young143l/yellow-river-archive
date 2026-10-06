@@ -410,6 +410,7 @@ export async function search(deps: SearchDeps, request: SearchRequest): Promise<
     hits.push({
       itemId: info.itemId,
       name: info.name,
+      chunkId: info.chunkId,
       section: info.section,
       snippet: makeSnippet(info.text, tokens),
       score: Math.round(item.score * 10000) / 10000,

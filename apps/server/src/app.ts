@@ -4,8 +4,11 @@ import { join } from 'node:path'
 import {
   DashScopeEmbedding,
   DashScopeRerank,
+  DeepSeekLlm,
   readEmbeddingEnv,
+  readEnv,
   type EmbeddingProvider,
+  type LlmProvider,
   type RerankProvider,
 } from '@yra/ai'
 import { Tokenizer } from '@yra/nlp'
@@ -18,6 +21,7 @@ import { importPreset } from './db/import'
 import { MetaKeys } from './db/schema'
 import { buildEntityDictionary, describeDictionary } from './search/query-understanding'
 import { itemsRoutes } from './routes/items'
+import { qaRoutes } from './routes/qa'
 import { searchRoutes } from './routes/search'
 import { statsRoutes } from './routes/stats'
 import { syncRoutes } from './routes/sync'
@@ -68,6 +72,10 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   app.log.info(`语义通道就绪：${embedding.model} @ ${embedding.dim} 维`)
   app.log.info(`精排就绪：${rerankProvider.model}`)
 
+  // ---- 生成模型（问答用）----
+  const llm: LlmProvider = new DeepSeekLlm(readEnv())
+  app.log.info(`生成就绪：${llm.model}`)
+
   // ---- 实体词典（查询理解用）----
   const dict = buildEntityDictionary(db)
   app.log.info(`实体词典就绪：${describeDictionary(dict)}`)
@@ -94,6 +102,11 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel, rerankProvider })
   await app.register(statsRoutes, { db })
   await app.register(syncRoutes, { db })
+  await app.register(qaRoutes, {
+    db,
+    searchDeps: { db, vectors, tokenizer, dict, vectorChannel, rerankProvider },
+    llm,
+  })
 
   return app
 }
