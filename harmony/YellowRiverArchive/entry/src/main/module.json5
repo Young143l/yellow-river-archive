@@ -4,6 +4,11 @@
     // 无此权限时 createKVManager 会抛 401，通道 A 直接不可用
     "requestPermissions": [
       {
+        "name": "ohos.permission.INTERNET",
+        "reason": "$string:internet_reason",
+        "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
+      },
+      {
         "name": "ohos.permission.DISTRIBUTED_DATASYNC",
         "reason": "$string:distributed_sync_reason",
         "usedScene": {

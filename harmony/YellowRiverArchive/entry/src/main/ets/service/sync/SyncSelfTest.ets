@@ -133,7 +133,13 @@ export class SyncSelfTest {
 
       // ---- 8. 分布式 KV（通道 A） ----
       const distributed = new DistributedSync()
+      // 注意顺序：必须先 init 再清场 —— 未 init 时 store 还是空的，清场会静默无效
       const opened: boolean = await distributed.init(context)
+      if (opened) {
+        // 上次自检留在分布式 KV 里的探针会被 pull 当成「对端推来的数据」，
+        // 污染后续同步结果（实测就踩到了：一次真实同步里拉回了这个残留）
+        await distributed.debugClearPrefix(Tables.FAVORITES)
+      }
       if (!opened) {
         add('分布式 KV 打开', false, '通道 A 不可用（权限或系统服务问题）')
       } else {

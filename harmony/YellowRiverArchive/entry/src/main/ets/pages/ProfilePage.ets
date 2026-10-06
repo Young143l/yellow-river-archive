@@ -5,6 +5,7 @@ import { CORE_ERAS, type Favorite, type Note, type Progress, type Tag } from '..
 import { AppColor, AppFont, AppSize } from '../constants/Theme'
 import { HeritageDao } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
+import { SyncService, type SyncSummary } from '../service/sync/SyncService'
 
 /** 收藏项的展示形状（把 id 补成可读的名称） */
 interface FavoriteView {
@@ -42,6 +43,12 @@ export struct ProfilePage {
   @State tags: Tag[] = []
   @State loaded: boolean = false
   @State activePane: number = 0
+  // ---- 同步 ----
+  @State syncLines: string[] = []
+  @State pairCode: string = ''
+  @State joinCode: string = ''
+  @State syncBusy: boolean = false
+  @State syncMessage: string = ''
 
   aboutToAppear(): void {
     this.load()
@@ -98,6 +105,7 @@ export struct ProfilePage {
       this.notes = noteViews
 
       this.tags = await PersonalDao.listTags(context)
+      await this.refreshSyncStatus()
     } catch (err) {
       // 页面降级为空态，不弹错
     }
@@ -106,6 +114,180 @@ export struct ProfilePage {
 
   private openItem(id: string): void {
     router.pushUrl({ url: 'pages/DetailPage', params: { id } })
+  }
+
+  private async refreshSyncStatus(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      await SyncService.init(context)
+      this.syncLines = await SyncService.channelReport(context)
+    } catch (err) {
+      this.syncLines = ['状态获取失败']
+    }
+  }
+
+  /** 本机设备名：用「型号-短 id」，两台设备在列表里能分辨出来 */
+  private async deviceLabel(context: common.Context): Promise<string> {
+    const id: string = await PersonalDao.getDeviceId(context)
+    return id.slice(0, 6)
+  }
+
+  private async onCreatePairing(): Promise<void> {
+    if (this.syncBusy) {
+      return
+    }
+    this.syncBusy = true
+    this.syncMessage = '正在生成配对码…'
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const label: string = await this.deviceLabel(context)
+      const result = await SyncService.createPairing(context, `设备-${label}`)
+      this.pairCode = result.code
+      this.syncMessage = result.message
+      await this.refreshSyncStatus()
+    } catch (err) {
+      this.syncMessage = '生成失败'
+    }
+    this.syncBusy = false
+  }
+
+  private async onJoinPairing(): Promise<void> {
+    const code: string = this.joinCode.trim()
+    if (code.length === 0 || this.syncBusy) {
+      return
+    }
+    this.syncBusy = true
+    this.syncMessage = '正在配对…'
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const label: string = await this.deviceLabel(context)
+      const result = await SyncService.joinPairing(context, code, `设备-${label}`)
+      this.syncMessage = result.message
+      if (result.ok) {
+        this.joinCode = ''
+        await this.refreshSyncStatus()
+      }
+    } catch (err) {
+      this.syncMessage = '配对异常'
+    }
+    this.syncBusy = false
+  }
+
+  private async onResetCursor(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      await SyncService.resetCursor(context)
+      this.syncMessage = '同步游标已重置，下次同步会重新推送全部本地数据'
+    } catch (err) {
+      this.syncMessage = '重置失败'
+    }
+  }
+
+  private async onSync(): Promise<void> {
+    if (this.syncBusy) {
+      return
+    }
+    this.syncBusy = true
+    this.syncMessage = '正在同步…'
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const summary: SyncSummary = await SyncService.sync(context)
+      this.syncMessage = summary.outcome.message
+      await this.load()
+    } catch (err) {
+      this.syncMessage = '同步异常'
+    }
+    this.syncBusy = false
+  }
+
+  @Builder
+  syncCard() {
+    Column({ space: 10 }) {
+      Text('跨设备同步')
+        .fontSize(AppFont.heading)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColor.textPrimary)
+        .width('100%')
+
+      ForEach(
+        this.syncLines,
+        (line: string) => {
+          Text(line)
+            .fontSize(11)
+            .fontColor(AppColor.textSecondary)
+            .width('100%')
+        },
+        (line: string) => line
+      )
+
+      Row({ space: 8 }) {
+        Button(this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成配对码')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.surface)
+          .backgroundColor(AppColor.primary)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.onCreatePairing()
+          })
+        Button(this.syncBusy ? '…' : '立即同步')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.surface)
+          .borderWidth(1)
+          .borderColor(AppColor.primary)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.onSync()
+          })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        TextInput({ text: this.joinCode, placeholder: '输入另一台设备的 6 位配对码' })
+          .fontSize(AppFont.caption)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .type(InputType.Number)
+          .maxLength(6)
+          .layoutWeight(1)
+          .onChange((value: string) => {
+            this.joinCode = value
+          })
+        Button('重置游标')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.textTertiary)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .onClick(() => {
+            this.onResetCursor()
+          })
+        Button('加入')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.surface)
+          .backgroundColor(this.joinCode.trim().length === 6 ? AppColor.primary : AppColor.textTertiary)
+          .borderRadius(8)
+          .onClick(() => {
+            this.onJoinPairing()
+          })
+      }
+      .width('100%')
+
+      if (this.syncMessage.length > 0) {
+        Text(this.syncMessage)
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.textPrimary)
+          .width('100%')
+          .padding(8)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+      }
+    }
+    .width('100%')
+    .padding(AppSize.pagePadding)
+    .backgroundColor(AppColor.surface)
+    .borderRadius(AppSize.cardRadius)
   }
 
   @Builder
@@ -295,6 +477,8 @@ export struct ProfilePage {
       Scroll() {
         Column({ space: AppSize.cardGap }) {
           this.progressCard()
+
+          this.syncCard()
 
           Column() {
             Tabs({ barPosition: BarPosition.Start, index: this.activePane }) {

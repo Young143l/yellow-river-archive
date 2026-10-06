@@ -280,6 +280,18 @@ export class DistributedSync implements SyncAdapter {
     return { name: this.name, available: true, detail: `已与 ${this.lastPeerCount} 台设备同步` }
   }
 
+  /**
+   * 信任环内是否有对端。
+   *
+   * 不能用「pull 是否拉到数据」来推断 —— 本地残留（如自检写入的探针、
+   * 上一轮自己推上去的记录）也会让 pull 非空，从而误判为「有对端」，
+   * 结果云端兜底通道永远不被启用。唯一可靠来源是 syncComplete 回调
+   * 给出的对端数量。
+   */
+  hasPeers(): boolean {
+    return this.lastPeerCount > 0
+  }
+
   /** 上次同步完成时间，供同步中心展示 */
   get lastSync(): number {
     return this.lastSyncAt
@@ -296,6 +308,22 @@ export class DistributedSync implements SyncAdapter {
       return rawToString(value)
     } catch (err) {
       return ''
+    }
+  }
+
+  /** 清理某张表在某前缀下的全部键（自检清场用） */
+  async debugClearPrefix(table: string): Promise<void> {
+    const store: distributedKVStore.SingleKVStore | undefined = this.store
+    if (store === undefined) {
+      return
+    }
+    try {
+      const entries: distributedKVStore.Entry[] = await store.getEntries(keyPrefix(table))
+      for (const entry of entries) {
+        await store.delete(entry.key)
+      }
+    } catch (err) {
+      // 清场失败不影响自检结论
     }
   }
 

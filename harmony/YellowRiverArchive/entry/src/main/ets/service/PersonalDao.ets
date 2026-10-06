@@ -456,7 +456,7 @@ export class PersonalDao {
     for (const table of ['tags', 'favorites', 'notes', 'themes', 'visits']) {
       const rs: relationalStore.ResultSet = await store.querySql(
         `SELECT COUNT(*) FROM ${table} WHERE updated_at > ?`,
-        [`${cursor}`]
+        [cursor]
       )
       if (rs.goToNextRow()) {
         total += rs.getLong(0)
