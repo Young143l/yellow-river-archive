@@ -38,7 +38,7 @@ export const searchRoutes: FastifyPluginAsync<SearchDeps> = async (
       return reply.code(400).send(err)
     }
 
-    const result: SearchResponse = search(deps, { ...body, query })
+    const result: SearchResponse = await search(deps, { ...body, query })
     return result
   })
 }

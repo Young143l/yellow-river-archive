@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { DashScopeEmbedding, readEmbeddingEnv, type EmbeddingProvider } from '@yra/ai'
 import { Tokenizer } from '@yra/nlp'
 import type { VocabEntry } from '@yra/shared'
 import Fastify, { type FastifyInstance } from 'fastify'
@@ -9,8 +10,10 @@ import { readServerConfig, type ServerConfig } from './config'
 import { getMeta, openDb } from './db/index'
 import { importPreset } from './db/import'
 import { MetaKeys } from './db/schema'
+import { buildEntityDictionary, describeDictionary } from './search/query-understanding'
 import { itemsRoutes } from './routes/items'
 import { searchRoutes } from './routes/search'
+import { createVectorChannel } from './search/service'
 import { VectorStore } from './search/vectors'
 
 export interface BuildOptions {
@@ -50,6 +53,15 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   const tokenizer: Tokenizer = Tokenizer.createFromVocab(vocabFile.entries)
   app.log.info(`分词器就绪：${vocabFile.entries.length} 个领域词`)
 
+  // ---- 语义通道 ----
+  const embedding: EmbeddingProvider = new DashScopeEmbedding(readEmbeddingEnv())
+  const vectorChannel = createVectorChannel(embedding, vectors)
+  app.log.info(`语义通道就绪：${embedding.model} @ ${embedding.dim} 维`)
+
+  // ---- 实体词典（查询理解用）----
+  const dict = buildEntityDictionary(db)
+  app.log.info(`实体词典就绪：${describeDictionary(dict)}`)
+
   // ---- 健康检查 ----
   app.get('/api/health', async () => {
     return {
@@ -63,12 +75,13 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
       uptimeMs: Math.round(process.uptime() * 1000),
       vectorCount: vectors.size,
       vocabSize: vocabFile.entries.length,
+      entityTerms: dict.terms.size,
     }
   })
 
   // ---- 业务路由 ----
   await app.register(itemsRoutes, { db, vectors })
-  await app.register(searchRoutes, { db, vectors, tokenizer })
+  await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel })
 
   return app
 }

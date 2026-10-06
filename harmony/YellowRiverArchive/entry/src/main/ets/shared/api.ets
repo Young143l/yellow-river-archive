@@ -116,10 +116,34 @@ export interface SearchHit {
   readonly section: Section
   /** 高亮片段 */
   readonly snippet: string
+  /**
+   * 相关度分数。**只在同一次响应内可比**，不要跨响应或跨查询比较。
+   *
+   * 量纲随通道数变化：单通道时是该通道的原始分数（BM25 无上界 / 余弦在 [0,1]），
+   * 双通道时是 RRF 融合分（约 0.01~0.05）。之所以不统一，是因为两种场景下
+   * 「分数量级」本身都有用 —— 单通道时光看绝对值就能判断命中强弱，
+   * 强行归一化反而会把这个信息抹掉。**排序始终可信，数值仅供展示参考。**
+   */
   readonly score: number
   readonly channel: SearchChannel
   /** 语义命中时给出的可解释理由 */
   readonly reason?: string
+}
+
+/**
+ * 查询理解结果：从自然语言查询里识别出的结构化条件。
+ *
+ * 回传给客户端是为了**可观测** —— UI 上可以显示「已识别：洛阳 · 汉唐 · 窑址」，
+ * 让用户知道系统为什么这样筛，也让路演演示时能直观展示理解能力。
+ */
+export interface QueryUnderstanding {
+  readonly cities: City[]
+  readonly eras: Era[]
+  readonly types: HeritageType[]
+  /** 命中的专名（条目名 / 别名 / 文物 / 人物 / 关键词） */
+  readonly entities: string[]
+  /** 命中的条目 id，供「猜你在找」与图谱增强使用 */
+  readonly matchedItems: string[]
 }
 
 export interface SearchResponse {
@@ -129,6 +153,16 @@ export interface SearchResponse {
   readonly degraded: boolean
   /** 实际参与检索的通道 */
   readonly channels: SearchChannel[]
+  /** 查询理解结果 */
+  readonly understanding?: QueryUnderstanding
+  /**
+   * 是否放宽了筛选。
+   *
+   * 从查询里推断出的条件过严时（例：「洛阳的唐代窑址」而洛阳没有窑址），
+   * 首次检索会是零结果；此时自动去掉**推断的**条件重检一次并置此标志。
+   * 用户在界面上显式选择的筛选不会被放宽。
+   */
+  readonly relaxed?: boolean
 }
 
 // ---------------------------------------------------------------------------
