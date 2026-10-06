@@ -307,6 +307,8 @@ export async function* answerQuestion(
 
   let answer: string = ''
   let streamOk: boolean = false
+  let streamError: string = ''
+  console.log(`[qa] 检索到 ${chunks.length} 个片段，准备生成（问题：${question.slice(0, 20)}）`)
   try {
     const stream: AsyncIterable<string> = await withUsage(deps.db, 'qa_generate', deps.llm, () =>
       deps.llm.stream(messages, { temperature: 0.2, maxTokens: MAX_ANSWER_TOKENS, timeoutMs: 60_000 })
@@ -316,11 +318,15 @@ export async function* answerQuestion(
       answer += delta
       yield { kind: 'delta', text: delta }
     }
+    console.log(`[qa] 流式结束，累计 ${answer.length} 字`)
   } catch (err) {
     streamOk = false
+    streamError = err instanceof Error ? err.message : String(err)
+    console.error(`[qa] 生成失败：${streamError.slice(0, 200)}`)
   }
 
   if (!streamOk || answer.trim().length === 0) {
+    console.error(`[qa] 降级为抽取式（streamOk=${streamOk} answerLen=${answer.length} err=${streamError.slice(0, 120)}）`)
     // ---- 降级：抽取式回答 ----
     // 抽取式回答展示的是 Top-3 原文摘要，因此这三条**全部**算作引用
     const fallback: string = extractiveAnswer(chunks)

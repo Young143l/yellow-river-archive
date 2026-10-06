@@ -166,7 +166,7 @@
 | D5-1 | 图谱 API：`subgraph` / `path` / `communities` / `theme/build` | 图谱接口 | D3-6 |
 | D5-2 | 图算法：PageRank / 标签传播 / BFS 最短路 | `graph/algorithms.ts` | D5-1 |
 | D5-3 | 问答 API：WS 流式 + 引用数组 + 图谱路径 + 四级降级 | `api/qa` | **已完成**（实测无幻觉） |
-| D5-4 | AI 助手页：流式输出 + 引用卡片跳详情 + 图路径展示 | `pages/AssistantPage.ets` | D5-3 |
+| D5-4 | AI 助手页：流式输出 + 引用卡片跳详情 + 图路径展示 | `pages/AssistantPage.ets` | **未完成**（服务端已通，端侧渲染未跑通，见 ADR-034 附录） |
 | D5-5 | 断网降级验证（拔网线 → 抽取式回答 + 端侧检索仍可用） | 测试记录 | D5-4 |
 
 **出口**：引用可点击跳转；断网仍给出带引用的答案。
