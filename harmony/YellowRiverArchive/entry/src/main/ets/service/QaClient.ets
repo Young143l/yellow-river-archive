@@ -14,7 +14,6 @@ import { common } from '@kit.AbilityKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 
 import type { Citation, GraphPath } from '../shared'
-import type { QaTurn } from '../model/QaTurn'
 import { DEFAULT_BASE_URL } from './sync/SyncService'
 import { PersonalDao } from './PersonalDao'
 
@@ -28,13 +27,44 @@ interface ServerMessage {
   readonly message?: string
 }
 
+/**
+ * 流式结果的**静态缓冲**。
+ *
+ * 为什么不用回调或 @Observed 对象把增量推给页面：
+ * 实测在 ArkTS/ArkUI 上，把增量写进「页面持有的嵌套对象」或「@Observed 对象的
+ * 字段」都不会触发重渲染 —— 消息确实到了（设备日志可见 81 条 `on message`），
+ * 界面却一直停在 pending 态。原因与 ArkUI 对嵌套状态的观察粒度有关，
+ * 试过 @Observed、@ObjectLink、@Builder 读 this 三种写法均无效。
+ *
+ * 因此改成：QaClient 只往这里写，页面用定时器读进**顶层的 @State 字段**。
+ * 顶层 @State 的赋值是 ArkUI 一定能观察到的。
+ * 代价是多了一个静态字段与一次轮询，换来的是行为确定。
+ */
+export class QaBus {
+  static answer: string = ''
+  static citations: Citation[] = []
+  static graphPaths: GraphPath[] = []
+  static degraded: boolean = false
+  static error: string = ''
+  static finished: boolean = true
+
+  static reset(): void {
+    QaBus.answer = ''
+    QaBus.citations = []
+    QaBus.graphPaths = []
+    QaBus.degraded = false
+    QaBus.error = ''
+    QaBus.finished = false
+  }
+}
+
 export class QaClient {
   /**
    * 提问一次。
    *
    * 整体不抛异常：任何失败都走 onError，因为问答页不该因为网络问题崩掉。
    */
-  static async ask(context: common.Context, query: string, turn: QaTurn): Promise<boolean> {
+  static async ask(context: common.Context, query: string): Promise<void> {
     let baseUrl: string = await PersonalDao.getSyncMeta(context, 'syncBaseUrl')
     if (baseUrl.length === 0) {
       baseUrl = DEFAULT_BASE_URL
@@ -52,6 +82,10 @@ export class QaClient {
       const socket: webSocket.WebSocket = webSocket.createWebSocket()
 
       socket.on('message', (err: Object, value: string | ArrayBuffer) => {
+        // 入口日志：跨进程链路调试的第一要务是确定「消息到没到」。
+        // 这条日志之前缺失，导致排查时无法区分「没收到」与「收到了没渲染」，
+        // 白绕了渲染层的弯路。
+        hilog.info(0x0000, 'qaDiag', 'on message: type=%{public}s', typeof value)
         if (typeof value !== 'string') {
           return
         }
@@ -65,19 +99,21 @@ export class QaClient {
         if (message.type === 'ack') {
           // ack 只表示服务端已收到，pending 已经在转圈，不需要额外处理
         } else if (message.type === 'delta') {
-          turn.answer += message.text !== undefined ? message.text : ''
+          QaBus.answer += message.text !== undefined ? message.text : ''
+          hilog.info(0x0000, 'qaDiag', 'delta 累积=%{public}d', QaBus.answer.length)
         } else if (message.type === 'done') {
           finished = true
-          turn.answer = message.answer !== undefined ? message.answer : turn.answer
-          turn.citations = message.citations !== undefined ? message.citations : []
-          turn.graphPaths = message.graphPaths !== undefined ? message.graphPaths : []
-          turn.degraded = message.degraded === true
-          turn.pending = false
+          QaBus.answer = message.answer !== undefined ? message.answer : QaBus.answer
+          QaBus.citations = message.citations !== undefined ? message.citations : []
+          QaBus.graphPaths = message.graphPaths !== undefined ? message.graphPaths : []
+          QaBus.degraded = message.degraded === true
+          QaBus.finished = true
+          hilog.info(0x0000, 'qaDiag', 'done 最终=%{public}d 引用=%{public}d', QaBus.answer.length, QaBus.citations.length)
           socket.close()
         } else if (message.type === 'error') {
           finished = true
-          turn.error = message.message !== undefined ? message.message : '问答服务返回错误'
-          turn.pending = false
+          QaBus.error = message.message !== undefined ? message.message : '问答服务返回错误'
+          QaBus.finished = true
           socket.close()
         }
       })
@@ -85,8 +121,8 @@ export class QaClient {
       socket.on('error', () => {
         if (!finished) {
           finished = true
-          turn.error = '无法连接问答服务。可改用本地检索，或检查网络。'
-          turn.pending = false
+          QaBus.error = '无法连接问答服务。可改用本地检索，或检查网络。'
+          QaBus.finished = true
         }
       })
 
@@ -104,15 +140,13 @@ export class QaClient {
         await QaClient.sleep(120)
       }
       if (!finished) {
-        turn.error = '回答超时，请重试'
-        turn.pending = false
+        QaBus.error = '回答超时，请重试'
+        QaBus.finished = true
         await socket.close()
       }
-      return true
     } catch (err) {
-      turn.error = '无法连接问答服务，请检查网络后重试'
-      turn.pending = false
-      return false
+      QaBus.error = '无法连接问答服务，请检查网络后重试'
+      QaBus.finished = true
     }
   }
 
