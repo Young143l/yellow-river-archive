@@ -143,11 +143,11 @@
 
 | # | 任务 | 产出 | 依赖 |
 |---|---|---|---|
-| D4-1 | 端侧个人数据表：收藏（遗址+文物统一）/ 笔记 / 标签 / 进度 | `model/schema.ets` | D1-3 |
+| D4-1 | 端侧个人数据表：收藏（遗址+文物统一）/ 笔记 / 标签 / 进度 | `model/schema.ets` | **已完成**（含 LWW 元数据与软删） |
 | D4-2 | 收藏 / 笔记 / 标签 的 UI 与交互 | 详情页与我的档案页 | D4-1 |
-| D4-3 | 学习进度计算（去重条目 / 总数，按时代分段） | `service/ProgressService.ets` | D4-1 |
-| D4-4 | `SyncAdapter` 接口定义 | `service/sync/types.ets` | D4-1 |
-| D4-5 | `HarmonyDistributedKV` 实现（主路径） | `service/sync/distributed.ets` | D4-4, D0V-1 |
+| D4-3 | 学习进度计算（去重条目 / 总数，按时代分段） | `service/ProgressService.ets` | **已完成**（并入 PersonalDao） |
+| D4-4 | `SyncAdapter` 接口定义 | `service/sync/types.ets` | **已完成** |
+| D4-5 | `HarmonyDistributedKV` 实现（主路径） | `service/sync/distributed.ets` | **已完成**（本机自检 11/11 通过） |
 | D4-6 | 服务端同步服务（WS + LWW + 变更日志 + 冲突日志） | `apps/server/src/sync/` | D3-1 |
 | D4-7 | `CloudSync` 端侧实现（兜底通道） | `service/sync/cloud.ets` | D4-4, D4-6 |
 | D4-8 | `IdentityAdapter` + 配对码页面（openid 主 / 配对码兜底） | `service/identity/` | D4-4 |

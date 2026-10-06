@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "distributed_sync_reason",
+      "value": "用于在您的多台设备之间同步收藏与笔记"
     }
   ]
 }

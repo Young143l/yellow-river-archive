@@ -1,5 +1,18 @@
 {
   "module": {
+    // 分布式数据同步（通道 A：鸿蒙分布式数据服务）
+    // 无此权限时 createKVManager 会抛 401，通道 A 直接不可用
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:distributed_sync_reason",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      }
+    ],
+
     "name": "entry",
     "type": "entry",
     "description": "$string:module_desc",

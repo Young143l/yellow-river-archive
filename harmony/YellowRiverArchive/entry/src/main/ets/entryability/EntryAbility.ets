@@ -17,6 +17,8 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
+import { SyncSelfTest } from '../service/sync/SyncSelfTest';
+
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
@@ -27,6 +29,18 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // 同步链路自检：写入→读回→LWW 合并→分布式 KV 全链路，跑完自动清理。
+    // 异步执行不阻塞 Ability 创建；结果打到日志供开发期验证，
+    // 后续同步中心页会以「自检」按钮的形式复用同一实现。
+    const ctx = this.context;
+    SyncSelfTest.run(ctx)
+      .then((report) => {
+        hilog.info(DOMAIN, 'syncTest', '%{public}s', SyncSelfTest.format(report));
+      })
+      .catch((err: Object) => {
+        hilog.error(DOMAIN, 'syncTest', 'Self test crashed: %{public}s', JSON.stringify(err));
+      });
   }
 
   onDestroy(): void {
