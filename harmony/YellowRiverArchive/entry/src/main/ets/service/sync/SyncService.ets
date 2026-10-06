@@ -54,6 +54,16 @@ export interface JoinResultView {
   readonly message: string
 }
 
+/**
+ * 同步进度（对应赛题原文「清晰展示'手机→平板'的同步进度」）。
+ * done 为已完成条数，total 为总条数，direction 为方向标识。
+ */
+export interface SyncProgressView {
+  readonly done: number
+  readonly total: number
+  readonly direction: string
+}
+
 /** 一次同步的汇总，供 UI 展示 */
 export interface SyncSummary {
   readonly outcome: SyncOutcome
@@ -162,6 +172,21 @@ export class SyncService {
     } catch (err) {
       return { ok: false, message: `无法连接服务端（${SyncService.describeError(err)})` }
     }
+  }
+
+  /** 注册同步进度回调（同步中心页画进度条用） */
+  static onProgress(handler: (progress: SyncProgressView) => void): void {
+    const cloud: CloudSync | undefined = SyncService.cloud
+    if (cloud !== undefined) {
+      cloud.onProgress((done: number, total: number, direction: string) => {
+        handler({ done, total, direction })
+      })
+    }
+  }
+
+  /** 最近的冲突记录（同步中心展示「双方版本、时间戳、最终采用哪一方」） */
+  static async recentConflicts(context: common.Context, limit: number): Promise<ConflictRecord[]> {
+    return PersonalDao.listConflicts(context, limit)
   }
 
   /** 订阅对端变更（云通道的实时广播） */

@@ -1,11 +1,11 @@
 import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
-import { CORE_ERAS, type Favorite, type Note, type Progress, type Tag } from '../shared'
+import { CORE_ERAS, type ConflictRecord, type Favorite, type Note, type Progress, type Tag } from '../shared'
 import { AppColor, AppFont, AppSize } from '../constants/Theme'
 import { HeritageDao } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
-import { SyncService, type SyncSummary } from '../service/sync/SyncService'
+import { SyncService, type SyncProgressView, type SyncSummary } from '../service/sync/SyncService'
 
 /** 收藏项的展示形状（把 id 补成可读的名称） */
 interface FavoriteView {
@@ -49,6 +49,13 @@ export struct ProfilePage {
   @State joinCode: string = ''
   @State syncBusy: boolean = false
   @State syncMessage: string = ''
+  /** 同步进度：赛题要求「清晰展示同步进度」，因此要有 done/total 与方向 */
+  @State progressDone: number = 0
+  @State progressTotal: number = 0
+  @State progressDirection: string = ''
+  @State conflicts: ConflictRecord[] = []
+
+  private progressWired: boolean = false
 
   aboutToAppear(): void {
     this.load()
@@ -121,6 +128,16 @@ export struct ProfilePage {
       const context = this.getUIContext().getHostContext() as common.Context
       await SyncService.init(context)
       this.syncLines = await SyncService.channelReport(context)
+      this.conflicts = await SyncService.recentConflicts(context, 5)
+      // 进度回调只注册一次：重复注册会让同一条进度被处理多次
+      if (!this.progressWired) {
+        this.progressWired = true
+        SyncService.onProgress((progress: SyncProgressView) => {
+          this.progressDone = progress.done
+          this.progressTotal = progress.total
+          this.progressDirection = progress.direction
+        })
+      }
     } catch (err) {
       this.syncLines = ['状态获取失败']
     }
@@ -273,6 +290,67 @@ export struct ProfilePage {
           })
       }
       .width('100%')
+
+      if (this.progressTotal > 0) {
+        Column({ space: 4 }) {
+          Row() {
+            Text(this.progressDirection.length > 0 ? this.progressDirection : '同步中')
+              .fontSize(11)
+              .fontColor(AppColor.textSecondary)
+              .layoutWeight(1)
+            Text(`${this.progressDone} / ${this.progressTotal}`)
+              .fontSize(11)
+              .fontColor(AppColor.primary)
+          }
+          .width('100%')
+
+          Progress({
+            value: this.progressTotal === 0 ? 0 : (this.progressDone / this.progressTotal) * 100,
+            total: 100,
+            type: ProgressType.Linear,
+          })
+            .color(AppColor.primary)
+            .width('100%')
+        }
+        .width('100%')
+      }
+
+      // 冲突列表：按赛题要求展示「双方版本、时间戳、最终采用哪一方」
+      if (this.conflicts.length > 0) {
+        Column({ space: 6 }) {
+          Text(`冲突记录 ${this.conflicts.length}`)
+            .fontSize(AppFont.caption)
+            .fontColor(AppColor.textSecondary)
+            .width('100%')
+          ForEach(
+            this.conflicts,
+            (c: ConflictRecord) => {
+              Column({ space: 2 }) {
+                Row() {
+                  Text(`${c.table} · ${c.recordId.slice(0, 18)}`)
+                    .fontSize(11)
+                    .fontColor(AppColor.textPrimary)
+                    .layoutWeight(1)
+                  Text(c.winner === 'local' ? '采用本机' : '采用远端')
+                    .fontSize(11)
+                    .fontColor(AppColor.primary)
+                }
+                .width('100%')
+                Text(`本机 ${PersonalDao.formatTime(c.localUpdatedAt)} ｜ 远端 ${PersonalDao.formatTime(c.remoteUpdatedAt)}`)
+                  .fontSize(10)
+                  .fontColor(AppColor.textTertiary)
+                  .width('100%')
+              }
+              .width('100%')
+              .padding(6)
+              .backgroundColor(AppColor.background)
+              .borderRadius(6)
+            },
+            (c: ConflictRecord) => c.id
+          )
+        }
+        .width('100%')
+      }
 
       if (this.syncMessage.length > 0) {
         Text(this.syncMessage)
