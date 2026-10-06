@@ -336,7 +336,14 @@ export interface SyncPush {
 export interface SyncPull {
   readonly type: 'pull'
   readonly deviceId: string
-  /** 上次同步游标（毫秒时间戳） */
+  /**
+   * 上次同步游标 —— **服务器单调序号，不是时间戳**。
+   *
+   * 为什么不用时间戳：若客户端游标是 T、而一条新变更的服务器时间戳也恰好是 T，
+   * 下次拉取用 `> T` 会把它永久漏掉（同毫秒内的变更尤其容易触发）。
+   * 单调序号没有这个问题：它只在有变更时递增，且严格可比较。
+   * 服务器时间只用于展示，不参与游标运算。
+   */
   readonly since: number
 }
 
@@ -357,6 +364,9 @@ export interface SyncPulled {
   readonly type: 'pulled'
   readonly changes: readonly ChangeSet[]
   readonly conflicts: readonly ConflictRecord[]
+  /** 本次拉取后的新游标，客户端应存下并用于下次 pull */
+  readonly cursor: number
+  /** 服务器时间，仅供展示，不参与游标运算 */
   readonly serverTime: number
 }
 

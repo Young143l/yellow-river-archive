@@ -88,6 +88,72 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_usage_op ON usage_log(operation)`,
+
+  // ---- 个人数据云存储（D4-6）----
+  // 服务端存的是**权威版本**：多设备推送时由它统一裁决，端侧再拉取收敛。
+  // 若去中心化地让设备两两同步，三台以上设备时收敛速度会随设备数平方增长。
+  `CREATE TABLE IF NOT EXISTS sync_records (
+    user_id TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    device_id TEXT NOT NULL,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL,
+    PRIMARY KEY (user_id, table_name, record_id)
+  )`,
+  // 变更日志：pull 的数据源。seq 自增且单调，充当拉取游标
+  `CREATE TABLE IF NOT EXISTS sync_changelog (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_changelog_user_seq ON sync_changelog(user_id, seq)`,
+  `CREATE TABLE IF NOT EXISTS sync_conflicts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL DEFAULT '',
+    record_id TEXT NOT NULL,
+    table_name TEXT NOT NULL,
+    local_updated_at INTEGER NOT NULL,
+    remote_updated_at INTEGER NOT NULL,
+    winner TEXT NOT NULL,
+    detected_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_conflicts_user ON sync_conflicts(user_id, detected_at)`,
+
+  // ---- 身份配对（D4-8 兜底路径）----
+  // 零依赖的路演方案：设备 A 生成 6 位码，设备 B 输入即绑定同一身份。
+  // 不依赖华为账号与 AGC 配置，现场 30 秒可演示。
+  `CREATE TABLE IF NOT EXISTS pairing_codes (
+    code TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_by TEXT,
+    used_at INTEGER
+  )`,
+  `CREATE TABLE IF NOT EXISTS sync_devices (
+    user_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    device_name TEXT NOT NULL DEFAULT '',
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    PRIMARY KEY (user_id, device_id)
+  )`,
+]
+
+/** 可同步的表名白名单（防止客户端用任意表名污染数据库） */
+export const SYNCABLE_TABLES: string[] = [
+  'tags',
+  'favorites',
+  'notes',
+  'themes',
+  'visits',
 ]
 
 /** 导入前清空的业务表（保留 FTS5 与 usage_log） */

@@ -24,6 +24,7 @@
     "data:sites": "pnpm --filter @yra/pipeline run sites",
     "data:verify": "pnpm --filter @yra/pipeline run verify",
     "server": "pnpm --filter @yra/server run start",
+    "sync:test": "pnpm --filter @yra/server run sync:test",
     "server:dev": "pnpm --filter @yra/server run dev"
   },
   "devDependencies": {

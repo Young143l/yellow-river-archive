@@ -20,6 +20,7 @@ import { buildEntityDictionary, describeDictionary } from './search/query-unders
 import { itemsRoutes } from './routes/items'
 import { searchRoutes } from './routes/search'
 import { statsRoutes } from './routes/stats'
+import { syncRoutes } from './routes/sync'
 import { createVectorChannel } from './search/service'
 import { VectorStore } from './search/vectors'
 
@@ -92,6 +93,7 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   await app.register(itemsRoutes, { db, vectors })
   await app.register(searchRoutes, { db, vectors, tokenizer, dict, vectorChannel, rerankProvider })
   await app.register(statsRoutes, { db })
+  await app.register(syncRoutes, { db })
 
   return app
 }
