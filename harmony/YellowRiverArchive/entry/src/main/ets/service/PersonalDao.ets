@@ -14,15 +14,19 @@
  */
 
 import { util } from '@kit.ArkTS'
+import { fileIo } from '@kit.CoreFileKit'
 import { relationalStore } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
 
 import type {
+  BackupPayload,
   ChangeSet,
   CollectTargetType,
   ConflictRecord,
   CountPair,
   Favorite,
+  ImportResult,
+  Theme,
   Note,
   Progress,
   SyncableRecord,
@@ -813,6 +817,136 @@ export class PersonalDao {
     }
     rs.close()
     return n
+  }
+
+  // -------------------------------------------------------------------------
+  // 备份与恢复（D4-10）
+  // -------------------------------------------------------------------------
+
+  /** 备份文件路径（应用沙箱内，卸载即清） */
+  static backupPath(context: common.Context): string {
+    return `${context.filesDir}/yra-backup.json`
+  }
+
+  /**
+   * 全量导出。
+   *
+   * 导出的是**完整记录**（含 updatedAt / deviceId / deleted 三个 LWW 元数据），
+   * 不是「当前有效数据」—— 少了元数据，导入时就无法判断该保留哪一份，
+   * 只能整份覆盖，那会丢掉导入之后产生的更新。
+   */
+  static async exportBackup(context: common.Context): Promise<BackupPayload> {
+    const favorites: Favorite[] = await PersonalDao.listFavorites(context)
+    const notes: Note[] = await PersonalDao.listNotes(context)
+    const tags: Tag[] = await PersonalDao.listTags(context)
+    const themes: Theme[] = await PersonalDao.listThemes(context)
+    const deviceId: string = await PersonalDao.getDeviceId(context)
+
+    return {
+      version: '1.0',
+      exportedAt: new Date().getTime(),
+      deviceId,
+      favorites,
+      notes,
+      tags,
+      themes,
+    }
+  }
+
+  /** 导出到沙箱文件，返回文件路径与字节数 */
+  static async exportToFile(context: common.Context): Promise<string> {
+    const payload: BackupPayload = await PersonalDao.exportBackup(context)
+    const text: string = JSON.stringify(payload)
+    const path: string = PersonalDao.backupPath(context)
+    const file = fileIo.openSync(path, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC)
+    try {
+      fileIo.writeSync(file.fd, text)
+    } finally {
+      fileIo.closeSync(file)
+    }
+    return path
+  }
+
+  /** 读取沙箱备份文件的原始文本（不存在返回空串） */
+  static readBackupFile(context: common.Context): string {
+    const path: string = PersonalDao.backupPath(context)
+    if (!fileIo.accessSync(path)) {
+      return ''
+    }
+    const file = fileIo.openSync(path, fileIo.OpenMode.READ_ONLY)
+    try {
+      const stat = fileIo.statSync(path)
+      const buffer = new ArrayBuffer(stat.size)
+      fileIo.readSync(file.fd, buffer)
+      const decoder = util.TextDecoder.create('utf-8')
+      return decoder.decodeToString(new Uint8Array(buffer))
+    } finally {
+      fileIo.closeSync(file)
+    }
+  }
+
+  /**
+   * 导入合并。
+   *
+   * **复用 applyRemote 的 LWW 逻辑**，不另写一套合并：
+   * 备份载荷先转成 ChangeSet，再走与同步完全相同的收敛路径。
+   * 这样「导入」「同步」「云端快照恢复」三条路径的行为天然一致 ——
+   * 不会出现「导入会覆盖、恢复不会」这种让人记不住的差异。
+   */
+  static async importBackup(context: common.Context, payload: BackupPayload): Promise<ImportResult> {
+    const sets: ChangeSet[] = []
+    if (payload.favorites.length > 0) {
+      sets.push({ table: 'favorites', records: payload.favorites })
+    }
+    if (payload.notes.length > 0) {
+      sets.push({ table: 'notes', records: payload.notes })
+    }
+    if (payload.tags.length > 0) {
+      sets.push({ table: 'tags', records: payload.tags })
+    }
+    if (payload.themes.length > 0) {
+      sets.push({ table: 'themes', records: payload.themes })
+    }
+
+    const report = await PersonalDao.applyRemote(context, sets)
+    return {
+      imported: report.applied,
+      merged: report.skipped,
+      conflicts: report.conflicts,
+    }
+  }
+
+  /** 从沙箱文件导入 */
+  static async importFromFile(context: common.Context): Promise<ImportResult> {
+    const text: string = PersonalDao.readBackupFile(context)
+    if (text.length === 0) {
+      return { imported: 0, merged: 0, conflicts: [] }
+    }
+    const payload = JSON.parse(text) as BackupPayload
+    return PersonalDao.importBackup(context, payload)
+  }
+
+  /** 列出主题（备份载荷与文档视图都要用） */
+  static async listThemes(context: common.Context): Promise<Theme[]> {
+    const store: relationalStore.RdbStore = await DataImportService.open(context)
+    const rs: relationalStore.ResultSet = await store.querySql(
+      `SELECT id, name, target_ids, updated_at, created_at, device_id, deleted
+         FROM ${Tables.THEMES} WHERE deleted = 0 ORDER BY updated_at DESC`
+    )
+    const list: Theme[] = []
+    while (rs.goToNextRow()) {
+      list.push({
+        id: rs.getString(rs.getColumnIndex('id')),
+        name: rs.getString(rs.getColumnIndex('name')),
+        targetIds: PersonalDao.parseStringArray(rs.getString(rs.getColumnIndex('target_ids'))),
+        updatedAt: rs.getLong(rs.getColumnIndex('updated_at')),
+        createdAt: rs.getLong(rs.getColumnIndex('created_at')),
+        deviceId: rs.getString(rs.getColumnIndex('device_id')),
+        deleted: false,
+      })
+    }
+    rs.close()
+    return list
   }
 
   /** 解析存成 JSON 文本的字符串数组（ArkTS 不允许直接 as string[]） */

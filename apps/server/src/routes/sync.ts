@@ -25,6 +25,7 @@ import type {
 import type { WebSocket } from 'ws'
 
 import type { Db } from '../db/index'
+import { createSnapshot, deleteSnapshot, listSnapshots, readSnapshotForRestore, snapshotStats } from '../sync/backup'
 import {
   createPairing,
   joinPairing,
@@ -136,6 +137,76 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
     }
     return { userId, devices: listDevices(db, userId), ...userStats(db, userId) }
   })
+
+  // -------------------------------------------------------------------------
+  // 云端快照（备份点，D4-10）
+  // -------------------------------------------------------------------------
+
+  app.post<{ Body: { userId?: string } }>('/api/backup/snapshot', async (request, reply) => {
+    const userId: string = (request.body?.userId ?? '').trim()
+    if (userId.length === 0) {
+      const e: ApiError = { code: 'E4002', message: '需要 userId' }
+      return reply.code(400).send(e)
+    }
+    const result = createSnapshot(db, userId)
+    if (!result.ok) {
+      const e: ApiError = { code: 'E4008', message: result.message }
+      return reply.code(400).send(e)
+    }
+    return result
+  })
+
+  app.get<{ Querystring: { userId?: string; limit?: string } }>(
+    '/api/backup/snapshots',
+    async (request, reply) => {
+      const userId: string = (request.query.userId ?? '').trim()
+      if (userId.length === 0) {
+        const e: ApiError = { code: 'E4002', message: '需要 userId' }
+        return reply.code(400).send(e)
+      }
+      const rawLimit: string | undefined = request.query.limit
+      const limit: number = rawLimit !== undefined ? Number.parseInt(rawLimit, 10) : 20
+      const safeLimit: number = Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 20
+      const stats = snapshotStats(db, userId)
+      return {
+        userId,
+        snapshots: listSnapshots(db, userId, safeLimit),
+        count: stats.count,
+        totalBytes: stats.totalBytes,
+      }
+    }
+  )
+
+  app.post<{ Params: { id: string }; Body: { userId?: string } }>(
+    '/api/backup/snapshots/:id/restore',
+    async (request, reply) => {
+      const userId: string = (request.body?.userId ?? '').trim()
+      if (userId.length === 0) {
+        const e: ApiError = { code: 'E4002', message: '需要 userId' }
+        return reply.code(400).send(e)
+      }
+      const result = readSnapshotForRestore(db, userId, request.params.id)
+      if (!result.ok) {
+        const e: ApiError = { code: 'E4009', message: result.message }
+        return reply.code(404).send(e)
+      }
+      // 返回变更集而不直接改服务端数据 —— 由客户端走 LWW 合并落库
+      return { ok: true, message: result.message, changes: result.changes }
+    }
+  )
+
+  app.delete<{ Params: { id: string }; Querystring: { userId?: string } }>(
+    '/api/backup/snapshots/:id',
+    async (request, reply) => {
+      const userId: string = (request.query.userId ?? '').trim()
+      if (userId.length === 0) {
+        const e: ApiError = { code: 'E4002', message: '需要 userId' }
+        return reply.code(400).send(e)
+      }
+      const removed: boolean = deleteSnapshot(db, userId, request.params.id)
+      return { ok: removed, message: removed ? '已删除' : '快照不存在' }
+    }
+  )
 
   // -------------------------------------------------------------------------
   // 同步通道（WebSocket）

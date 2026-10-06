@@ -137,6 +137,18 @@ export const SCHEMA_STATEMENTS: string[] = [
     used_by TEXT,
     used_at INTEGER
   )`,
+  // ---- 云端快照（备份点）----
+  // 存在理由：同步只保证「最新状态一致」，不保证「能回到过去」。
+  // 一次误删若已被同步到所有设备，没有快照就真的找不回来了。
+  `CREATE TABLE IF NOT EXISTS backup_snapshots (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    item_count INTEGER NOT NULL,
+    payload TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_snapshots_user ON backup_snapshots(user_id, created_at)`,
   `CREATE TABLE IF NOT EXISTS sync_devices (
     user_id TEXT NOT NULL,
     device_id TEXT NOT NULL,

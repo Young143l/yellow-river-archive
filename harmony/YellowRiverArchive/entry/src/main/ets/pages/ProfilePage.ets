@@ -200,6 +200,72 @@ export struct ProfilePage {
     }
   }
 
+  private async onExportBackup(): Promise<void> {
+    if (this.syncBusy) { return }
+    this.syncBusy = true
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const path: string = await PersonalDao.exportToFile(context)
+      const text: string = PersonalDao.readBackupFile(context)
+      this.syncMessage = `已导出到 ${path.split('/').pop()}（${Math.round(text.length / 1024)} KB）`
+    } catch (err) {
+      this.syncMessage = '导出失败'
+    }
+    this.syncBusy = false
+  }
+
+  private async onImportBackup(): Promise<void> {
+    if (this.syncBusy) { return }
+    this.syncBusy = true
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const result = await PersonalDao.importFromFile(context)
+      if (result.imported === 0 && result.merged === 0) {
+        this.syncMessage = '没有找到备份文件，请先导出'
+      } else {
+        this.syncMessage = `导入完成：应用 ${result.imported} 条、保留本地 ${result.merged} 条、冲突 ${result.conflicts.length} 条`
+      }
+      await this.load()
+    } catch (err) {
+      this.syncMessage = '导入失败'
+    }
+    this.syncBusy = false
+  }
+
+  private async onSaveSnapshot(): Promise<void> {
+    if (this.syncBusy) { return }
+    this.syncBusy = true
+    this.syncMessage = '正在保存云端快照…'
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      this.syncMessage = await SyncService.saveCloudSnapshot(context)
+      await this.refreshSyncStatus()
+    } catch (err) {
+      this.syncMessage = '保存快照失败'
+    }
+    this.syncBusy = false
+  }
+
+  private async onRestoreSnapshot(): Promise<void> {
+    if (this.syncBusy) { return }
+    this.syncBusy = true
+    this.syncMessage = '正在读取云端快照…'
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const snapshots = await SyncService.listCloudSnapshots(context)
+      if (snapshots.length === 0) {
+        this.syncMessage = '云端还没有快照'
+      } else {
+        const latest = snapshots[0]
+        this.syncMessage = await SyncService.restoreSnapshot(context, latest.id)
+        await this.load()
+      }
+    } catch (err) {
+      this.syncMessage = '恢复失败'
+    }
+    this.syncBusy = false
+  }
+
   private async onSync(): Promise<void> {
     if (this.syncBusy) {
       return
@@ -288,6 +354,42 @@ export struct ProfilePage {
           .onClick(() => {
             this.onJoinPairing()
           })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Button('导出备份')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => { this.onExportBackup() })
+        Button('导入恢复')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => { this.onImportBackup() })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Button('存云端快照')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => { this.onSaveSnapshot() })
+        Button('从快照恢复')
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.background)
+          .borderRadius(8)
+          .layoutWeight(1)
+          .onClick(() => { this.onRestoreSnapshot() })
       }
       .width('100%')
 

@@ -13,7 +13,7 @@ import { common } from '@kit.AbilityKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { http } from '@kit.NetworkKit'
 
-import type { ChangeSet, ConflictRecord, SyncableRecord } from '../../shared'
+import type { BackupSnapshot, ChangeSet, ConflictRecord, SyncableRecord } from '../../shared'
 import { SyncKeys } from '../../model/Schema'
 import { DataImportService } from '../DataImportService'
 import { PersonalDao } from '../PersonalDao'
@@ -39,6 +39,22 @@ export interface PairingCreatedView {
   readonly code: string
   readonly userId: string
   readonly message: string
+}
+
+/** 服务端备份接口的响应体 */
+export interface SnapshotResultView {
+  readonly ok: boolean
+  readonly message: string
+}
+
+export interface SnapshotListView {
+  readonly snapshots: BackupSnapshot[]
+}
+
+export interface SnapshotRestoreView {
+  readonly ok: boolean
+  readonly message: string
+  readonly changes: ChangeSet[]
 }
 
 /** 服务端 /api/sync/pair/join 的响应体 */
@@ -342,6 +358,78 @@ export class SyncService {
     // 两个游标都要清：一个是本机时间戳、一个是服务端序号，各自的「从头开始」含义不同
     await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PUSHED_AT, '0')
     await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, '0')
+  }
+
+  /** 保存云端快照（备份点） */
+  static async saveCloudSnapshot(context: common.Context): Promise<string> {
+    const baseUrl: string = await SyncService.resolveBaseUrl(context)
+    const userId: string = await SyncService.currentUserId(context)
+    if (userId.length === 0) {
+      return '未绑定身份，无法保存云端快照'
+    }
+    try {
+      const text: string = await SyncService.postJson(
+        `${baseUrl}/api/backup/snapshot`,
+        JSON.stringify({ userId: userId })
+      )
+      const body = JSON.parse(text) as SnapshotResultView
+      return body.ok === true ? body.message : '保存失败'
+    } catch (err) {
+      return `无法连接服务端（${SyncService.describeError(err)})`
+    }
+  }
+
+  /** 列出云端快照 */
+  static async listCloudSnapshots(context: common.Context): Promise<BackupSnapshot[]> {
+    const baseUrl: string = await SyncService.resolveBaseUrl(context)
+    const userId: string = await SyncService.currentUserId(context)
+    if (userId.length === 0) {
+      return []
+    }
+    try {
+      const request = http.createHttp()
+      try {
+        const response: http.HttpResponse = await request.request(
+          `${baseUrl}/api/backup/snapshots?userId=${encodeURIComponent(userId)}&limit=10`,
+          { method: http.RequestMethod.GET, connectTimeout: 6000, readTimeout: 8000 }
+        )
+        const body = JSON.parse(String(response.result)) as SnapshotListView
+        return body.snapshots !== undefined ? body.snapshots : []
+      } finally {
+        request.destroy()
+      }
+    } catch (err) {
+      return []
+    }
+  }
+
+  /**
+   * 从云端快照恢复。
+   *
+   * 走的是与同步相同的 LWW 合并路径 —— 快照被当作一批「远端变更」应用，
+   * **不直接覆盖本地**。否则「恢复到旧快照」会悄悄回退掉快照之后的所有改动，
+   * 而用户点「恢复」时通常并不期望这个语义。
+   */
+  static async restoreSnapshot(context: common.Context, snapshotId: string): Promise<string> {
+    const baseUrl: string = await SyncService.resolveBaseUrl(context)
+    const userId: string = await SyncService.currentUserId(context)
+    if (userId.length === 0) {
+      return '未绑定身份'
+    }
+    try {
+      const text: string = await SyncService.postJson(
+        `${baseUrl}/api/backup/snapshots/${encodeURIComponent(snapshotId)}/restore`,
+        JSON.stringify({ userId: userId })
+      )
+      const body = JSON.parse(text) as SnapshotRestoreView
+      if (body.changes === undefined) {
+        return body.message !== undefined ? body.message : '快照读取失败'
+      }
+      const report = await PersonalDao.applyRemote(context, body.changes)
+      return `已按最新时间戳合并：应用 ${report.applied} 条、保留本地 ${report.skipped} 条、冲突 ${report.conflicts.length} 条`
+    } catch (err) {
+      return `恢复失败（${SyncService.describeError(err)})`
+    }
   }
 
   /** 各通道的可读状态（同步中心页展示） */
