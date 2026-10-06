@@ -2,9 +2,10 @@ import { common } from '@kit.AbilityKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { router } from '@kit.ArkUI'
 
-import type { Citation, GraphPath } from '../shared'
+import { SECTION_LABELS, type Citation, type GraphPath, type Section } from '../shared'
 import { AppColor, AppFont, AppSize } from '../constants/Theme'
 import { QaBus, QaClient } from '../service/QaClient'
+import { SearchService, type SearchHit } from '../service/SearchService'
 
 /** 首屏引导问题：不给引导时用户不知道该问什么，问答页会显得空 */
 const SUGGESTIONS: string[] = [
@@ -58,6 +59,14 @@ export struct AssistantPage {
         this.answer = QaBus.answer
       }
       if (QaBus.finished) {
+        if (QaBus.error.length > 0) {
+          // ---- 四级降级链的第三级：云端问答不可用 → 端侧检索兜底 ----
+          // 设计文档 6.2 要求「完全断网 → 端侧 token 匹配检索」。
+          // 不降级的话，演示现场一旦断网，问答页就只剩一句报错。
+          this.stopPolling()
+          this.localFallback(this.question)
+          return
+        }
         this.citations = QaBus.citations
         this.graphPaths = QaBus.graphPaths
         this.degraded = QaBus.degraded
@@ -69,6 +78,60 @@ export struct AssistantPage {
         this.stopPolling()
       }
     }, 150)
+  }
+
+  /**
+   * 端侧检索兜底（断网 / 云端不可用）。
+   *
+   * 如实说明 AI 不可用，再把本地检索到的原文摘要摆出来 ——
+   * 用户仍能拿到有用信息，且清楚知道这不是生成的答案。
+   * 本地检索走的是预置包 + RDB，完全离线可用。
+   */
+  /** 分区键转中文名（端侧检索返回的是键，直接展示会显示 archaeology 这类英文） */
+  private sectionLabel(key: string): string {
+    for (const entry of SECTION_LABELS) {
+      if (entry.key === key) {
+        return entry.label
+      }
+    }
+    return key
+  }
+
+  private async localFallback(query: string): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const hits: SearchHit[] = await SearchService.search(context, query)
+      if (hits.length === 0) {
+        this.answer = '云端助手不可用，本地档案中也没有找到相关内容。可以换个说法，或先浏览时间轴上的条目。'
+        this.degraded = true
+        this.pending = false
+        return
+      }
+
+      const lines: string[] = ['云端助手当前不可用，以下是从本地档案中检索到的相关原文：', '']
+      const citations: Citation[] = []
+      hits.slice(0, 3).forEach((hit: SearchHit, i: number) => {
+        lines.push(`${i + 1}. ${hit.name} · ${this.sectionLabel(hit.section)}`)
+        lines.push(`   ${hit.snippet}`)
+        lines.push('')
+        citations.push({
+          chunkId: `${hit.itemId}#${i}`,
+          itemId: hit.itemId,
+          title: `${i + 1}. ${hit.name} · ${this.sectionLabel(hit.section)}`,
+          snippet: hit.snippet,
+          section: hit.section as Section,
+        })
+      })
+      lines.push('（恢复联网后可获得完整的归纳回答）')
+
+      this.answer = lines.join('\n')
+      this.citations = citations
+      this.degraded = true
+      this.errorText = ''
+    } catch (err) {
+      this.errorText = '本地检索也不可用'
+    }
+    this.pending = false
   }
 
   private submit(input: string): void {
