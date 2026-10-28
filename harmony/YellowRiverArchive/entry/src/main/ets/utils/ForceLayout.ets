@@ -34,6 +34,8 @@ export class SimNode {
    * 让同簇节点互相靠近、异簇互相排斥，图才会呈现「5 个团」而不是「一锅粥」。
    */
   cluster: string = ''
+  /** 聚焦模式下不参与绘制（只留焦点与其一跳邻居） */
+  hidden: boolean = false
 
   constructor(id: string, name: string, type: string, weight: number) {
     this.id = id
@@ -252,6 +254,9 @@ export class ForceLayout {
     let best: number = -1
     let bestDist: number = threshold * threshold
     this.nodes.forEach((node, index) => {
+      if (node.hidden) {
+        return
+      }
       const dx: number = node.x - x
       const dy: number = node.y - y
       const d2: number = dx * dx + dy * dy

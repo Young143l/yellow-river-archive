@@ -60,6 +60,14 @@ export struct GraphPage {
   @State settled: boolean = false
   /** 时间轴联动（D6-3）：选中的时代，空串表示不过滤 */
   @State activeEra: string = ''
+  /**
+   * 聚焦的遗址序号，-1 表示显示全图。
+   *
+   * 默认聚焦 —— 参照 Obsidian 的局部图谱：手机上把 57 个节点塞进一屏，
+   * 无论怎么调布局都读不出来。**聚焦一个遗址、只画它和它的一跳邻居**，
+   * 邻居沿圆周均匀排布，没有物理模拟、没有重叠、永远可读。
+   */
+  @State focusSite: number = 0
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -76,6 +84,8 @@ export struct GraphPage {
   private eraNodes: Map<string, number[]> = new Map<string, number[]>()
   /** 每个节点所属簇的序号（按遗址首次出现顺序），决定颜色 */
   private clusterOfNode: number[] = []
+  /** 各遗址节点在 layout.nodes 中的下标（@State 才能驱动遗址切换条重绘） */
+  @State siteIndices: number[] = []
   // ---- 视图变换：布局坐标 → 屏幕坐标 ----
   // 两级缩放：fitScale 让整图恰好填满画布（不论 5 个还是 500 个节点），
   // zoom 是用户的双指缩放倍数，panX/panY 是拖动偏移。
@@ -145,6 +155,7 @@ export struct GraphPage {
           siteIndices.push(i)
         }
       })
+      this.siteIndices = siteIndices
       let frontier: number[] = []
       for (const siteIdx of siteIndices) {
         clusterIdOfNode[siteIdx] = this.layout.nodes[siteIdx].id
@@ -206,16 +217,86 @@ export struct GraphPage {
     this.loading = false
   }
 
+  /**
+   * 径向自我网络布局：焦点放中心，一跳邻居沿圆周均匀排布。
+   *
+   * 这是移动端图谱的标准做法（Obsidian 局部图谱、D3 radial tree 同理）：
+   * 节点数固定在十几个，位置可解析计算 —— 不需要物理模拟，
+   * 不会重叠，也不需要用户缩放才能看清。
+   */
+  private applyFocusLayout(): void {
+    const w: number = this.ctx.width
+    const h: number = this.ctx.height
+    if (w <= 0 || h <= 0) {
+      return
+    }
+    this.layout.nodes.forEach((node) => {
+      node.hidden = true
+    })
+
+    const focusIdx: number = this.focusSite
+    if (focusIdx < 0 || focusIdx >= this.layout.nodes.length) {
+      // 全图模式：全部显示，交给力导向
+      this.layout.nodes.forEach((node) => {
+        node.hidden = false
+      })
+      this.layout.seed()
+      return
+    }
+
+    const focus: SimNode = this.layout.nodes[focusIdx]
+    focus.hidden = false
+    focus.x = w / 2
+    focus.y = h / 2
+
+    // 一跳邻居按「同簇优先」排序后均匀排布，同类节点会相邻，读起来成组
+    const neighborIdxs: number[] = (this.neighbors.get(focusIdx) ?? []).slice()
+    neighborIdxs.sort((a, b) => {
+      const ca: number = this.clusterOfNode[a] ?? 0
+      const cb: number = this.clusterOfNode[b] ?? 0
+      if (ca !== cb) {
+        return ca - cb
+      }
+      return this.layout.nodes[a].name.localeCompare(this.layout.nodes[b].name)
+    })
+
+    const count: number = neighborIdxs.length
+    // 半径留足边距，给外圈标签留出空间
+    const radius: number = Math.min(w * 0.34, h * 0.30)
+    neighborIdxs.forEach((idx: number, k: number) => {
+      const node: SimNode = this.layout.nodes[idx]
+      node.hidden = false
+      // 从正上方开始顺时针排列，视觉上有确定的起点
+      const theta: number = (Math.PI * 2 * k) / Math.max(1, count) - Math.PI / 2
+      node.x = w / 2 + radius * Math.cos(theta)
+      node.y = h / 2 + radius * Math.sin(theta)
+    })
+
+    // 二跳节点不显示，但保留在原位（切回全图时不用重新布局）
+  }
+
+  /** 切换聚焦的遗址 */
+  private setFocus(siteOrder: number): void {
+    this.focusSite = siteOrder
+    this.zoom = 1
+    this.panX = 0
+    this.panY = 0
+    this.applyFocusLayout()
+    this.draw()
+  }
+
   private startLoop(): void {
     if (!this.ready || this.timer !== -1 || this.layout.nodes.length === 0) {
       return
     }
     this.timer = setInterval(() => {
-      // 收敛后停止迭代，只保留重绘以响应点击 —— 省电，也让画面不抖
-      if (this.layout.energy() > 0.6) {
-        this.layout.step()
-      } else if (!this.settled) {
-        this.settled = true
+      // 聚焦模式下位置是解析算出来的，不需要迭代
+      if (this.focusSite < 0) {
+        if (this.layout.energy() > 0.6) {
+          this.layout.step()
+        } else if (!this.settled) {
+          this.settled = true
+        }
       }
       this.draw()
     }, 16)
@@ -233,6 +314,13 @@ export struct GraphPage {
     const w: number = this.ctx.width
     const h: number = this.ctx.height
     if (this.layout.nodes.length === 0 || w <= 0 || h <= 0) {
+      return
+    }
+    // 聚焦模式下位置已按画布解析算好，再做自动适配只会把图缩小一圈
+    if (this.focusSite >= 0) {
+      this.fitScale = 1
+      this.bboxCx = w / 2
+      this.bboxCy = h / 2
       return
     }
     let minX: number = Number.MAX_VALUE
@@ -293,7 +381,7 @@ export struct GraphPage {
     for (const edge of this.layout.edges) {
       const a: SimNode | undefined = this.layout.nodes[edge.from]
       const b: SimNode | undefined = this.layout.nodes[edge.to]
-      if (a === undefined || b === undefined) {
+      if (a === undefined || b === undefined || a.hidden || b.hidden) {
         continue
       }
       const touches: boolean =
@@ -310,6 +398,9 @@ export struct GraphPage {
 
     // ---- 节点 ----
     this.layout.nodes.forEach((node, index) => {
+      if (node.hidden) {
+        return
+      }
       const isSelected: boolean = index === this.selected
       const isNeighbor: boolean = highlighted.includes(index)
       const eraDimmed: boolean = hasEraFilter && !eraSet.has(index)
@@ -338,16 +429,23 @@ export struct GraphPage {
       // 只给重要节点与选中邻居画标签 —— 全画会糊成一片
       // 遗址名永远显示（它是簇的锚点，读图全靠它定坐标）；
       // 成员名只在放大到 1.6 倍以上或选中相关时出现，避免拥挤
+      // 聚焦模式下只有十几个节点，全部标注才可读；
+      // 全图模式下才需要靠权重和放大倍数筛选
       const showLabel: boolean =
-        isSelected ||
-        isNeighbor ||
-        isSiteNode ||
+        isSelected || isNeighbor || isSiteNode ||
+        (this.focusSite >= 0 && !eraDimmed) ||
         (this.zoom >= 1.6 && node.weight > 0.35 && !eraDimmed)
       if (showLabel) {
         const fontSize: number = isSelected ? 14 : 12
         this.ctx.font = `${fontSize}px sans-serif`
         this.ctx.globalAlpha = dimmed ? 0.3 : 1
-        const tx: number = nx + r + 4
+        // 径向布局：标签按节点相对圆心的方向朝外摆，不会压回中心节点
+        let tx: number = nx + r + 4
+        if (this.focusSite >= 0 && !isSiteNode) {
+          const dx: number = nx - this.ctx.width / 2
+          // 左半圆上的节点标签放左侧，右半圆放右侧
+          tx = dx < 0 ? nx - r - 4 - node.name.length * fontSize * 0.6 : nx + r + 4
+        }
         const ty: number = ny + fontSize / 2 - 1
         // 先描一圈背景色再加文字 —— 图密集时标签会压在连边与其他节点上，
         // 没有这层描边就完全读不出来
@@ -476,6 +574,7 @@ export struct GraphPage {
               rebuilt.seed()
               this.layout = rebuilt
             }
+            this.applyFocusLayout()
             this.startLoop()
           })
           .onClick((event: ClickEvent) => {
@@ -506,6 +605,45 @@ export struct GraphPage {
                 })
             )
           )
+      }
+
+      // 遗址切换条：默认聚焦单个遗址（径向自我网络），也可切到全图
+      if (this.siteIndices.length > 0) {
+        Scroll() {
+          Row({ space: 8 }) {
+            Text('全图')
+              .fontSize(11)
+              .fontColor(this.focusSite < 0 ? AppColor.surface : AppColor.textSecondary)
+              .backgroundColor(this.focusSite < 0 ? AppColor.primary : AppColor.background)
+              .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+              .borderRadius(13)
+              .onClick(() => {
+                this.setFocus(-1)
+              })
+            ForEach(
+              this.siteIndices,
+              (idx: number, order: number) => {
+                Text(this.layout.nodes[idx].name)
+                  .fontSize(11)
+                  .fontColor(this.focusSite === order ? AppColor.surface : AppColor.textSecondary)
+                  .backgroundColor(
+                    this.focusSite === order ? AppColor.primary : AppColor.background
+                  )
+                  .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+                  .borderRadius(13)
+                  .onClick(() => {
+                    this.setFocus(order)
+                  })
+              },
+              (idx: number) => `site-${idx}`
+            )
+          }
+          .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .width('100%')
+        .padding({ top: 4, bottom: 4 })
       }
 
       // 时代轴：点选高亮该时代的节点（D6-3）
