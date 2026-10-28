@@ -2,7 +2,9 @@ import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
 import type { GraphEdge, GraphNode } from '../shared'
+import { CORE_ERAS } from '../shared'
 import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { HeritageDao } from '../service/HeritageDao'
 import { GraphDao } from '../service/GraphDao'
 import { ForceLayout, SimEdge, SimNode } from '../utils/ForceLayout'
 
@@ -53,6 +55,8 @@ export struct GraphPage {
   @State selectedType: string = ''
   @State selectedItemId: string = ''
   @State settled: boolean = false
+  /** 时间轴联动（D6-3）：选中的时代，空串表示不过滤 */
+  @State activeEra: string = ''
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -65,6 +69,8 @@ export struct GraphPage {
   private selected: number = -1
   /** 邻居索引：高亮邻居用，避免每帧重算 */
   private neighbors: Map<number, number[]> = new Map<number, number[]>()
+  /** 时代 → 节点下标。时间轴联动用它把「时代」映射到画布上的节点集合 */
+  private eraNodes: Map<string, number[]> = new Map<string, number[]>()
 
   aboutToAppear(): void {
     this.load()
@@ -104,6 +110,28 @@ export struct GraphPage {
         b.push(edge.from)
         this.neighbors.set(edge.to, b)
       }
+
+      // 时间轴联动：把每个时代映射到它包含的节点
+      // Site 节点的 id 就是 itemId，直接查档案拿时代，再把这些节点连同
+      // 同名 Era 节点一起归入该时代
+      await HeritageDao.ready(context)
+      this.layout.nodes.forEach((node, i) => {
+        let era: string = ''
+        if (node.type === 'Site') {
+          const item = HeritageDao.detail(node.id)
+          if (item !== undefined) {
+            era = item.era
+          }
+        } else if (node.type === 'Era') {
+          era = node.name
+        }
+        if (era.length === 0) {
+          return
+        }
+        const bucket: number[] = this.eraNodes.get(era) ?? []
+        bucket.push(i)
+        this.eraNodes.set(era, bucket)
+      })
 
       this.nodeCount = nodes.length
       this.edgeCount = this.layout.edges.length
@@ -145,6 +173,14 @@ export struct GraphPage {
     const highlighted: number[] = hasSelection
       ? this.neighbors.get(this.selected) ?? []
       : []
+    // 时间轴联动：选中时代后，不属于该时代的节点淡出
+    const eraSet: Set<number> = new Set<number>()
+    if (this.activeEra.length > 0) {
+      for (const i of this.eraNodes.get(this.activeEra) ?? []) {
+        eraSet.add(i)
+      }
+    }
+    const hasEraFilter: boolean = this.activeEra.length > 0
 
     // ---- 连边 ----
     for (const edge of this.layout.edges) {
@@ -155,11 +191,13 @@ export struct GraphPage {
       }
       const touches: boolean =
         !hasSelection || edge.from === this.selected || edge.to === this.selected
+      const inEra: boolean =
+        !hasEraFilter || (eraSet.has(edge.from) && eraSet.has(edge.to))
       this.ctx.beginPath()
       this.ctx.moveTo(a.x, a.y)
       this.ctx.lineTo(b.x, b.y)
       this.ctx.lineWidth = touches && hasSelection ? 1.6 : 0.8
-      this.ctx.strokeStyle = touches ? '#C4B7A6' : '#E6DED2'
+      this.ctx.strokeStyle = inEra ? (touches ? '#C4B7A6' : '#E6DED2') : '#F0EBE4'
       this.ctx.stroke()
     }
 
@@ -167,7 +205,8 @@ export struct GraphPage {
     this.layout.nodes.forEach((node, index) => {
       const isSelected: boolean = index === this.selected
       const isNeighbor: boolean = highlighted.includes(index)
-      const dimmed: boolean = hasSelection && !isSelected && !isNeighbor
+      const eraDimmed: boolean = hasEraFilter && !eraSet.has(index)
+      const dimmed: boolean = eraDimmed || (hasSelection && !isSelected && !isNeighbor)
 
       const r: number = node.radius() * (isSelected ? 1.35 : 1)
       this.ctx.beginPath()
@@ -272,6 +311,35 @@ export struct GraphPage {
           .onClick((event: ClickEvent) => {
             this.onTap(event.x, event.y)
           })
+      }
+
+      // 时代轴：点选高亮该时代的节点（D6-3）
+      if (this.nodeCount > 0) {
+        Scroll() {
+          Row({ space: 8 }) {
+            ForEach(
+              CORE_ERAS,
+              (era: string) => {
+                Text(era)
+                  .fontSize(11)
+                  .fontColor(this.activeEra === era ? AppColor.surface : AppColor.textSecondary)
+                  .backgroundColor(this.activeEra === era ? AppColor.primary : AppColor.background)
+                  .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                  .borderRadius(12)
+                  .onClick(() => {
+                    this.activeEra = this.activeEra === era ? '' : era
+                    this.draw()
+                  })
+              },
+              (era: string) => era
+            )
+          }
+          .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .width('100%')
+        .padding({ top: 6, bottom: 6 })
       }
 
       // 选中详情条：点节点看名称与类型，Site 节点可直接进详情
