@@ -46,6 +46,35 @@ const BAND_SPECS: BandSpec[] = [
  * 黄河下游是著名的宽浅游荡型河道，沙洲与汊道是它的标志性地貌。
  * 画几处浅色滩地，河就不再是一条均匀的带子。
  */
+/** 汊道：offset 为相对河宽的横向偏移，freq/phase 决定摆动，width 为线宽 */
+class BraidSpec {
+  readonly offset: number
+  readonly freq: number
+  readonly phase: number
+  readonly width: number
+  readonly tint: string
+
+  constructor(offset: number, freq: number, phase: number, width: number, tint: string) {
+    this.offset = offset
+    this.freq = freq
+    this.phase = phase
+    this.width = width
+    this.tint = tint
+  }
+}
+
+/**
+ * 次级水流。
+ *
+ * 黄河下游是宽浅游荡型河道：主槽之外还有多条汊道，之间夹着心滩。
+ * 只画一条均匀的水带，无论配色多准都不像黄河；有汊道才有那种"散"的形态。
+ */
+const BRAIDS: BraidSpec[] = [
+  new BraidSpec(-0.46, 0.0061, 0.4, 9, 'rgba(204, 170, 104, 0.55)'),
+  new BraidSpec(0.40, 0.0049, 2.1, 7, 'rgba(196, 160, 96, 0.50)'),
+  new BraidSpec(-0.02, 0.0077, 1.2, 5, 'rgba(212, 180, 116, 0.40)'),
+]
+
 const SANDBARS: number[][] = [
   [0.16, 0.55, -0.30, 1.5],
   [0.34, 0.42, 0.34, 1.1],
@@ -84,18 +113,24 @@ export struct HomePage {
   // ---- 版式基准 ----
   // 河道是一条有边界的竖带（14..42），不是铺在文字底下的背景：
   // 左页边 14 → 河面宽 28 → 河岸 → 遗迹图形(44..68) → 连接线(68..92) → 正文 92
+  // 河宽比例是这一版的关键决定。45px 在 360px 屏上只占 12.5%，
+  // 只够画一条"带子"——沙洲、汊道、宽窄变化都表现不出来，所以显得窄。
+  // 加到 100px（约 28%）之后，河才有了"面"，能画宽浅游荡型河道的地貌。
+  // 代价是正文从 240px 收窄到 218px，仍容得下约 17 个汉字/行。
   /** 河道画布宽度 */
-  private readonly RIVER_W: number = 60
+  private readonly RIVER_W: number = 106
   /** 河道中心线距屏幕左沿 */
-  private readonly RIVER_CX: number = 28
-  /** 河道半宽：河面总宽 = 2 × 它 */
-  private readonly RIVER_HW: number = 12
+  private readonly RIVER_CX: number = 55
+  /** 河道半宽基准：实际宽度会在此基础上随流程起伏 */
+  private readonly RIVER_HW: number = 42
   /** 右岸线位置 */
-  private readonly BANK_RIGHT: number = 45
+  private readonly BANK_RIGHT: number = 97
+  /** 遗迹图形左沿（压在右岸上，不额外占用正文宽度） */
+  private readonly GLYPH_LEFT: number = 76
   /** 正文起始位置 */
-  private readonly CONTENT_LEFT: number = 100
+  private readonly CONTENT_LEFT: number = 112
   /** 遗迹图形宽 */
-  private readonly GLYPH_W: number = 32
+  private readonly GLYPH_W: number = 30
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -234,6 +269,45 @@ export struct HomePage {
    * 配色取青绿山水：石青为水、石绿为岸、赭石勾线。矿物颜料本身有分量，
    * 不会像水墨那样在暖纸色上显得灰扑扑。
    */
+  /** 在河道里填充一条水道：centerOff/halfRatio 都随流程变化，水道才会时分时合 */
+  private fillChannel(
+    h: number,
+    centerOff: (y: number) => number,
+    halfRatio: (y: number) => number,
+    tint: string
+  ): void {
+    this.ctx.beginPath()
+    for (let y = 0; y <= h; y += 5) {
+      const hw: number = this.riverHalf(y, h)
+      const x: number = this.riverX(y) + centerOff(y) * hw - halfRatio(y) * hw
+      if (y === 0) {
+        this.ctx.moveTo(x, y)
+      } else {
+        this.ctx.lineTo(x, y)
+      }
+    }
+    for (let y = h; y >= 0; y -= 5) {
+      const hw: number = this.riverHalf(y, h)
+      this.ctx.lineTo(this.riverX(y) + centerOff(y) * hw + halfRatio(y) * hw, y)
+    }
+    this.ctx.closePath()
+    this.ctx.fillStyle = tint
+    this.ctx.fill()
+  }
+
+  /**
+   * 绘制河道（宽浅游荡型）。
+   *
+   * 关键改动：**不再是"一整条填满的水"**。
+   * 之前把整个河带填成赭色，放大看就是一块扁平的黄色，汊道与心滩全被压住；
+   * 沙洲只能靠叠椭圆硬凑，结果成了一个个圆斑。
+   *
+   * 现在按真实黄河的地貌来组织：
+   *   1. 铺一层河漫滩（浅沙色）
+   *   2. 在滩地上开 3 条水道，各自的横向位置与宽度都随流程变化
+   *      —— 水道时宽时窄、时分时合，它们之间的空地自然就成了心滩沙洲
+   *   3. 水纹只画在水道里，滩地保持干燥
+   */
   private drawRiver(): void {
     const w: number = this.ctx.width
     const h: number = this.ctx.height
@@ -244,9 +318,9 @@ export struct HomePage {
     this.ctx.lineCap = 'round'
     this.ctx.lineJoin = 'round'
 
-    // ---- 河面：两岸围合成填充路径 ----
+    // ---- 1. 河漫滩：整条河带的底，浅沙色 ----
     this.ctx.beginPath()
-    for (let y = 0; y <= h; y += 6) {
+    for (let y = 0; y <= h; y += 5) {
       const x: number = this.riverX(y) - this.riverHalf(y, h)
       if (y === 0) {
         this.ctx.moveTo(x, y)
@@ -254,26 +328,42 @@ export struct HomePage {
         this.ctx.lineTo(x, y)
       }
     }
-    for (let y = h; y >= 0; y -= 6) {
+    for (let y = h; y >= 0; y -= 5) {
       this.ctx.lineTo(this.riverX(y) + this.riverHalf(y, h), y)
     }
     this.ctx.closePath()
-
-    // 黄河的水色是赭黄 —— 它叫「黄河」就是因为挟带大量泥沙。
-    // 之前用青绿山水的石青，虽然好看，但那不是黄河。
-    const water: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, h)
-    water.addColorStop(0, 'rgba(196, 158, 88, 0.72)')
-    water.addColorStop(0.35, 'rgba(183, 143, 74, 0.80)')
-    water.addColorStop(0.72, 'rgba(191, 152, 82, 0.78)')
-    water.addColorStop(1, 'rgba(204, 168, 100, 0.66)')
-    this.ctx.fillStyle = water
+    const flood: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, h)
+    flood.addColorStop(0, 'rgba(214, 194, 152, 0.72)')
+    flood.addColorStop(0.5, 'rgba(206, 185, 142, 0.78)')
+    flood.addColorStop(1, 'rgba(216, 197, 156, 0.70)')
+    this.ctx.fillStyle = flood
     this.ctx.fill()
 
-    // ---- 水下结构与笔触（裁剪在河形内）----
+    // ---- 2. 三条水道 ----
+    // 每条道的位置与宽度都是 y 的函数：错开的相位让它们时而并行、时交汇
+    this.fillChannel(
+      h,
+      (y: number) => -0.40 + Math.sin(y * 0.0042 + 0.8) * 0.14,
+      (y: number) => 0.33 + Math.sin(y * 0.0068 + 2.0) * 0.07,
+      'rgba(172, 130, 62, 0.90)'
+    )
+    this.fillChannel(
+      h,
+      (y: number) => 0.34 + Math.sin(y * 0.0051 + 2.6) * 0.13,
+      (y: number) => 0.25 + Math.sin(y * 0.0079 + 0.4) * 0.06,
+      'rgba(180, 140, 72, 0.86)'
+    )
+    this.fillChannel(
+      h,
+      (y: number) => -0.02 + Math.sin(y * 0.0033 + 3.4) * 0.22,
+      (y: number) => 0.09 + Math.sin(y * 0.0092 + 1.6) * 0.05,
+      'rgba(158, 118, 54, 0.80)'
+    )
+
+    // ---- 3. 河内细节（裁剪在河带内）----
     this.ctx.save()
     this.ctx.clip()
 
-    // 深浅横带：纯渐变像塑料板，叠几道浓淡不一的水色才有「浑水」的质感
     for (const b of BAND_SPECS) {
       const y0: number = h * b.top
       const bh: number = h * b.height
@@ -285,31 +375,9 @@ export struct HomePage {
       this.ctx.fillRect(0, y0, this.ctx.width, bh)
     }
 
-    // 沙洲：河心几处浅色滩地，黄河下游的典型地貌，也是「不是蛇」的关键细节。
-    // 单个椭圆看起来像贴纸 —— 用三层由大到小、由淡到浓的椭圆叠出柔边，
-    // 滩地才像是从水里"浮"出来的。
-    for (const bar of SANDBARS) {
-      const by: number = h * bar[0]
-      const hw: number = this.riverHalf(by, h)
-      const bx: number = this.riverX(by) + bar[2] * hw
-      const bw0: number = hw * bar[1]
-      const bh0: number = bar[3] * h * 0.012
-      const layers: number[][] = [
-        [1.45, 0.16],
-        [1.15, 0.26],
-        [0.82, 0.42],
-      ]
-      for (const l of layers) {
-        this.ctx.beginPath()
-        this.ctx.ellipse(bx, by, bw0 * l[0], bh0 * l[0], 0.12, 0, Math.PI * 2)
-        this.ctx.fillStyle = `rgba(232, 212, 168, ${l[1]})`
-        this.ctx.fill()
-      }
-    }
-
     this.ctx.restore()
 
-    // ---- 岸线：赭石，两岸各一条 ----
+    // ---- 4. 岸线：河带外沿 ----
     for (const side of [-1, 1]) {
       this.ctx.beginPath()
       for (let y = 0; y <= h; y += 5) {
@@ -320,12 +388,12 @@ export struct HomePage {
           this.ctx.lineTo(x, y)
         }
       }
-      this.ctx.lineWidth = 1.5
-      this.ctx.strokeStyle = 'rgba(138, 96, 52, 0.66)'
+      this.ctx.lineWidth = 1.7
+      this.ctx.strokeStyle = 'rgba(146, 104, 58, 0.60)'
       this.ctx.stroke()
     }
 
-    // ---- 石绿岸带：两岸外侧一线青绿，暗示滩地植被 ----
+    // ---- 5. 滩地植被：岸外一线青绿 ----
     for (const side of [-1, 1]) {
       this.ctx.beginPath()
       for (let y = 0; y <= h; y += 5) {
@@ -336,37 +404,42 @@ export struct HomePage {
           this.ctx.lineTo(x, y)
         }
       }
-      this.ctx.lineWidth = 3
-      this.ctx.strokeStyle = 'rgba(120, 158, 118, 0.26)'
+      this.ctx.lineWidth = 3.4
+      this.ctx.strokeStyle = 'rgba(116, 152, 110, 0.24)'
       this.ctx.stroke()
     }
 
-    // ---- 水波：米白短弧，错落散布 ----
-    const ROW: number = 19
-    const drift: number = (this.phase * 9) % ROW
-    this.ctx.lineWidth = 1.5
+    // ---- 6. 水波：只落在水道范围内 ----
+    // 行距不再固定：固定行距会让水波排成横平竖直的网格，看着像缝线。
+    // 让每行的间距在 13-27 之间浮动，水波才「散」。
+    const drift: number = (this.phase * 9) % 18
+    this.ctx.lineWidth = 1.4
 
     let k: number = 0
-    for (let y = 0; y <= h; y += ROW) {
+    let y: number = -6
+    while (y <= h) {
       const yy: number = y + drift
-      const half: number = this.riverHalf(yy, h)
-      if (half < 3) {
+      const hw: number = this.riverHalf(yy, h)
+      if (hw < 4) {
         k += 1
+        y += 13 + ((k * 37) % 15)
         continue
       }
       const cx: number = this.riverX(yy)
-      const span: number = half * 1.5
-      const count: number = k % 3 === 0 ? 2 : 1
-      for (let i = 0; i < count; i += 1) {
-        const seed: number = k * 7 + i * 13
-        const len: number = 5 + (seed % 5)
-        const lateral: number = ((seed * 31) % 100) / 100 * span - span / 2
-        const yJitter: number = (((seed * 17) % 7) - 3) * 0.9
-        const alpha: number = 0.42 + (seed % 4) / 24
-        this.ctx.strokeStyle = `rgba(248, 240, 216, ${alpha})`
-        this.ripple(cx + lateral - len / 2, yy + yJitter, len, seed % 2 === 0 ? 1 : -1)
+      for (let i = 0; i < 3; i += 1) {
+        const seed: number = k * 11 + i * 17
+        // 落点对齐到三条水道的中心附近，水波才不会画到滩地上
+        const laneOff: number = i === 0 ? -0.40 : (i === 1 ? 0.34 : -0.02)
+        const jitter: number = (((seed * 29) % 100) / 100 - 0.5) * 0.22
+        const len: number = 6 + (seed % 5)
+        const x: number = cx + (laneOff + jitter) * hw
+        const yJ: number = yy + (((seed * 13) % 7) - 3) * 0.8
+        const alpha: number = 0.38 + (seed % 4) / 26
+        this.ctx.strokeStyle = `rgba(250, 243, 222, ${alpha})`
+        this.ripple(x - len / 2, yJ, len, seed % 2 === 0 ? 1 : -1)
       }
       k += 1
+      y += 13 + ((k * 37) % 15)
     }
   }
 
@@ -529,25 +602,25 @@ export struct HomePage {
       // 这样无论图形多宽，线都不会出现断口 —— 上一版从图形右沿起算，
       // 因为留了间距，看起来就是「有些点没连上」。
       Row()
-        .width(this.CONTENT_LEFT - this.BANK_RIGHT - 2)
+        .width(this.CONTENT_LEFT - this.BANK_RIGHT)
         .height(1)
-        .backgroundColor('#93B5C3')
-        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT - 2), y: 28 })
+        .backgroundColor('#A08A63')
+        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT), y: 24 })
 
       // 岸端落点：线从河岸「长」出来的地方有个点
       Column()
         .width(5)
         .height(5)
         .borderRadius(3)
-        .backgroundColor('#7EA6B6')
-        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT - 3), y: 25.5 })
+        .backgroundColor('#8A6E45')
+        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT) - 1, y: 21.5 })
 
       // 岸边遗迹：压在连接线上，紧贴河道右岸
       Column() {
         this.siteGlyph(item)
       }
       .width(this.GLYPH_W)
-      .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT - 2), y: 6 })
+      .position({ x: -(this.CONTENT_LEFT - this.GLYPH_LEFT), y: 4 })
 
     Column({ space: 7 }) {
       Text(item.name)
