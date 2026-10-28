@@ -66,7 +66,7 @@ export struct TurnView {
         if (this.turn.error.length > 0) {
           Text(this.turn.error)
             .fontSize(AppFont.body)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
             .width('100%')
         } else if (this.turn.answer.length > 0) {
           Text(this.turn.answer)
@@ -84,7 +84,7 @@ export struct TurnView {
         if (this.turn.degraded) {
           Text('生成服务暂不可用，以上为档案原文摘要')
             .fontSize(11)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
             .width('100%')
         }
 

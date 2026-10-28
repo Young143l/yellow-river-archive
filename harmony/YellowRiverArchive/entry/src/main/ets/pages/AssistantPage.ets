@@ -242,7 +242,7 @@ export struct AssistantPage {
         if (this.errorText.length > 0) {
           Text(this.errorText)
             .fontSize(AppFont.body)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
             .width('100%')
         } else if (this.answer.length > 0) {
           Text(this.answer)
@@ -260,7 +260,7 @@ export struct AssistantPage {
         if (this.degraded) {
           Text('生成服务暂不可用，以上为档案原文摘要')
             .fontSize(11)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
             .width('100%')
         }
 

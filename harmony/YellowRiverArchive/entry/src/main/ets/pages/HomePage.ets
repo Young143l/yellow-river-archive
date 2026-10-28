@@ -492,16 +492,16 @@ export struct HomePage {
       Text('河')
         .fontSize(15)
         .fontFamily(FontFamily.serifBold)
-        .fontColor('#FBF7F0')
+        .fontColor(AppColor.surface)
       Text('图')
         .fontSize(15)
         .fontFamily(FontFamily.serifBold)
-        .fontColor('#FBF7F0')
+        .fontColor(AppColor.surface)
     }
     .width(34)
     .height(46)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('#A2392B')
+    .backgroundColor(AppColor.seal)
     .borderRadius(3)
     .rotate({ angle: 3 })
   }
@@ -515,12 +515,12 @@ export struct HomePage {
           Text('黄河图志')
             .fontSize(33)
             .fontFamily(FontFamily.serifBold)
-            .fontColor('#2A2520')
+            .fontColor(AppColor.textPrimary)
             .letterSpacing(5)
           Row()
             .width(38)
             .height(2)
-            .backgroundColor('#A2392B')
+            .backgroundColor(AppColor.seal)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -532,13 +532,13 @@ export struct HomePage {
 
       Text('河南段黄河文化遗产')
         .fontSize(12)
-        .fontColor('#8B7F71')
+        .fontColor(AppColor.textTertiary)
         .letterSpacing(2)
         .margin({ top: 18 })
 
       Text(`${this.total} 处遗址 · ${this.groups.length} 个时代 · 自西向东`)
         .fontSize(11)
-        .fontColor('#A99D8E')
+        .fontColor(AppColor.textTertiary)
         .letterSpacing(1)
         .margin({ top: 5 })
     }
@@ -555,17 +555,17 @@ export struct HomePage {
       Text(CN_NUMERALS[group.index % CN_NUMERALS.length])
         .fontSize(44)
         .fontFamily(FontFamily.serif)
-        .fontColor('#E3D9C9')
+        .fontColor(AppColor.divider)
 
       Column({ space: 3 }) {
         Text(group.era)
           .fontSize(25)
           .fontFamily(FontFamily.serifBold)
-          .fontColor('#8E3423')
+          .fontColor(AppColor.seal)
           .letterSpacing(3)
         Text(`${group.items.length} 处`)
           .fontSize(10)
-          .fontColor('#A99D8E')
+          .fontColor(AppColor.textTertiary)
           .letterSpacing(1)
       }
       .alignItems(HorizontalAlign.Start)
@@ -587,25 +587,25 @@ export struct HomePage {
     if (item.types.length > 0 && item.types[0] === '都城遗址') {
       // 城墙带垛口
       Path({ commands: 'M3 29 L3 16 L7 16 L7 12 L11 12 L11 16 L13 16 L13 12 L17 12 L17 16 L21 16 L21 12 L25 12 L25 16 L29 16 L29 29 Z' })
-        .width(32).height(32).fill('#7E5B3E').opacity(0.62)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.62)
     } else if (item.types.length > 0 && item.types[0] === '窑址') {
       // 窑包 + 烟囱
       Path({ commands: 'M4 29 Q4 17 16 17 Q28 17 28 29 Z' })
-        .width(32).height(32).fill('#9A6935').opacity(0.60)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.60)
       Path({ commands: 'M16 17 L16 8 L20 8 L20 17 Z' })
-        .width(32).height(32).fill('#7E5B3E').opacity(0.66)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.66)
     } else if (item.types.length > 0 && item.types[0] === '古建筑') {
       // 塔：层层收分
       Path({ commands: 'M16 3 L21 12 L19 12 L19 16 L23 16 L23 20 L19 20 L19 24 L24 24 L24 29 L8 29 L8 24 L13 24 L13 20 L9 20 L9 16 L13 16 L13 12 L11 12 Z' })
-        .width(32).height(32).fill('#7E4E32').opacity(0.66)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.66)
     } else if (item.types.length > 0 && item.types[0] === '墓葬群') {
       // 封土堆
       Path({ commands: 'M3 29 Q16 9 29 29 Z' })
-        .width(32).height(32).fill('#7E5B3E').opacity(0.56)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.56)
     } else {
       // 聚落：两间坡顶房
       Path({ commands: 'M3 29 L3 19 L9 13 L16 19 L16 29 Z M17 29 L17 20 L24 15 L31 20 L31 29 Z' })
-        .width(32).height(32).fill('#7E5B3E').opacity(0.62)
+        .width(32).height(32).fill(AppColor.earth).opacity(0.62)
     }
   }
 
@@ -619,7 +619,7 @@ export struct HomePage {
       Row()
         .width(this.CONTENT_LEFT - this.BANK_RIGHT)
         .height(1)
-        .backgroundColor('#A08A63')
+        .backgroundColor(AppColor.earth)
         .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT), y: 24 })
 
       // 岸端落点：线从河岸「长」出来的地方有个点
@@ -627,7 +627,7 @@ export struct HomePage {
         .width(5)
         .height(5)
         .borderRadius(3)
-        .backgroundColor('#8A6E45')
+        .backgroundColor(AppColor.earth)
         .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT) - 1, y: 21.5 })
 
       // 岸边遗迹：压在连接线上，紧贴河道右岸
@@ -641,34 +641,34 @@ export struct HomePage {
       Text(item.name)
         .fontSize(20)
         .fontFamily(FontFamily.serif)
-        .fontColor('#2A2520')
+        .fontColor(AppColor.textPrimary)
         .letterSpacing(1)
         .width('100%')
 
       Row({ space: 7 }) {
         Text(item.city)
           .fontSize(11)
-          .fontColor('#8E3423')
+          .fontColor(AppColor.seal)
         Text('/')
           .fontSize(11)
-          .fontColor('#CFC4B4')
+          .fontColor(AppColor.divider)
         Text(item.types.length > 0 ? item.types[0] : '')
           .fontSize(11)
-          .fontColor('#7C7266')
+          .fontColor(AppColor.textSecondary)
         if (item.level.length > 0) {
           Text('/')
             .fontSize(11)
-            .fontColor('#CFC4B4')
+            .fontColor(AppColor.divider)
           Text(item.level)
             .fontSize(11)
-            .fontColor('#7C7266')
+            .fontColor(AppColor.textSecondary)
         }
       }
       .width('100%')
 
       Text(item.summary)
         .fontSize(13)
-        .fontColor('#5C5348')
+        .fontColor(AppColor.textSecondary)
         .lineHeight(24)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -692,7 +692,7 @@ export struct HomePage {
       .height(1)
       .linearGradient({
         angle: 90,
-        colors: [['#E2D9CA', 0.0], ['#EFE8DC', 0.85], ['#F4EFE3', 1.0]],
+        colors: [[AppColor.divider, 0.0], [AppColor.divider, 0.85], [AppColor.background, 1.0]],
       })
   }
 
@@ -703,10 +703,10 @@ export struct HomePage {
       Row()
         .width(28)
         .height(1)
-        .backgroundColor('#D6CCBB')
+        .backgroundColor(AppColor.divider)
       Text('卷 终')
         .fontSize(10)
-        .fontColor('#B3A797')
+        .fontColor(AppColor.textTertiary)
         .letterSpacing(4)
     }
     .width('100%')
@@ -731,7 +731,7 @@ export struct HomePage {
         Column() {
           Text(this.error)
             .fontSize(AppFont.body)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
             .textAlign(TextAlign.Center)
         }
         .layoutWeight(1)
@@ -811,6 +811,6 @@ export struct HomePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F4EFE3')
+    .backgroundColor(AppColor.background)
   }
 }

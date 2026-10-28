@@ -202,7 +202,7 @@ export struct SearchPage {
         Text(hit.reason)
           .fontSize(11)
           .fontColor(AppColor.primary)
-          .backgroundColor('#F0E6DA')
+          .backgroundColor(AppColor.divider)
           .borderRadius(4)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       }
@@ -253,7 +253,7 @@ export struct SearchPage {
       if (this.error.length > 0) {
         Text(this.error)
           .fontSize(AppFont.caption)
-          .fontColor('#B3261E')
+          .fontColor(AppColor.danger)
           .width('100%')
       }
 

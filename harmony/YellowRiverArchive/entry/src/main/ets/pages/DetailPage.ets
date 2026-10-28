@@ -237,7 +237,7 @@ struct DetailPage {
               .height(180)
               .borderRadius(8)
               .objectFit(ImageFit.Cover)
-              .backgroundColor('#EFE7DA')
+              .backgroundColor(AppColor.divider)
             Text(`${img.caption}（${img.credit} / ${img.license}）`)
               .fontSize(11)
               .fontColor(AppColor.textTertiary)
@@ -478,7 +478,7 @@ struct DetailPage {
         .height(200)
         .borderRadius(AppSize.cardRadius)
         .objectFit(ImageFit.Cover)
-        .backgroundColor('#EFE7DA')
+        .backgroundColor(AppColor.divider)
 
       Text(item.name)
         .fontSize(24)
@@ -496,7 +496,7 @@ struct DetailPage {
             Text(t)
               .fontSize(11)
               .fontColor(AppColor.textSecondary)
-              .backgroundColor('#F0EAE0')
+              .backgroundColor(AppColor.divider)
               .borderRadius(4)
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
           },
@@ -552,7 +552,7 @@ struct DetailPage {
         Column() {
           Text(this.error.length > 0 ? this.error : '未找到档案')
             .fontSize(AppFont.body)
-            .fontColor('#B3261E')
+            .fontColor(AppColor.danger)
         }
         .layoutWeight(1)
         .width('100%')

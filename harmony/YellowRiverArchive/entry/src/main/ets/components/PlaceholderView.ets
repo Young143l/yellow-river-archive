@@ -27,7 +27,7 @@ export struct PlaceholderView {
         Text(`待实现：${this.taskId}`)
           .fontSize(AppFont.caption)
           .fontColor(AppColor.primary)
-          .backgroundColor('#F0E6DA')
+          .backgroundColor(AppColor.divider)
           .borderRadius(6)
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
       }
