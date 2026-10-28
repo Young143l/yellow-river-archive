@@ -15,6 +15,9 @@ export interface HeritageSummary {
   readonly level: string
   readonly summary: string
   readonly cover: string
+  /** 真实经纬度：首页沿河卷轴按经度排序、图谱按地理位置定位都要用 */
+  readonly lat: number
+  readonly lng: number
 }
 
 /** 关联推荐项 */
@@ -99,6 +102,8 @@ export class HeritageDao {
       level: item.level !== undefined ? item.level : '',
       summary: item.summary,
       cover: item.images.length > 0 ? item.images[0].url : '',
+      lat: item.geo.lat,
+      lng: item.geo.lng,
     }
   }
 

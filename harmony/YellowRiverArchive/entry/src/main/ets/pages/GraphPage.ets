@@ -67,7 +67,7 @@ export struct GraphPage {
    * 无论怎么调布局都读不出来。**聚焦一个遗址、只画它和它的一跳邻居**，
    * 邻居沿圆周均匀排布，没有物理模拟、没有重叠、永远可读。
    */
-  @State focusSite: number = 0
+  @State focusSite: number = -1
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -215,6 +215,13 @@ export struct GraphPage {
       this.nodeCount = 0
     }
     this.loading = false
+    // 数据到位后再应用一次聚焦布局。
+    // onReady 早于数据加载完成，那时 nodes 还是空的，applyFocusLayout 会走
+    // 「全图」分支；不在加载完成后补一次，默认聚焦就永远不生效。
+    if (this.ready && this.ctx.width > 0) {
+      this.applyFocusLayout()
+      this.draw()
+    }
   }
 
   /**
@@ -335,9 +342,10 @@ export struct GraphPage {
     }
     const spanX: number = Math.max(1, maxX - minX)
     const spanY: number = Math.max(1, maxY - minY)
-    // 留出 18% 边距：标签画在节点右侧，需要额外的水平空间
-    const padX: number = w * 0.18
-    const padY: number = h * 0.08
+    // 标签默认不显示后不再需要为它预留水平空间，边距收到 7%，
+    // 让图铺满画布 —— 之前那 18% 让整张图只占了画布中间一小块
+    const padX: number = w * 0.07
+    const padY: number = h * 0.05
     // 上限 1.3：布局若因数据退化而收缩，自动缩放会把单个节点放大成巨型圆。
     // 可选「看不清」胜过「看不对」—— 宁可图小一点，也不要一张畸形的图。
     this.fitScale = Math.min(1.3, Math.min((w - padX * 2) / spanX, (h - padY * 2) / spanY))
@@ -391,8 +399,9 @@ export struct GraphPage {
       this.ctx.beginPath()
       this.ctx.moveTo(this.sx(a.x), this.sy(a.y))
       this.ctx.lineTo(this.sx(b.x), this.sy(b.y))
-      this.ctx.lineWidth = touches && hasSelection ? 1.6 : 0.8
-      this.ctx.strokeStyle = inEra ? (touches ? '#C4B7A6' : '#E6DED2') : '#F0EBE4'
+      // Obsidian 风格：连边是极细极淡的辅助线，不该与节点抢视觉重量
+      this.ctx.lineWidth = touches && hasSelection ? 1.2 : 0.6
+      this.ctx.strokeStyle = touches && hasSelection ? '#B8AFA3' : '#DED8D0'
       this.ctx.stroke()
     }
 
@@ -407,11 +416,11 @@ export struct GraphPage {
       const dimmed: boolean = eraDimmed || (hasSelection && !isSelected && !isNeighbor)
 
       // 淡出用透明度而不是浅色 —— 浅色圆点仍占满画面，看起来就是一团噪声
+      // Obsidian 的节点就是小圆点 —— 大圆饼会把画面压死，也失去「点」的语义。
+      // 站点节点略大一点点用于区分层级，而不是放大 1.5 倍那种夸张
       const isSiteNode: boolean = node.type === 'Site'
-      const baseR: number = isSiteNode
-        ? node.radius() * 1.5
-        : Math.max(2.5, node.radius() * 0.62)
-      const r: number = Math.max(2.5, baseR * this.viewScale()) * (isSelected ? 1.3 : 1)
+      const baseR: number = (3.2 + node.weight * 5.0) * (isSiteNode ? 1.5 : 1)
+      const r: number = Math.max(2.2, baseR * this.viewScale()) * (isSelected ? 1.6 : 1)
       const nx: number = this.sx(node.x)
       const ny: number = this.sy(node.y)
       this.ctx.globalAlpha = dimmed ? 0.16 : 1
@@ -429,12 +438,9 @@ export struct GraphPage {
       // 只给重要节点与选中邻居画标签 —— 全画会糊成一片
       // 遗址名永远显示（它是簇的锚点，读图全靠它定坐标）；
       // 成员名只在放大到 1.6 倍以上或选中相关时出现，避免拥挤
-      // 聚焦模式下只有十几个节点，全部标注才可读；
-      // 全图模式下才需要靠权重和放大倍数筛选
-      const showLabel: boolean =
-        isSelected || isNeighbor || isSiteNode ||
-        (this.focusSite >= 0 && !eraDimmed) ||
-        (this.zoom >= 1.6 && node.weight > 0.35 && !eraDimmed)
+      // Obsidian 的规则：**默认一个标签都不显示**，只在选中节点及其邻居上出现。
+      // 这样全图看的是「形状」，细节靠点击探索 —— 之前把标签全铺开是根本性错误
+      const showLabel: boolean = isSelected || isNeighbor
       if (showLabel) {
         const fontSize: number = isSelected ? 14 : 12
         this.ctx.font = `${fontSize}px sans-serif`
