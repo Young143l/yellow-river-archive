@@ -71,6 +71,20 @@ export struct GraphPage {
   private neighbors: Map<number, number[]> = new Map<number, number[]>()
   /** 时代 → 节点下标。时间轴联动用它把「时代」映射到画布上的节点集合 */
   private eraNodes: Map<string, number[]> = new Map<string, number[]>()
+  // ---- 视图变换：布局坐标 → 屏幕坐标 ----
+  // 两级缩放：fitScale 让整图恰好填满画布（不论 5 个还是 500 个节点），
+  // zoom 是用户的双指缩放倍数，panX/panY 是拖动偏移。
+  // 分开存是为了「缩放围绕图像中心」—— 若把两者揉成一个 scale，
+  // 缩放基准点会随平移漂移，手感很怪。
+  private fitScale: number = 1
+  private bboxCx: number = 0
+  private bboxCy: number = 0
+  private zoom: number = 1
+  private zoomStart: number = 1
+  private panX: number = 0
+  private panY: number = 0
+  private panStartX: number = 0
+  private panStartY: number = 0
 
   aboutToAppear(): void {
     this.load()
@@ -164,10 +178,51 @@ export struct GraphPage {
     }
   }
 
+  /** 计算包围盒并换算视图变换，使整图缩放居中到画布内 */
+  private fitView(): void {
+    const w: number = this.ctx.width
+    const h: number = this.ctx.height
+    if (this.layout.nodes.length === 0 || w <= 0 || h <= 0) {
+      return
+    }
+    let minX: number = Number.MAX_VALUE
+    let maxX: number = -Number.MAX_VALUE
+    let minY: number = Number.MAX_VALUE
+    let maxY: number = -Number.MAX_VALUE
+    for (const node of this.layout.nodes) {
+      minX = Math.min(minX, node.x - node.radius())
+      maxX = Math.max(maxX, node.x + node.radius())
+      minY = Math.min(minY, node.y - node.radius())
+      maxY = Math.max(maxY, node.y + node.radius())
+    }
+    const spanX: number = Math.max(1, maxX - minX)
+    const spanY: number = Math.max(1, maxY - minY)
+    // 留出 18% 边距：标签画在节点右侧，需要额外的水平空间
+    const padX: number = w * 0.18
+    const padY: number = h * 0.08
+    this.fitScale = Math.min((w - padX * 2) / spanX, (h - padY * 2) / spanY)
+    this.bboxCx = (minX + maxX) / 2
+    this.bboxCy = (minY + maxY) / 2
+  }
+
+  private viewScale(): number {
+    return this.fitScale * this.zoom
+  }
+
+  // 以「画布中心 + 拖动偏移」为基准做缩放，缩放感受才是围绕视线中心
+  private sx(x: number): number {
+    return (x - this.bboxCx) * this.viewScale() + this.ctx.width / 2 + this.panX
+  }
+
+  private sy(y: number): number {
+    return (y - this.bboxCy) * this.viewScale() + this.ctx.height / 2 + this.panY
+  }
+
   private draw(): void {
     const w: number = this.ctx.width
     const h: number = this.ctx.height
     this.ctx.clearRect(0, 0, w, h)
+    this.fitView()
 
     const hasSelection: boolean = this.selected >= 0
     const highlighted: number[] = hasSelection
@@ -194,8 +249,8 @@ export struct GraphPage {
       const inEra: boolean =
         !hasEraFilter || (eraSet.has(edge.from) && eraSet.has(edge.to))
       this.ctx.beginPath()
-      this.ctx.moveTo(a.x, a.y)
-      this.ctx.lineTo(b.x, b.y)
+      this.ctx.moveTo(this.sx(a.x), this.sy(a.y))
+      this.ctx.lineTo(this.sx(b.x), this.sy(b.y))
       this.ctx.lineWidth = touches && hasSelection ? 1.6 : 0.8
       this.ctx.strokeStyle = inEra ? (touches ? '#C4B7A6' : '#E6DED2') : '#F0EBE4'
       this.ctx.stroke()
@@ -208,10 +263,14 @@ export struct GraphPage {
       const eraDimmed: boolean = hasEraFilter && !eraSet.has(index)
       const dimmed: boolean = eraDimmed || (hasSelection && !isSelected && !isNeighbor)
 
-      const r: number = node.radius() * (isSelected ? 1.35 : 1)
+      // 淡出用透明度而不是浅色 —— 浅色圆点仍占满画面，看起来就是一团噪声
+      const r: number = Math.max(3, node.radius() * this.viewScale()) * (isSelected ? 1.35 : 1)
+      const nx: number = this.sx(node.x)
+      const ny: number = this.sy(node.y)
+      this.ctx.globalAlpha = dimmed ? 0.16 : 1
       this.ctx.beginPath()
-      this.ctx.arc(node.x, node.y, r, 0, Math.PI * 2)
-      this.ctx.fillStyle = dimmed ? '#D8CFC3' : colorOf(node.type)
+      this.ctx.arc(nx, ny, r, 0, Math.PI * 2)
+      this.ctx.fillStyle = colorOf(node.type)
       this.ctx.fill()
 
       if (isSelected) {
@@ -221,12 +280,23 @@ export struct GraphPage {
       }
 
       // 只给重要节点与选中邻居画标签 —— 全画会糊成一片
-      const showLabel: boolean = isSelected || isNeighbor || (!hasSelection && node.weight > 0.55)
+      const showLabel: boolean =
+        isSelected || isNeighbor || (node.weight > 0.55 && !eraDimmed)
       if (showLabel) {
-        this.ctx.font = isSelected ? '13px sans-serif' : '11px sans-serif'
-        this.ctx.fillStyle = dimmed ? '#B5AA9C' : AppColor.textPrimary
-        this.ctx.fillText(node.name, node.x + r + 3, node.y + 4)
+        const fontSize: number = isSelected ? 14 : 12
+        this.ctx.font = `${fontSize}px sans-serif`
+        this.ctx.globalAlpha = dimmed ? 0.3 : 1
+        const tx: number = nx + r + 4
+        const ty: number = ny + fontSize / 2 - 1
+        // 先描一圈背景色再加文字 —— 图密集时标签会压在连边与其他节点上，
+        // 没有这层描边就完全读不出来
+        this.ctx.lineWidth = 3
+        this.ctx.strokeStyle = AppColor.surface
+        this.ctx.strokeText(node.name, tx, ty)
+        this.ctx.fillStyle = AppColor.textPrimary
+        this.ctx.fillText(node.name, tx, ty)
       }
+      this.ctx.globalAlpha = 1
     })
   }
 
@@ -234,7 +304,12 @@ export struct GraphPage {
     if (this.layout.nodes.length === 0) {
       return
     }
-    const hit: number = this.layout.hitTest(x, y)
+    // 点击坐标是屏幕坐标，先反算回布局坐标再命中测试
+    const scale: number = this.viewScale() > 0 ? this.viewScale() : 1
+    const lx: number = (x - this.ctx.width / 2 - this.panX) / scale + this.bboxCx
+    const ly: number = (y - this.ctx.height / 2 - this.panY) / scale + this.bboxCy
+    // 命中半径按屏幕像素给，换算到布局坐标要除以缩放
+    const hit: number = this.layout.hitTest(lx, ly, 26 / scale)
     if (hit === this.selected) {
       return
     }
@@ -261,6 +336,40 @@ export struct GraphPage {
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColor.textPrimary)
           .layoutWeight(1)
+        // 缩放按钮：双指手势不易被发现，且 CLI 无法模拟双指 ——
+        // 给一组显式按钮，既好发现也好验证
+        Text('−')
+          .fontSize(16)
+          .fontColor(this.zoom > 1.02 ? AppColor.primary : AppColor.textTertiary)
+          .padding({ left: 8, right: 8 })
+          .onClick(() => {
+            this.zoom = Math.max(1, this.zoom / 1.5)
+            if (this.zoom <= 1.02) {
+              this.panX = 0
+              this.panY = 0
+            }
+            this.draw()
+          })
+        Text('+')
+          .fontSize(16)
+          .fontColor(this.zoom < 4.9 ? AppColor.primary : AppColor.textTertiary)
+          .padding({ left: 8, right: 8 })
+          .onClick(() => {
+            this.zoom = Math.min(5, this.zoom * 1.5)
+            this.draw()
+          })
+        if (this.zoom > 1.02 || Math.abs(this.panX) > 2 || Math.abs(this.panY) > 2) {
+          Text('复位')
+            .fontSize(11)
+            .fontColor(AppColor.primary)
+            .margin({ right: 10 })
+            .onClick(() => {
+              this.zoom = 1
+              this.panX = 0
+              this.panY = 0
+              this.draw()
+            })
+        }
         Text(`${this.nodeCount} 节点 · ${this.edgeCount} 连边`)
           .fontSize(11)
           .fontColor(AppColor.textTertiary)
@@ -311,6 +420,31 @@ export struct GraphPage {
           .onClick((event: ClickEvent) => {
             this.onTap(event.x, event.y)
           })
+          // 双指缩放 + 单指拖动。与 onClick 并行：位移小于手势阈值时
+          // 仍判定为点击，所以「轻点选中 / 拖拽平移」不会互相打架
+          .gesture(
+            GestureGroup(
+              GestureMode.Parallel,
+              PanGesture({ fingers: 1, distance: 8 })
+                .onActionStart(() => {
+                  this.panStartX = this.panX
+                  this.panStartY = this.panY
+                })
+                .onActionUpdate((event: GestureEvent) => {
+                  this.panX = this.panStartX + event.offsetX
+                  this.panY = this.panStartY + event.offsetY
+                  this.draw()
+                }),
+              PinchGesture({ fingers: 2 })
+                .onActionStart(() => {
+                  this.zoomStart = this.zoom
+                })
+                .onActionUpdate((event: GestureEvent) => {
+                  this.zoom = Math.max(1, Math.min(5, this.zoomStart * event.scale))
+                  this.draw()
+                })
+            )
+          )
       }
 
       // 时代轴：点选高亮该时代的节点（D6-3）

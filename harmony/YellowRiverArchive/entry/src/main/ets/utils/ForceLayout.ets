@@ -95,8 +95,12 @@ export class ForceLayout {
     const cx: number = this.width / 2
     const cy: number = this.height / 2
 
-    // 理想边长随节点数缩小；否则节点多了以后整图撑爆画布
-    const idealLength: number = Math.max(46, Math.min(110, this.width / Math.sqrt(n) * 0.9))
+    // 理想边长按「可用面积 / 节点数」定，而不是按画布宽度
+    // 旧算法 width/sqrt(n)*0.9 在 390 宽、57 节点时被下限 46 卡住，
+    // 结果是所有节点挤进一个直径不到 300px 的团里，标签全糊。
+    // 面积法：每节点应占约 1/1.6² 的均分面积，再开方得间距
+    const area: number = this.width * this.height
+    const idealLength: number = Math.max(64, Math.min(200, Math.sqrt(area / n) * 1.55))
     const repulsion: number = idealLength * idealLength
     const damping: number = 0.82
     const centerPull: number = 0.012
@@ -189,9 +193,10 @@ export class ForceLayout {
   }
 
   /** 命中测试：返回被点中的节点下标（-1 表示没点中） */
-  hitTest(x: number, y: number): number {
+  /** 命中测试。threshold 是布局坐标下的容差半径，调用方按视图缩放换算 */
+  hitTest(x: number, y: number, threshold: number): number {
     let best: number = -1
-    let bestDist: number = 26 * 26
+    let bestDist: number = threshold * threshold
     this.nodes.forEach((node, index) => {
       const dx: number = node.x - x
       const dy: number = node.y - y
