@@ -31,13 +31,13 @@ class BandSpec {
  * 位置刻意不均匀 —— 等距排列立刻露馅成条纹布料。
  */
 const BAND_SPECS: BandSpec[] = [
-  new BandSpec(0.05, 0.11, 'rgba(150, 108, 48, 0.26)'),
-  new BandSpec(0.19, 0.05, 'rgba(224, 196, 138, 0.30)'),
-  new BandSpec(0.31, 0.09, 'rgba(158, 116, 54, 0.24)'),
-  new BandSpec(0.46, 0.06, 'rgba(230, 204, 148, 0.26)'),
-  new BandSpec(0.60, 0.09, 'rgba(152, 110, 50, 0.26)'),
-  new BandSpec(0.74, 0.05, 'rgba(226, 200, 142, 0.28)'),
-  new BandSpec(0.87, 0.08, 'rgba(156, 114, 52, 0.24)'),
+  new BandSpec(0.05, 0.11, 'rgba(34, 82, 108, 0.26)'),
+  new BandSpec(0.19, 0.05, 'rgba(150, 202, 216, 0.24)'),
+  new BandSpec(0.31, 0.09, 'rgba(30, 78, 104, 0.24)'),
+  new BandSpec(0.46, 0.06, 'rgba(156, 208, 220, 0.22)'),
+  new BandSpec(0.60, 0.09, 'rgba(32, 80, 106, 0.26)'),
+  new BandSpec(0.74, 0.05, 'rgba(152, 204, 218, 0.22)'),
+  new BandSpec(0.87, 0.08, 'rgba(28, 74, 100, 0.24)'),
 ]
 
 /**
@@ -122,7 +122,7 @@ export struct HomePage {
   /** 河道中心线距屏幕左沿 */
   private readonly RIVER_CX: number = 55
   /** 河道半宽基准：实际宽度会在此基础上随流程起伏 */
-  private readonly RIVER_HW: number = 42
+  private readonly RIVER_HW: number = 35
   /** 右岸线位置 */
   private readonly BANK_RIGHT: number = 97
   /** 遗迹图形左沿（压在右岸上，不额外占用正文宽度） */
@@ -238,12 +238,15 @@ export struct HomePage {
     } else if (y > h - taperBottom) {
       taper = 0.3 + 0.7 * ((h - y) / Math.max(1, taperBottom))
     }
-    // 沿程宽窄变化
+    // 沿程宽窄变化。
+    // 范围收在 0.68–1.10：之前放到 0.42–1.28，最宽处半个河宽 54px，
+    // 整条河接近 110px 顶到正文边上，看着像被撑开的气球。
+    // 河需要「宽窄有别」，但幅度太大就成了畸形。
     const vary: number =
-      0.72 +
-      0.28 * Math.sin(y * 0.0031 + 2.0) +
-      0.12 * Math.sin(y * 0.0092 + 0.9)
-    return this.RIVER_HW * Math.max(0.42, Math.min(1.28, vary)) * taper
+      0.89 +
+      0.13 * Math.sin(y * 0.0031 + 2.0) +
+      0.08 * Math.sin(y * 0.0092 + 0.9)
+    return this.RIVER_HW * Math.max(0.68, Math.min(1.10, vary)) * taper
   }
 
   private traceRiver(h: number, dx: number): void {
@@ -332,10 +335,11 @@ export struct HomePage {
       this.ctx.lineTo(this.riverX(y) + this.riverHalf(y, h), y)
     }
     this.ctx.closePath()
+    // 滩地用赭石黄 —— 黄河的「黄」来自泥沙，落在滩地上，不是水体本身。
     const flood: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, h)
-    flood.addColorStop(0, 'rgba(214, 194, 152, 0.72)')
-    flood.addColorStop(0.5, 'rgba(206, 185, 142, 0.78)')
-    flood.addColorStop(1, 'rgba(216, 197, 156, 0.70)')
+    flood.addColorStop(0, 'rgba(223, 203, 160, 0.88)')
+    flood.addColorStop(0.5, 'rgba(214, 192, 148, 0.92)')
+    flood.addColorStop(1, 'rgba(225, 206, 165, 0.86)')
     this.ctx.fillStyle = flood
     this.ctx.fill()
 
@@ -345,19 +349,19 @@ export struct HomePage {
       h,
       (y: number) => -0.40 + Math.sin(y * 0.0042 + 0.8) * 0.14,
       (y: number) => 0.33 + Math.sin(y * 0.0068 + 2.0) * 0.07,
-      'rgba(172, 130, 62, 0.90)'
+      'rgba(70, 126, 150, 0.92)'
     )
     this.fillChannel(
       h,
       (y: number) => 0.34 + Math.sin(y * 0.0051 + 2.6) * 0.13,
       (y: number) => 0.25 + Math.sin(y * 0.0079 + 0.4) * 0.06,
-      'rgba(180, 140, 72, 0.86)'
+      'rgba(84, 142, 164, 0.88)'
     )
     this.fillChannel(
       h,
       (y: number) => -0.02 + Math.sin(y * 0.0033 + 3.4) * 0.22,
       (y: number) => 0.09 + Math.sin(y * 0.0092 + 1.6) * 0.05,
-      'rgba(158, 118, 54, 0.80)'
+      'rgba(58, 112, 136, 0.90)'
     )
 
     // ---- 3. 河内细节（裁剪在河带内）----
@@ -389,7 +393,7 @@ export struct HomePage {
         }
       }
       this.ctx.lineWidth = 1.7
-      this.ctx.strokeStyle = 'rgba(146, 104, 58, 0.60)'
+      this.ctx.strokeStyle = 'rgba(132, 92, 48, 0.72)'
       this.ctx.stroke()
     }
 
@@ -405,7 +409,7 @@ export struct HomePage {
         }
       }
       this.ctx.lineWidth = 3.4
-      this.ctx.strokeStyle = 'rgba(116, 152, 110, 0.24)'
+      this.ctx.strokeStyle = 'rgba(104, 146, 104, 0.30)'
       this.ctx.stroke()
     }
 
@@ -435,7 +439,7 @@ export struct HomePage {
         const x: number = cx + (laneOff + jitter) * hw
         const yJ: number = yy + (((seed * 13) % 7) - 3) * 0.8
         const alpha: number = 0.38 + (seed % 4) / 26
-        this.ctx.strokeStyle = `rgba(250, 243, 222, ${alpha})`
+        this.ctx.strokeStyle = `rgba(224, 242, 248, ${alpha})`
         this.ripple(x - len / 2, yJ, len, seed % 2 === 0 ? 1 : -1)
       }
       k += 1
