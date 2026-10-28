@@ -9,70 +9,70 @@
         "开封铁塔",
         "开宝寺琉璃塔"
       ],
-      "rank": 0.818
+      "rank": 0.846
     },
     {
       "id": "city:开封",
       "type": "City",
       "name": "开封",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "era:宋",
       "type": "Era",
       "name": "宋",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "type:古建筑",
       "type": "Type",
       "name": "古建筑",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "kf-kaibaosi-ta#1",
       "type": "Artifact",
       "name": "琉璃佛像砖",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:铁塔公园内陈列",
       "type": "Museum",
       "name": "铁塔公园内陈列",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "figure:喻皓",
       "type": "Figure",
       "name": "喻皓",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:kf-kaibaosi-ta:1044",
       "type": "Event",
       "name": "灵感木塔毁于雷火",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:kf-kaibaosi-ta:1049",
       "type": "Event",
       "name": "改建琉璃砖塔落成",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:kf-kaibaosi-ta:1961",
       "type": "Event",
       "name": "列为第一批全国重点文物保护单位",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "poem:kf-kaibaosi-ta:0",
@@ -81,7 +81,7 @@
       "aliases": [
         "佚名"
       ],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "ly-erlitou",
@@ -91,84 +91,84 @@
         "偃师二里头",
         "二里头文化遗址"
       ],
-      "rank": 0.909
+      "rank": 0.923
     },
     {
       "id": "city:洛阳",
       "type": "City",
       "name": "洛阳",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "era:夏商",
       "type": "Era",
       "name": "夏商",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "type:都城遗址",
       "type": "Type",
       "name": "都城遗址",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "ly-erlitou#1",
       "type": "Artifact",
       "name": "乳钉纹铜爵",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:二里头夏都遗址博物馆",
       "type": "Museum",
       "name": "二里头夏都遗址博物馆",
       "aliases": [],
-      "rank": 0.273
+      "rank": 0.231
     },
     {
       "id": "ly-erlitou#2",
       "type": "Artifact",
       "name": "绿松石龙形器",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "ly-erlitou#3",
       "type": "Artifact",
       "name": "七孔玉刀",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "figure:徐旭生",
       "type": "Figure",
       "name": "徐旭生",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:ly-erlitou:1959",
       "type": "Event",
       "name": "遗址被发现",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:ly-erlitou:1988",
       "type": "Event",
       "name": "列为全国重点文物保护单位",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:ly-erlitou:2019",
       "type": "Event",
       "name": "二里头夏都遗址博物馆开放",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "py-xishuipo",
@@ -178,84 +178,84 @@
         "濮阳西水坡遗址",
         "中华第一龙出土地"
       ],
-      "rank": 1
+      "rank": 0.923
     },
     {
       "id": "city:濮阳",
       "type": "City",
       "name": "濮阳",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "era:仰韶",
       "type": "Era",
       "name": "仰韶",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "type:聚落遗址",
       "type": "Type",
       "name": "聚落遗址",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "type:墓葬群",
       "type": "Type",
       "name": "墓葬群",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "py-xishuipo#1",
       "type": "Artifact",
       "name": "蚌塑龙",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:濮阳市博物馆",
       "type": "Museum",
       "name": "濮阳市博物馆",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "py-xishuipo#2",
       "type": "Artifact",
       "name": "蚌塑虎",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "figure:濮阳西水坡考古队",
       "type": "Figure",
       "name": "濮阳西水坡考古队",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:py-xishuipo:1987",
       "type": "Event",
       "name": "遗址发现并发掘",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:py-xishuipo:1995",
       "type": "Event",
       "name": "蚌塑龙被誉称\"中华第一龙\"",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:py-xishuipo:2013",
       "type": "Event",
       "name": "列为全国重点文物保护单位",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "sms-yangshao",
@@ -272,56 +272,56 @@
       "type": "City",
       "name": "三门峡",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "sms-yangshao#1",
       "type": "Artifact",
       "name": "彩陶盆",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:渑池县仰韶文化博物馆",
       "type": "Museum",
       "name": "渑池县仰韶文化博物馆",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "sms-yangshao#2",
       "type": "Artifact",
       "name": "小口尖底瓶",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "figure:安特生",
       "type": "Figure",
       "name": "安特生",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:sms-yangshao:1921",
       "type": "Event",
       "name": "安特生主持首次发掘",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:sms-yangshao:1961",
       "type": "Event",
       "name": "列为第一批全国重点文物保护单位",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:sms-yangshao:2021",
       "type": "Event",
       "name": "仰韶村国家考古遗址公园开放",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "poem:sms-yangshao:0",
@@ -330,7 +330,7 @@
       "aliases": [
         "佚名"
       ],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "zz-gongyi-yao",
@@ -340,77 +340,77 @@
         "巩县窑",
         "黄冶三彩窑址"
       ],
-      "rank": 0.818
+      "rank": 0.923
     },
     {
       "id": "city:郑州",
       "type": "City",
       "name": "郑州",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "era:汉唐",
       "type": "Era",
       "name": "汉唐",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "type:窑址",
       "type": "Type",
       "name": "窑址",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "zz-gongyi-yao#1",
       "type": "Artifact",
       "name": "三彩马",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:河南博物院",
       "type": "Museum",
       "name": "河南博物院",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "zz-gongyi-yao#2",
       "type": "Artifact",
       "name": "绞胎瓷枕",
       "aliases": [],
-      "rank": 0.182
+      "rank": 0.154
     },
     {
       "id": "museum:河南省文物考古研究院",
       "type": "Museum",
       "name": "河南省文物考古研究院",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "figure:冯先铭",
       "type": "Figure",
       "name": "冯先铭",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:zz-gongyi-yao:2001",
       "type": "Event",
       "name": "列为全国重点文物保护单位",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "event:zz-gongyi-yao:2021",
       "type": "Event",
       "name": "黄冶三彩窑址展示馆开放",
       "aliases": [],
-      "rank": 0.091
+      "rank": 0.077
     },
     {
       "id": "poem:zz-gongyi-yao:0",
@@ -419,7 +419,7 @@
       "aliases": [
         "佚名"
       ],
-      "rank": 0.091
+      "rank": 0.077
     }
   ],
   "edges": [
@@ -865,6 +865,46 @@
       "rel": "culturalLink",
       "weight": 0.67,
       "evidence": "同属仰韶时期"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|nearby|py-xishuipo",
+      "from": "kf-kaibaosi-ta",
+      "to": "py-xishuipo",
+      "rel": "nearby",
+      "weight": 0.12,
+      "evidence": "相距约 115 公里"
+    },
+    {
+      "id": "e:kf-kaibaosi-ta|nearby|zz-gongyi-yao",
+      "from": "kf-kaibaosi-ta",
+      "to": "zz-gongyi-yao",
+      "rel": "nearby",
+      "weight": 0.06,
+      "evidence": "相距约 122 公里"
+    },
+    {
+      "id": "e:ly-erlitou|nearby|zz-gongyi-yao",
+      "from": "ly-erlitou",
+      "to": "zz-gongyi-yao",
+      "rel": "nearby",
+      "weight": 0.83,
+      "evidence": "相距约 22 公里"
+    },
+    {
+      "id": "e:ly-erlitou|nearby|sms-yangshao",
+      "from": "ly-erlitou",
+      "to": "sms-yangshao",
+      "rel": "nearby",
+      "weight": 0.28,
+      "evidence": "相距约 94 公里"
+    },
+    {
+      "id": "e:sms-yangshao|nearby|zz-gongyi-yao",
+      "from": "sms-yangshao",
+      "to": "zz-gongyi-yao",
+      "rel": "nearby",
+      "weight": 0.12,
+      "evidence": "相距约 115 公里"
     }
   ]
 }

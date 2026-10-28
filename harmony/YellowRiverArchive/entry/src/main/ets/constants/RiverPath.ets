@@ -153,3 +153,135 @@ export function projectionFor(
     height
   )
 }
+
+// ---------------------------------------------------------------- 曲线
+
+/** 归一化坐标点（0-1，相对画布宽高） */
+export class CurvePoint {
+  readonly x: number
+  readonly y: number
+
+  constructor(x: number, y: number) {
+    this.x = x
+    this.y = y
+  }
+}
+
+/**
+ * 黄河在画面上的走向（归一化控制点）。
+ *
+ * **这一版不再用原始经纬度做线性投影。** 原因是实测下来投影结果很难看：
+ * 经度 111.7-114.4 这 2.7 度横跨了五个遗址中的四个，剩下一度全给了濮阳那段
+ * 折向东北的河道，结果五个点全挤在左下角，右上角大片留白，构图严重失衡。
+ * 而且折线拐角生硬，完全不像水。
+ *
+ * 改为「手工控制点 + 样条平滑」：形状可控、像河，遗址按顺序沿线排布，
+ * 构图天然均衡。代价是放弃了精确地理投影 —— 这与「大致流向的示意图」的
+ * 定位一致，且在页面上注明了非测绘。
+ */
+export const RIVER_CONTROL: CurvePoint[] = [
+  new CurvePoint(-0.04, 0.70),
+  new CurvePoint(0.14, 0.66),
+  new CurvePoint(0.32, 0.68),
+  new CurvePoint(0.48, 0.62),
+  new CurvePoint(0.62, 0.56),
+  new CurvePoint(0.74, 0.44),
+  new CurvePoint(0.86, 0.30),
+  new CurvePoint(1.04, 0.16),
+]
+
+/**
+ * Catmull-Rom 样条：把控制点采样成密集折线。
+ *
+ * 为什么要自己采样而不是直接用贝塞尔：**需要按弧长定位遗址**。
+ * 只有拿到密集采样点与累积弧长，才能回答「沿河 30% 处是哪个位置」，
+ * 这样遗址之间的间距才可控，而不是在拐弯处挤成一坨。
+ */
+export class RiverCurve {
+  readonly samples: CurvePoint[] = []
+  private readonly cumulative: number[] = []
+  private totalLength: number = 0
+
+  constructor(control: CurvePoint[], segmentsPerSpan: number) {
+    const n: number = control.length
+    for (let i = 0; i < n - 1; i += 1) {
+      const p0: CurvePoint = control[Math.max(0, i - 1)]
+      const p1: CurvePoint = control[i]
+      const p2: CurvePoint = control[i + 1]
+      const p3: CurvePoint = control[Math.min(n - 1, i + 2)]
+      for (let s = 0; s < segmentsPerSpan; s += 1) {
+        const t: number = s / segmentsPerSpan
+        this.samples.push(new CurvePoint(
+          RiverCurve.cr(p0.x, p1.x, p2.x, p3.x, t),
+          RiverCurve.cr(p0.y, p1.y, p2.y, p3.y, t)
+        ))
+      }
+    }
+    this.samples.push(control[n - 1])
+
+    // 累积弧长
+    let acc: number = 0
+    this.cumulative.push(0)
+    for (let i = 1; i < this.samples.length; i += 1) {
+      const dx: number = this.samples[i].x - this.samples[i - 1].x
+      const dy: number = this.samples[i].y - this.samples[i - 1].y
+      acc += Math.sqrt(dx * dx + dy * dy)
+      this.cumulative.push(acc)
+    }
+    this.totalLength = acc
+  }
+
+  private static cr(a: number, b: number, c: number, d: number, t: number): number {
+    const t2: number = t * t
+    const t3: number = t2 * t
+    return 0.5 * (
+      2 * b +
+      (-a + c) * t +
+      (2 * a - 5 * b + 4 * c - d) * t2 +
+      (-a + 3 * b - 3 * c + d) * t3
+    )
+  }
+
+  /** 取弧长比例 frac（0-1）处的点 */
+  pointAt(frac: number): CurvePoint {
+    if (this.samples.length === 0) {
+      return new CurvePoint(0, 0)
+    }
+    const target: number = Math.max(0, Math.min(1, frac)) * this.totalLength
+    for (let i = 1; i < this.cumulative.length; i += 1) {
+      if (this.cumulative[i] >= target) {
+        const span: number = this.cumulative[i] - this.cumulative[i - 1]
+        const k: number = span > 0 ? (target - this.cumulative[i - 1]) / span : 0
+        const a: CurvePoint = this.samples[i - 1]
+        const b: CurvePoint = this.samples[i]
+        return new CurvePoint(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k)
+      }
+    }
+    return this.samples[this.samples.length - 1]
+  }
+}
+
+/**
+ * 各遗址在河道上的位置（弧长比例）。
+ *
+ * 顺序严格按经度自西向东：仰韶村 → 二里头 → 巩义窑址 → 开宝寺塔 → 西水坡。
+ * 间距经过调整：二里头与巩义窑址经度只差 0.23 度，按真实比例会几乎重叠，
+ * 这里拉开到 0.14 以保证可读。**顺序是真实的，间距是排版用的。**
+ */
+export class SiteOnRiver {
+  readonly itemId: string
+  readonly frac: number
+
+  constructor(itemId: string, frac: number) {
+    this.itemId = itemId
+    this.frac = frac
+  }
+}
+
+export const SITE_RIVER_POSITIONS: SiteOnRiver[] = [
+  new SiteOnRiver('sms-yangshao', 0.10),
+  new SiteOnRiver('ly-erlitou', 0.33),
+  new SiteOnRiver('zz-gongyi-yao', 0.47),
+  new SiteOnRiver('kf-kaibaosi-ta', 0.72),
+  new SiteOnRiver('py-xishuipo', 0.90),
+]

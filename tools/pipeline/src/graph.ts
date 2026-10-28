@@ -41,8 +41,17 @@ class NodeSet {
  */
 const CULTURAL_LINK_THRESHOLD: number = 0.5
 
-/** 地理邻近的阈值：同城且距离在 30km 内视为邻近 */
-const NEARBY_KM: number = 30
+/** 地理邻近的阈值：130km 内视为邻近 */
+const NEARBY_KM: number = 130
+
+/**
+ * 每条规则为每个条目保留的最近邻居数（kNN）。
+ *
+ * 为什么要设上界：规则全开时，80 条数据在 130km 半径内的两两组合可达数百条边，
+ * 图会烂成一团毛线，社区发现也会被噪声淹没。kNN 让每个节点的度数受控，
+ * 同时天然做到「稠密区分得清、稀疏区也连得上」—— 5 条数据时照样能连通。
+ */
+const KNN_K: number = 3
 
 /** 两点间球面距离（Haversine，公里） */
 function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -182,22 +191,127 @@ export function buildGraph(
     }
   }
 
-  // 地理邻近：同城且相距 30km 内
+  // ---- 条目间关系：四条规则 + kNN ----
+  //
+  // 修复的问题：原先只有「同城且 <30km」一条地理规则，而五个遗址恰好分属五个城市，
+  // 于是**一条边都生成不出来**，5 条数据形成 4 个互不相连的孤岛
+  // （实测连通分量 = 4）。知识图谱画出来必然是四团分离的东西，
+  // 无论用什么布局算法都读不出结构。跨遗址关系是可视化的前提，不是装饰。
+  //
+  // 设计取舍：每条规则各取最近的 k 个邻居再做合并，而不是「满足条件全连」。
+  // 全连在 80 条数据时会产出数百条边，图会烂掉。
+
+  interface Candidate {
+    readonly other: string
+    readonly rel: GraphEdge['rel']
+    readonly weight: number
+    readonly evidence: string
+    readonly order: number // 排序用：越小越优先
+  }
+
+  /** 把两条理由合并，相同的不重复列 */
+  const mergeEvidence = (a: string, b: string): string => {
+    if (a === b) {
+      return a
+    }
+    const seenParts: Set<string> = new Set<string>(a.split('；'))
+    for (const part of b.split('；')) {
+      seenParts.add(part)
+    }
+    return Array.from(seenParts).join('；')
+  }
+
+  /** 按规则收集候选边，再对每对条目取最强的一条 */
+  const best: Map<string, Candidate> = new Map<string, Candidate>()
+  const offer = (from: string, to: string, rel: GraphEdge['rel'], weight: number, evidence: string, order: number): void => {
+    const lo: string = from < to ? from : to
+    const hi: string = from < to ? to : from
+    const key: string = `${lo}|${hi}`
+    const prev: Candidate | undefined = best.get(key)
+    // 同一对条目可能同时满足多条规则（例如既是同时代又同类型）。
+    // 取 weight 最高的那条作为边的类型，但把其余理由合并进 evidence —— 
+    // 这样它仍是一条边，不会重复，也不会丢掉「为什么相连」的解释。
+    if (prev === undefined) {
+      best.set(key, { other: hi, rel, weight, evidence, order })
+      return
+    }
+    if (weight > prev.weight) {
+      best.set(key, {
+        other: hi,
+        rel,
+        weight,
+        evidence: mergeEvidence(evidence, prev.evidence),
+        order,
+      })
+    } else {
+      best.set(key, { ...prev, evidence: mergeEvidence(prev.evidence, evidence) })
+    }
+  }
+
   for (let i = 0; i < items.length; i += 1) {
     const a: HeritageItem | undefined = items[i]
     if (a === undefined) {
       continue
     }
-    for (let j = i + 1; j < items.length; j += 1) {
-      const b: HeritageItem | undefined = items[j]
-      if (b === undefined || a.city !== b.city) {
+    // 收集 a 与其余条目的所有候选关系
+    const cands: Candidate[] = []
+    for (let j = 0; j < items.length; j += 1) {
+      if (i === j) {
         continue
       }
+      const b: HeritageItem | undefined = items[j]
+      if (b === undefined) {
+        continue
+      }
+      // 同时代
+      if (a.era === b.era) {
+        cands.push({ other: b.id, rel: 'culturalLink', weight: 0.6, evidence: `同属${a.era}时期`, order: 1 })
+      }
+      // 同城市
+      if (a.city === b.city) {
+        cands.push({ other: b.id, rel: 'culturalLink', weight: 0.7, evidence: `同处${a.city}`, order: 0 })
+      }
+      // 同类型
+      const shared: string[] = a.types.filter((tp) => b.types.includes(tp))
+      if (shared.length > 0) {
+        cands.push({ other: b.id, rel: 'culturalLink', weight: 0.5, evidence: `同为${shared[0]}`, order: 2 })
+      }
+      // 地理近邻
       const km: number = distanceKm(a.geo.lat, a.geo.lng, b.geo.lat, b.geo.lng)
       if (km > 0 && km <= NEARBY_KM) {
-        addEdge(a.id, b.id, 'nearby', Math.round((1 - km / NEARBY_KM) * 100) / 100, `相距约 ${Math.round(km)} 公里`)
+        cands.push({
+          other: b.id,
+          rel: 'nearby',
+          weight: Math.round((1 - km / NEARBY_KM) * 100) / 100,
+          evidence: `相距约 ${Math.round(km)} 公里`,
+          order: 3 + km / NEARBY_KM,
+        })
       }
     }
+
+    // 同一目标可能被多条规则命中：按目标去重，保留最优理由
+    const byTarget: Map<string, Candidate> = new Map<string, Candidate>()
+    for (const c of cands) {
+      const prev: Candidate | undefined = byTarget.get(c.other)
+      if (prev === undefined || c.order < prev.order) {
+        byTarget.set(c.other, c)
+      }
+    }
+    // 取最近/最强的 k 个
+    const picked: Candidate[] = Array.from(byTarget.values())
+      .sort((x, y) => x.order - y.order)
+      .slice(0, KNN_K)
+
+    for (const c of picked) {
+      offer(a.id, c.other, c.rel, c.weight, c.evidence, c.order)
+    }
+  }
+
+  for (const [key, c] of best) {
+    const parts: string[] = key.split('|')
+    const from: string = parts[0]
+    const to: string = parts[1]
+    addEdge(from, to, c.rel, c.weight, c.evidence)
   }
 
   // 节点权重：D1 用归一化度数近似 PageRank

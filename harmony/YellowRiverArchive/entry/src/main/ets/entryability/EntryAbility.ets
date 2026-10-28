@@ -15,7 +15,7 @@
 
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { window } from '@kit.ArkUI';
+import { font, window } from '@kit.ArkUI';
 
 import { SyncSelfTest } from '../service/sync/SyncSelfTest';
 
@@ -29,6 +29,23 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
+
+    // 注册思源宋体（Noto Serif SC，SIL OFL-1.1）。
+    // 中文排版的高级感八成来自字体：系统无衬线体让「文化档案」读起来像工具 App，
+    // 而宋体的横细竖粗与笔锋才配得上这批内容。
+    // 字体是 GB2312 一级字库 + 正文用字的子集（3856 字形 / 各约 1.5MB），
+    // 完整字体 14MB，全量打包没必要。
+    //
+    // 两处必须分开注册：SemiBold 的 name 表里 family 是「Noto Serif SC SemiBold」，
+    // 与 Regular 不同族。若只注册一个 family 再靠 fontWeight 切换，
+    // ArkUI 会去合成粗体，中文合成粗体会糊。
+    try {
+      font.registerFont({ familyName: 'Serif', familySrc: $rawfile('fonts/NotoSerifSC-Regular.ttf') });
+      font.registerFont({ familyName: 'SerifBold', familySrc: $rawfile('fonts/NotoSerifSC-SemiBold.ttf') });
+      hilog.info(DOMAIN, 'testTag', '%{public}s', 'Serif fonts registered');
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'Font register failed: %{public}s', JSON.stringify(err));
+    }
 
     // 同步链路自检：写入→读回→LWW 合并→分布式 KV 全链路，跑完自动清理。
     // 异步执行不阻塞 Ability 创建；结果打到日志供开发期验证，

@@ -25,6 +25,18 @@ export class AppSize {
   static readonly tabBarHeight: number = 56
 }
 
+/**
+ * 字体族。
+ *
+ * 思源宋体两档分开注册（见 EntryAbility）：SemiBold 的 name 表 family 与 Regular
+ * 不同族，靠 fontWeight 切换会让 ArkUI 合成粗体 —— 中文合成粗体会糊。
+ * 所以「要用粗体」的地方直接换 family，而不是调 fontWeight。
+ */
+export class FontFamily {
+  static readonly serif: string = 'Serif'
+  static readonly serifBold: string = 'SerifBold'
+}
+
 export class AppFont {
   static readonly title: number = 22
   static readonly heading: number = 18
