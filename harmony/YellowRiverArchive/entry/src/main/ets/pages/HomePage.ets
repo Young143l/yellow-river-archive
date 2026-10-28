@@ -31,13 +31,27 @@ class BandSpec {
  * 位置刻意不均匀 —— 等距排列立刻露馅成条纹布料。
  */
 const BAND_SPECS: BandSpec[] = [
-  new BandSpec(0.06, 0.10, 'rgba(58, 118, 148, 0.30)'),
-  new BandSpec(0.18, 0.04, 'rgba(120, 176, 190, 0.24)'),
-  new BandSpec(0.30, 0.09, 'rgba(52, 110, 142, 0.26)'),
-  new BandSpec(0.47, 0.05, 'rgba(126, 182, 194, 0.22)'),
-  new BandSpec(0.62, 0.08, 'rgba(56, 116, 146, 0.28)'),
-  new BandSpec(0.76, 0.04, 'rgba(132, 186, 196, 0.22)'),
-  new BandSpec(0.88, 0.07, 'rgba(50, 108, 140, 0.26)'),
+  new BandSpec(0.05, 0.11, 'rgba(150, 108, 48, 0.26)'),
+  new BandSpec(0.19, 0.05, 'rgba(224, 196, 138, 0.30)'),
+  new BandSpec(0.31, 0.09, 'rgba(158, 116, 54, 0.24)'),
+  new BandSpec(0.46, 0.06, 'rgba(230, 204, 148, 0.26)'),
+  new BandSpec(0.60, 0.09, 'rgba(152, 110, 50, 0.26)'),
+  new BandSpec(0.74, 0.05, 'rgba(226, 200, 142, 0.28)'),
+  new BandSpec(0.87, 0.08, 'rgba(156, 114, 52, 0.24)'),
+]
+
+/**
+ * 河心沙洲：[纵向位置占比, 宽度系数, 横向偏移(-1..1), 纵向半径系数]
+ *
+ * 黄河下游是著名的宽浅游荡型河道，沙洲与汊道是它的标志性地貌。
+ * 画几处浅色滩地，河就不再是一条均匀的带子。
+ */
+const SANDBARS: number[][] = [
+  [0.16, 0.55, -0.30, 1.5],
+  [0.34, 0.42, 0.34, 1.1],
+  [0.55, 0.60, -0.22, 1.8],
+  [0.72, 0.38, 0.40, 1.0],
+  [0.86, 0.48, -0.34, 1.4],
 ]
 
 /** 一个时代分组 */
@@ -75,11 +89,11 @@ export struct HomePage {
   /** 河道中心线距屏幕左沿 */
   private readonly RIVER_CX: number = 28
   /** 河道半宽：河面总宽 = 2 × 它 */
-  private readonly RIVER_HW: number = 14
+  private readonly RIVER_HW: number = 12
   /** 右岸线位置 */
-  private readonly BANK_RIGHT: number = 42
+  private readonly BANK_RIGHT: number = 45
   /** 正文起始位置 */
-  private readonly CONTENT_LEFT: number = 98
+  private readonly CONTENT_LEFT: number = 100
   /** 遗迹图形宽 */
   private readonly GLYPH_W: number = 32
 
@@ -158,12 +172,43 @@ export struct HomePage {
    * 单道正弦的波形太"机械"，一看就是画出来的；叠一道频率 2.7 倍、
    * 相位不同步的弱波之后，摆动变得不规则，才像自然河道。
    */
+  /**
+   * 河道中心线：三道正弦叠加。
+   *
+   * 单一长波正弦画出来是「一条蛇」—— 起伏太规则、波长太长。
+   * 叠上频率 3 倍与 7 倍的弱波之后，弯道变得长短不一，
+   * 接近真实河道那种「一段缓弯接一个小折」的走向。
+   */
   private riverX(y: number): number {
     const cx: number = this.RIVER_CX
-    // 振幅收在 ±7 以内，保证河面不会压到右侧文字
-    const a: number = Math.sin(y * 0.0068) * 7.0
-    const b: number = Math.sin(y * 0.0176) * 2.4
-    return cx + a + b
+    return cx +
+      Math.sin(y * 0.0045 + 1.1) * 8.5 +
+      Math.sin(y * 0.0132 + 0.4) * 4.2 +
+      Math.sin(y * 0.0310 + 2.2) * 1.8
+  }
+
+  /**
+   * 河道半宽：随流程变宽变窄。
+   *
+   * 等宽的河道是蛇，不是河。真实河流在峡谷处收窄、在滩地散开，
+   * 黄河下游更是著名的宽浅游荡型河道。宽度变化是「河」最有效的信号之一。
+   */
+  private riverHalf(y: number, h: number): number {
+    const taperTop: number = Math.min(90, h * 0.10)
+    const taperBottom: number = Math.min(130, h * 0.14)
+    // 两端收窄：一笔起收
+    let taper: number = 1
+    if (y < taperTop) {
+      taper = 0.3 + 0.7 * (y / Math.max(1, taperTop))
+    } else if (y > h - taperBottom) {
+      taper = 0.3 + 0.7 * ((h - y) / Math.max(1, taperBottom))
+    }
+    // 沿程宽窄变化
+    const vary: number =
+      0.72 +
+      0.28 * Math.sin(y * 0.0031 + 2.0) +
+      0.12 * Math.sin(y * 0.0092 + 0.9)
+    return this.RIVER_HW * Math.max(0.42, Math.min(1.28, vary)) * taper
   }
 
   private traceRiver(h: number, dx: number): void {
@@ -199,50 +244,36 @@ export struct HomePage {
     this.ctx.lineCap = 'round'
     this.ctx.lineJoin = 'round'
 
-    const hw: number = this.RIVER_HW
-    const clip: number = Math.max(1, h)
-
-    /** 河面上端收窄、下端收窄：像一笔起收，而不是被裁断的色条 */
-    const taperTop: number = Math.min(90, h * 0.10)
-    const taperBottom: number = Math.min(120, h * 0.14)
-    const halfAt = (y: number): number => {
-      if (y < taperTop) {
-        return hw * (0.35 + 0.65 * (y / Math.max(1, taperTop)))
-      }
-      if (y > h - taperBottom) {
-        return hw * (0.35 + 0.65 * ((h - y) / Math.max(1, taperBottom)))
-      }
-      return hw
-    }
-
-    // ---- 河面填充：两岸围合 ----
+    // ---- 河面：两岸围合成填充路径 ----
     this.ctx.beginPath()
-    for (let y = 0; y <= h; y += 7) {
-      const x: number = this.riverX(y) - halfAt(y)
+    for (let y = 0; y <= h; y += 6) {
+      const x: number = this.riverX(y) - this.riverHalf(y, h)
       if (y === 0) {
         this.ctx.moveTo(x, y)
       } else {
         this.ctx.lineTo(x, y)
       }
     }
-    for (let y = h; y >= 0; y -= 7) {
-      this.ctx.lineTo(this.riverX(y) + halfAt(y), y)
+    for (let y = h; y >= 0; y -= 6) {
+      this.ctx.lineTo(this.riverX(y) + this.riverHalf(y, h), y)
     }
     this.ctx.closePath()
 
+    // 黄河的水色是赭黄 —— 它叫「黄河」就是因为挟带大量泥沙。
+    // 之前用青绿山水的石青，虽然好看，但那不是黄河。
     const water: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, h)
-    water.addColorStop(0, 'rgba(96, 150, 176, 0.42)')
-    water.addColorStop(0.35, 'rgba(78, 141, 172, 0.60)')
-    water.addColorStop(0.72, 'rgba(86, 148, 172, 0.58)')
-    water.addColorStop(1, 'rgba(104, 158, 172, 0.40)')
+    water.addColorStop(0, 'rgba(196, 158, 88, 0.72)')
+    water.addColorStop(0.35, 'rgba(183, 143, 74, 0.80)')
+    water.addColorStop(0.72, 'rgba(191, 152, 82, 0.78)')
+    water.addColorStop(1, 'rgba(204, 168, 100, 0.66)')
     this.ctx.fillStyle = water
     this.ctx.fill()
 
-    // ---- 笔触层次：在河形内叠几道横向色带 ----
-    // 纯渐变的河面像一块塑料板；加几道深浅不一的横向笔触才有「画」的质感。
-    // 用 clip 把笔触限制在河形内，边缘才不会溢出去。
+    // ---- 水下结构与笔触（裁剪在河形内）----
     this.ctx.save()
     this.ctx.clip()
+
+    // 深浅横带：纯渐变像塑料板，叠几道浓淡不一的水色才有「浑水」的质感
     for (const b of BAND_SPECS) {
       const y0: number = h * b.top
       const bh: number = h * b.height
@@ -253,62 +284,86 @@ export struct HomePage {
       this.ctx.fillStyle = g
       this.ctx.fillRect(0, y0, this.ctx.width, bh)
     }
+
+    // 沙洲：河心几处浅色滩地，黄河下游的典型地貌，也是「不是蛇」的关键细节。
+    // 单个椭圆看起来像贴纸 —— 用三层由大到小、由淡到浓的椭圆叠出柔边，
+    // 滩地才像是从水里"浮"出来的。
+    for (const bar of SANDBARS) {
+      const by: number = h * bar[0]
+      const hw: number = this.riverHalf(by, h)
+      const bx: number = this.riverX(by) + bar[2] * hw
+      const bw0: number = hw * bar[1]
+      const bh0: number = bar[3] * h * 0.012
+      const layers: number[][] = [
+        [1.45, 0.16],
+        [1.15, 0.26],
+        [0.82, 0.42],
+      ]
+      for (const l of layers) {
+        this.ctx.beginPath()
+        this.ctx.ellipse(bx, by, bw0 * l[0], bh0 * l[0], 0.12, 0, Math.PI * 2)
+        this.ctx.fillStyle = `rgba(232, 212, 168, ${l[1]})`
+        this.ctx.fill()
+      }
+    }
+
     this.ctx.restore()
 
-    // ---- 岸线：赭石，两岸各一条，河因此有明确边界 ----
+    // ---- 岸线：赭石，两岸各一条 ----
     for (const side of [-1, 1]) {
       this.ctx.beginPath()
-      for (let y = 0; y <= h; y += 6) {
-        const x: number = this.riverX(y) + side * halfAt(y)
+      for (let y = 0; y <= h; y += 5) {
+        const x: number = this.riverX(y) + side * this.riverHalf(y, h)
         if (y === 0) {
           this.ctx.moveTo(x, y)
         } else {
           this.ctx.lineTo(x, y)
         }
       }
-      this.ctx.lineWidth = 1.6
-      this.ctx.strokeStyle = 'rgba(150, 104, 66, 0.62)'
+      this.ctx.lineWidth = 1.5
+      this.ctx.strokeStyle = 'rgba(138, 96, 52, 0.66)'
       this.ctx.stroke()
     }
 
-    // ---- 石绿岸带：两岸外侧一线青绿，暗示植被 ----
+    // ---- 石绿岸带：两岸外侧一线青绿，暗示滩地植被 ----
     for (const side of [-1, 1]) {
       this.ctx.beginPath()
-      for (let y = 0; y <= h; y += 6) {
-        const x: number = this.riverX(y) + side * (halfAt(y) + 2.4)
+      for (let y = 0; y <= h; y += 5) {
+        const x: number = this.riverX(y) + side * (this.riverHalf(y, h) + 2.2)
         if (y === 0) {
           this.ctx.moveTo(x, y)
         } else {
           this.ctx.lineTo(x, y)
         }
       }
-      this.ctx.lineWidth = 3.2
-      this.ctx.strokeStyle = 'rgba(126, 172, 138, 0.30)'
+      this.ctx.lineWidth = 3
+      this.ctx.strokeStyle = 'rgba(120, 158, 118, 0.26)'
       this.ctx.stroke()
     }
 
-    // ---- 水波：不等长短弧，错落散布，随相位下移 ----
-    const ROW: number = 20
+    // ---- 水波：米白短弧，错落散布 ----
+    const ROW: number = 19
     const drift: number = (this.phase * 9) % ROW
-    this.ctx.lineWidth = 1.6
+    this.ctx.lineWidth = 1.5
 
     let k: number = 0
     for (let y = 0; y <= h; y += ROW) {
       const yy: number = y + drift
-      if (yy < taperTop * 0.6 || yy > h - taperBottom * 0.6) {
+      const half: number = this.riverHalf(yy, h)
+      if (half < 3) {
         k += 1
         continue
       }
       const cx: number = this.riverX(yy)
-      const span: number = halfAt(yy) * 1.5
+      const span: number = half * 1.5
       const count: number = k % 3 === 0 ? 2 : 1
       for (let i = 0; i < count; i += 1) {
         const seed: number = k * 7 + i * 13
-        const len: number = 5.5 + (seed % 5)
+        const len: number = 5 + (seed % 5)
         const lateral: number = ((seed * 31) % 100) / 100 * span - span / 2
         const yJitter: number = (((seed * 17) % 7) - 3) * 0.9
-        const alpha: number = 0.44 + (seed % 4) / 22
-        this.ctx.strokeStyle = `rgba(232, 245, 249, ${alpha})`
+        const alpha: number = 0.42 + (seed % 4) / 24
+        this.ctx.strokeStyle = `rgba(248, 240, 216, ${alpha})`
         this.ripple(cx + lateral - len / 2, yy + yJitter, len, seed % 2 === 0 ? 1 : -1)
       }
       k += 1
