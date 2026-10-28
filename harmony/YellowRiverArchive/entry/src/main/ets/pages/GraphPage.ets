@@ -8,22 +8,25 @@ import { HeritageDao } from '../service/HeritageDao'
 import { GraphDao } from '../service/GraphDao'
 import { ForceLayout, SimEdge, SimNode } from '../utils/ForceLayout'
 
-/** 节点类型配色：同类同色，一眼能看出结构 */
-const TYPE_COLORS: Map<string, string> = new Map<string, string>([
-  ['Site', '#8C3B1E'],
-  ['Artifact', '#C77B3A'],
-  ['Era', '#5B7C99'],
-  ['City', '#7A8B6F'],
-  ['Type', '#9B7BA8'],
-  ['Figure', '#B5885A'],
-  ['Event', '#8A8A6B'],
-  ['Poem', '#A8826B'],
-  ['Museum', '#6E7B8B'],
-])
+/**
+ * 簇配色：每个遗址一族色，[遗址本体, 簇内成员]。
+ *
+ * 为什么不按节点类型配色（初版做法）：按类型配时，20 多个文物全是同一个橙色、
+ * 10 多个时代全是同一个蓝色，颜色不携带任何「这几个节点是一伙的」信息，
+ * 57 个点看过去就是一把彩色沙子。**按簇配色才能读出结构**。
+ */
+const CLUSTER_COLORS: string[][] = [
+  ['#8C3B1E', '#C4835F'],
+  ['#4E6E8A', '#8FA9BE'],
+  ['#6B7C5E', '#A3B096'],
+  ['#8A6A99', '#B79CC4'],
+  ['#B0722F', '#D5A671'],
+  ['#7A7568', '#B5B0A4'],
+]
 
-function colorOf(type: string): string {
-  const color: string | undefined = TYPE_COLORS.get(type)
-  return color !== undefined ? color : '#9A9086'
+function clusterColor(clusterIndex: number, isSite: boolean): string {
+  const pair: string[] = CLUSTER_COLORS[clusterIndex % CLUSTER_COLORS.length]
+  return isSite ? pair[0] : pair[1]
 }
 
 /** 节点类型的中文名（长按选中时展示） */
@@ -71,6 +74,8 @@ export struct GraphPage {
   private neighbors: Map<number, number[]> = new Map<number, number[]>()
   /** 时代 → 节点下标。时间轴联动用它把「时代」映射到画布上的节点集合 */
   private eraNodes: Map<string, number[]> = new Map<string, number[]>()
+  /** 每个节点所属簇的序号（按遗址首次出现顺序），决定颜色 */
+  private clusterOfNode: number[] = []
   // ---- 视图变换：布局坐标 → 屏幕坐标 ----
   // 两级缩放：fitScale 让整图恰好填满画布（不论 5 个还是 500 个节点），
   // zoom 是用户的双指缩放倍数，panX/panY 是拖动偏移。
@@ -124,6 +129,51 @@ export struct GraphPage {
         b.push(edge.from)
         this.neighbors.set(edge.to, b)
       }
+
+      // ---- 簇归属：多源 BFS，所有遗址同时向外扩散，谁最近归谁 ----
+      // 初版是「每个遗址依次 BFS 两跳」，结果**第一个遗址把几乎所有节点都吞了** ——
+      // 因为两跳足以覆盖别的遗址的文物。后果是全图只有一个簇，全部节点挤到一个点，
+      // 自动缩放把这个点放大成了一个占满屏幕的巨型圆。
+      // 多源 BFS 保证「最近者得」，各簇规模才均衡。
+      const clusterIdOfNode: string[] = []
+      this.layout.nodes.forEach(() => {
+        clusterIdOfNode.push('')
+      })
+      const siteIndices: number[] = []
+      this.layout.nodes.forEach((n, i) => {
+        if (n.type === 'Site') {
+          siteIndices.push(i)
+        }
+      })
+      let frontier: number[] = []
+      for (const siteIdx of siteIndices) {
+        clusterIdOfNode[siteIdx] = this.layout.nodes[siteIdx].id
+        frontier.push(siteIdx)
+      }
+      // 逐层扩散；已归属的节点视为已访问，先到的不再改
+      for (let depth = 0; depth < 2 && frontier.length > 0; depth += 1) {
+        const next: number[] = []
+        for (const idx of frontier) {
+          for (const nb of this.neighbors.get(idx) ?? []) {
+            if (clusterIdOfNode[nb].length === 0) {
+              clusterIdOfNode[nb] = clusterIdOfNode[idx]
+              next.push(nb)
+            }
+          }
+        }
+        frontier = next
+      }
+      // 簇序号：按首次出现顺序编号，保证同一份数据每次打开配色一致
+      const clusterOrder: string[] = []
+      this.clusterOfNode = []
+      this.layout.nodes.forEach((node, i) => {
+        const cid: string = clusterIdOfNode[i].length > 0 ? clusterIdOfNode[i] : '__rest__'
+        node.cluster = cid
+        if (!clusterOrder.includes(cid)) {
+          clusterOrder.push(cid)
+        }
+        this.clusterOfNode.push(clusterOrder.indexOf(cid))
+      })
 
       // 时间轴联动：把每个时代映射到它包含的节点
       // Site 节点的 id 就是 itemId，直接查档案拿时代，再把这些节点连同
@@ -200,7 +250,9 @@ export struct GraphPage {
     // 留出 18% 边距：标签画在节点右侧，需要额外的水平空间
     const padX: number = w * 0.18
     const padY: number = h * 0.08
-    this.fitScale = Math.min((w - padX * 2) / spanX, (h - padY * 2) / spanY)
+    // 上限 1.3：布局若因数据退化而收缩，自动缩放会把单个节点放大成巨型圆。
+    // 可选「看不清」胜过「看不对」—— 宁可图小一点，也不要一张畸形的图。
+    this.fitScale = Math.min(1.3, Math.min((w - padX * 2) / spanX, (h - padY * 2) / spanY))
     this.bboxCx = (minX + maxX) / 2
     this.bboxCy = (minY + maxY) / 2
   }
@@ -264,13 +316,17 @@ export struct GraphPage {
       const dimmed: boolean = eraDimmed || (hasSelection && !isSelected && !isNeighbor)
 
       // 淡出用透明度而不是浅色 —— 浅色圆点仍占满画面，看起来就是一团噪声
-      const r: number = Math.max(3, node.radius() * this.viewScale()) * (isSelected ? 1.35 : 1)
+      const isSiteNode: boolean = node.type === 'Site'
+      const baseR: number = isSiteNode
+        ? node.radius() * 1.5
+        : Math.max(2.5, node.radius() * 0.62)
+      const r: number = Math.max(2.5, baseR * this.viewScale()) * (isSelected ? 1.3 : 1)
       const nx: number = this.sx(node.x)
       const ny: number = this.sy(node.y)
       this.ctx.globalAlpha = dimmed ? 0.16 : 1
       this.ctx.beginPath()
       this.ctx.arc(nx, ny, r, 0, Math.PI * 2)
-      this.ctx.fillStyle = colorOf(node.type)
+      this.ctx.fillStyle = clusterColor(this.clusterOfNode[index] ?? 0, node.type === 'Site')
       this.ctx.fill()
 
       if (isSelected) {
@@ -280,8 +336,13 @@ export struct GraphPage {
       }
 
       // 只给重要节点与选中邻居画标签 —— 全画会糊成一片
+      // 遗址名永远显示（它是簇的锚点，读图全靠它定坐标）；
+      // 成员名只在放大到 1.6 倍以上或选中相关时出现，避免拥挤
       const showLabel: boolean =
-        isSelected || isNeighbor || (node.weight > 0.55 && !eraDimmed)
+        isSelected ||
+        isNeighbor ||
+        isSiteNode ||
+        (this.zoom >= 1.6 && node.weight > 0.35 && !eraDimmed)
       if (showLabel) {
         const fontSize: number = isSelected ? 14 : 12
         this.ctx.font = `${fontSize}px sans-serif`

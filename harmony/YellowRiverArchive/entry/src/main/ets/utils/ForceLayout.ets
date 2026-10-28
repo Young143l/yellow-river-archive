@@ -25,6 +25,15 @@ export class SimNode {
   vy: number = 0
   /** 是否被拖动固定 */
   fixed: boolean = false
+  /**
+   * 所属簇（通常是它归属的遗址 id）。
+   *
+   * 这一项存在的理由：**纯力导向画出来的 57 节点图是一团毛线** ——
+   * 节点随机分布、边四处乱穿，放大也读不出结构。
+   * 而数据本身有明确的簇（5 个遗址各带自己的文物与时代），
+   * 让同簇节点互相靠近、异簇互相排斥，图才会呈现「5 个团」而不是「一锅粥」。
+   */
+  cluster: string = ''
 
   constructor(id: string, name: string, type: string, weight: number) {
     this.id = id
@@ -36,6 +45,17 @@ export class SimNode {
   /** 半径：既要有区分度，又不能小到看不见 */
   radius(): number {
     return 5 + this.weight * 12
+  }
+}
+
+/** 簇心坐标 */
+export class ClusterCenter {
+  readonly x: number
+  readonly y: number
+
+  constructor(x: number, y: number) {
+    this.x = x
+    this.y = y
   }
 }
 
@@ -55,6 +75,8 @@ export class SimEdge {
 export class ForceLayout {
   readonly nodes: SimNode[] = []
   readonly edges: SimEdge[] = []
+  /** 簇心：种子阶段按簇数目均分在圆环上，之后固定不动 */
+  readonly clusterCenters: Map<string, ClusterCenter> = new Map<string, ClusterCenter>()
 
   private readonly width: number
   private readonly height: number
@@ -71,16 +93,38 @@ export class ForceLayout {
    * 布局抖动明显；螺旋分布既均匀又确定性，每次打开页面的初始形态一致。
    */
   seed(): void {
-    const golden: number = Math.PI * (3 - Math.sqrt(5))
     const cx: number = this.width / 2
     const cy: number = this.height / 2
-    const scale: number = Math.min(this.width, this.height) * 0.36
 
-    this.nodes.forEach((node, i) => {
-      const r: number = scale * Math.sqrt((i + 0.5) / Math.max(1, this.nodes.length))
-      const theta: number = golden * i
-      node.x = cx + r * Math.cos(theta)
-      node.y = cy + r * Math.sin(theta)
+    // ---- 簇心均匀排在圆环上 ----
+    const clusterIds: string[] = []
+    for (const node of this.nodes) {
+      if (!clusterIds.includes(node.cluster)) {
+        clusterIds.push(node.cluster)
+      }
+    }
+    clusterIds.sort()
+    this.clusterCenters.clear()
+    const ringR: number = Math.min(this.width, this.height) * 0.30
+    clusterIds.forEach((cid: string, i: number) => {
+      const theta: number = (Math.PI * 2 * i) / Math.max(1, clusterIds.length) - Math.PI / 2
+      this.clusterCenters.set(cid, new ClusterCenter(cx + ringR * Math.cos(theta), cy + ringR * Math.sin(theta)))
+    })
+
+    // ---- 成员围绕各自簇心按黄金角螺旋撒点 ----
+    const golden: number = Math.PI * (3 - Math.sqrt(5))
+    const seenInCluster: Map<string, number> = new Map<string, number>()
+    this.nodes.forEach((node) => {
+      const k: number = seenInCluster.get(node.cluster) ?? 0
+      seenInCluster.set(node.cluster, k + 1)
+      const center: ClusterCenter | undefined = this.clusterCenters.get(node.cluster)
+      const bx: number = center !== undefined ? center.x : cx
+      const by: number = center !== undefined ? center.y : cy
+      // 簇内规模决定展开半径，簇越大散得越开
+      const spread: number = 26 * Math.sqrt(k + 0.5)
+      const theta: number = golden * (k + 1)
+      node.x = bx + spread * Math.cos(theta)
+      node.y = by + spread * Math.sin(theta)
       node.vx = 0
       node.vy = 0
     })
@@ -160,6 +204,16 @@ export class ForceLayout {
       }
       node.vx += (cx - node.x) * centerPull
       node.vy += (cy - node.y) * centerPull
+
+      // 簇凝聚力：把节点拉向自己簇的簇心。
+      // 强度取 0.05 —— 明显强于向心力 0.012（否则簇会被整体拉塌），
+      // 又远弱于簇内弹簧引力（否则簇内结构会被压成一个点）。
+      // 有了这一项，簇才不会被簇间斥力推开、散成一锅粥。
+      const center: ClusterCenter | undefined = this.clusterCenters.get(node.cluster)
+      if (center !== undefined) {
+        node.vx += (center.x - node.x) * 0.05
+        node.vy += (center.y - node.y) * 0.05
+      }
       node.vx *= damping
       node.vy *= damping
       node.x += node.vx
