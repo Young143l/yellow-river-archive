@@ -309,8 +309,11 @@ export function buildGraph(
 
   for (const [key, c] of best) {
     const parts: string[] = key.split('|')
-    const from: string = parts[0]
-    const to: string = parts[1]
+    const from: string | undefined = parts[0]
+    const to: string | undefined = parts[1]
+    if (from === undefined || to === undefined) {
+      continue
+    }
     addEdge(from, to, c.rel, c.weight, c.evidence)
   }
 
