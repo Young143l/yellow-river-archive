@@ -229,24 +229,20 @@ export struct HomePage {
    * 黄河下游更是著名的宽浅游荡型河道。宽度变化是「河」最有效的信号之一。
    */
   private riverHalf(y: number, h: number): number {
-    const taperTop: number = Math.min(90, h * 0.10)
-    const taperBottom: number = Math.min(130, h * 0.14)
-    // 两端收窄：一笔起收
-    let taper: number = 1
-    if (y < taperTop) {
-      taper = 0.3 + 0.7 * (y / Math.max(1, taperTop))
-    } else if (y > h - taperBottom) {
-      taper = 0.3 + 0.7 * ((h - y) / Math.max(1, taperBottom))
-    }
-    // 沿程宽窄变化。
-    // 范围收在 0.68–1.10：之前放到 0.42–1.28，最宽处半个河宽 54px，
-    // 整条河接近 110px 顶到正文边上，看着像被撑开的气球。
-    // 河需要「宽窄有别」，但幅度太大就成了畸形。
+    // 不再在两端收尖。
+    //
+    // 之前两端收窄到 0.3、中段鼓到 1.1，形状就是一条鱼 —— 宽身子加尖头尖尾。
+    // 河不是物件，它应该从画面外流进来、再流出画面；两端收尖恰好把河
+    // 变成了一个封闭的图形。现在改为宽度基本恒定、只在首尾用透明度淡出，
+    // 观感是"河流出画"而不是"一条鱼"。
+    //
+    // 起伏也压平：真实河流在图上宽度相当稳定，靠弯曲与汊道提供形态，
+    // 不靠宽度鼓包。
     const vary: number =
-      0.89 +
-      0.13 * Math.sin(y * 0.0031 + 2.0) +
-      0.08 * Math.sin(y * 0.0092 + 0.9)
-    return this.RIVER_HW * Math.max(0.68, Math.min(1.10, vary)) * taper
+      0.94 +
+      0.05 * Math.sin(y * 0.0052 + 2.0) +
+      0.04 * Math.sin(y * 0.0137 + 0.9)
+    return this.RIVER_HW * Math.max(0.84, Math.min(1.04, vary))
   }
 
   private traceRiver(h: number, dx: number): void {
@@ -445,6 +441,21 @@ export struct HomePage {
       k += 1
       y += 13 + ((k * 37) % 15)
     }
+
+    // ---- 7. 首尾淡出：用纸色渐变把两端抹开 ----
+    // 河不从收尖结束，而是"流出画面"。这两段遮罩盖住上下各约 56px。
+    const fadeH: number = Math.min(56, h * 0.06)
+    const top: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, fadeH)
+    top.addColorStop(0, 'rgba(244, 239, 227, 1)')
+    top.addColorStop(1, 'rgba(244, 239, 227, 0)')
+    this.ctx.fillStyle = top
+    this.ctx.fillRect(0, 0, w, fadeH)
+
+    const bottom: CanvasGradient = this.ctx.createLinearGradient(0, h - fadeH, 0, h)
+    bottom.addColorStop(0, 'rgba(244, 239, 227, 0)')
+    bottom.addColorStop(1, 'rgba(244, 239, 227, 1)')
+    this.ctx.fillStyle = bottom
+    this.ctx.fillRect(0, h - fadeH, w, fadeH)
   }
 
   /** 一道水波：短横弧；dir 取 ±1 让相邻笔起伏反向，才像水 */
