@@ -246,7 +246,9 @@ export struct GraphPage {
     const pad: number = w * 0.08
     this.fitScale = Math.min(1.35, Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY))
     this.bboxCx = (minX + maxX) / 2
-    this.bboxCy = (minY + maxY) / 2
+    // 纵向补偿 8%：图看起来偏下，是因为 bbox 含节点半径、且上方图例区占了视觉重量。
+    // 这里直接给一点上移量，让图在可视区里居中。
+    this.bboxCy = (minY + maxY) / 2 - spanY * 0.08
   }
 
   private viewScale(): number {
@@ -418,81 +420,86 @@ export struct GraphPage {
 
   // ---------------------------------------------------------------- 视图
 
+  /**
+   * 图例：两行换行，不再横向滚动。
+   *
+   * 原先的横滚把右侧「城市」「类型」裁在屏幕外，也没有任何提示，
+   * 看起来像渲染出错。图例是读图的前提，必须一眼看全。
+   */
   @Builder
   legend() {
-    Scroll() {
-      Row({ space: 10 }) {
-        ForEach(
-          LEGEND_TYPES,
-          (t: string) => {
-            Row({ space: 4 }) {
-              Column()
-                .width(8)
-                .height(8)
-                .borderRadius(4)
-                .backgroundColor(colorOf(t))
-              Text(TYPE_LABELS.get(t) !== undefined ? TYPE_LABELS.get(t) : t)
-                .fontSize(11)
-                .fontColor(AppColor.textTertiary)
-            }
-          },
-          (t: string) => t
-        )
-      }
-      .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding })
+    Flex({ wrap: FlexWrap.Wrap }) {
+      ForEach(
+        LEGEND_TYPES,
+        (t: string) => {
+          Row({ space: 4 }) {
+            Column()
+              .width(8)
+              .height(8)
+              .borderRadius(4)
+              .backgroundColor(colorOf(t))
+            Text(TYPE_LABELS.get(t) !== undefined ? TYPE_LABELS.get(t) : t)
+              .fontSize(11)
+              .fontColor(AppColor.textTertiary)
+          }
+          .margin({ right: 12, bottom: 4 })
+        },
+        (t: string) => t
+      )
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
     .width('100%')
-    .height(28)
+    .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 2 })
   }
 
+  /** 时代筛选：换行排布，保证「宋」不被裁掉 */
   @Builder
   eraBar() {
-    Scroll() {
-      Row({ space: 8 }) {
-        Text('全部')
-          .fontSize(11)
-          .fontColor(this.activeEra.length === 0 ? AppColor.surface : AppColor.textSecondary)
-          .backgroundColor(this.activeEra.length === 0 ? AppColor.primary : AppColor.surface)
-          .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-          .borderRadius(12)
-          .onClick(() => {
-            this.activeEra = ''
-            this.draw()
-          })
-        ForEach(
-          CORE_ERAS,
-          (era: string) => {
-            Text(era)
-              .fontSize(11)
-              .fontColor(this.activeEra === era ? AppColor.surface : AppColor.textSecondary)
-              .backgroundColor(this.activeEra === era ? AppColor.primary : AppColor.surface)
-              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-              .borderRadius(12)
-              .onClick(() => {
-                this.activeEra = this.activeEra === era ? '' : era
-                this.draw()
-              })
-          },
-          (era: string) => era
-        )
-      }
-      .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding })
+    Flex({ wrap: FlexWrap.Wrap }) {
+      Text('全部')
+        .fontSize(11)
+        .fontColor(this.activeEra.length === 0 ? AppColor.surface : AppColor.textSecondary)
+        .backgroundColor(this.activeEra.length === 0 ? AppColor.primary : AppColor.surface)
+        .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+        .borderRadius(12)
+        .borderWidth(1)
+        .borderColor(this.activeEra.length === 0 ? AppColor.primary : AppColor.divider)
+        .margin({ right: 7, bottom: 5 })
+        .onClick(() => {
+          this.activeEra = ''
+          this.draw()
+        })
+      ForEach(
+        CORE_ERAS,
+        (era: string) => {
+          Text(era)
+            .fontSize(11)
+            .fontColor(this.activeEra === era ? AppColor.surface : AppColor.textSecondary)
+            .backgroundColor(this.activeEra === era ? AppColor.primary : AppColor.surface)
+            .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+            .borderRadius(12)
+            .borderWidth(1)
+            .borderColor(this.activeEra === era ? AppColor.primary : AppColor.divider)
+            .margin({ right: 7, bottom: 5 })
+            .onClick(() => {
+              this.activeEra = this.activeEra === era ? '' : era
+              this.draw()
+            })
+        },
+        (era: string) => era
+      )
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
     .width('100%')
-    .height(38)
+    .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 4 })
   }
 
   build() {
     Column() {
       Row() {
         Text('知识图谱')
-          .fontSize(AppFont.heading)
+          .fontSize(22)
           .fontFamily(FontFamily.serifBold)
           .fontColor(AppColor.textPrimary)
+          .letterSpacing(3)
           .layoutWeight(1)
         Text('−')
           .fontSize(16)
@@ -625,6 +632,8 @@ export struct GraphPage {
         .width('100%')
         .padding(AppSize.pagePadding)
         .backgroundColor(AppColor.surface)
+        .borderWidth({ top: 1 })
+        .borderColor({ top: AppColor.divider })
       }
     }
     .width('100%')

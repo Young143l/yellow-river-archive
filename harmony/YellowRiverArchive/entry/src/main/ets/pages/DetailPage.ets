@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
 import { SECTION_LABELS, type HeritageItem, type Note } from '../shared'
-import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { HeritageDao, type RelatedItem } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
 
@@ -481,9 +481,10 @@ struct DetailPage {
         .backgroundColor(AppColor.divider)
 
       Text(item.name)
-        .fontSize(24)
-        .fontWeight(FontWeight.Medium)
+        .fontSize(26)
+        .fontFamily(FontFamily.serifBold)
         .fontColor(AppColor.textPrimary)
+        .letterSpacing(2)
         .width('100%')
 
       Row({ space: 8 }) {
@@ -521,6 +522,30 @@ struct DetailPage {
     .alignItems(HorizontalAlign.Start)
   }
 
+  /**
+   * 分段导航的自定义 tabBar。
+   *
+   * 默认 tabBar 传字符串会渲染成系统样式的蓝色下划线标签，与全站的
+   * 宋体 + 细线 + 石青完全不是一套语言。这里自绘：宋体标签 + 选中时
+   * 一条 16px 短下划线，与底部 Tab 栏同一套规则。
+   */
+  @Builder
+  sectionTab(index: number, label: string) {
+    Column({ space: 5 }) {
+      Text(label)
+        .fontSize(12)
+        .fontFamily(this.activeIndex === index ? FontFamily.serifBold : FontFamily.serif)
+        .fontColor(this.activeIndex === index ? AppColor.primary : AppColor.textTertiary)
+        .letterSpacing(1)
+      Row()
+        .width(this.activeIndex === index ? 16 : 0)
+        .height(1.5)
+        .backgroundColor(AppColor.primary)
+    }
+    .justifyContent(FlexAlign.Center)
+    .padding({ left: 6, right: 6 })
+  }
+
   build() {
     Column() {
       Row({ space: 8 }) {
@@ -531,9 +556,12 @@ struct DetailPage {
             router.back()
           })
         Text(this.item !== undefined ? this.item.name : '档案详情')
-          .fontSize(AppFont.heading)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(20)
+          .fontFamily(FontFamily.serifBold)
           .fontColor(AppColor.textPrimary)
+          .letterSpacing(1)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
       }
       .width('100%')
@@ -568,35 +596,37 @@ struct DetailPage {
               TabContent() {
                 this.introSection(this.item)
               }
-              .tabBar(SECTION_LABELS[0].label)
+              .tabBar(this.sectionTab(0, SECTION_LABELS[0].label))
 
               TabContent() {
                 this.archaeologySection(this.item)
               }
-              .tabBar(SECTION_LABELS[1].label)
+              .tabBar(this.sectionTab(1, SECTION_LABELS[1].label))
 
               TabContent() {
                 this.eventsSection(this.item)
               }
-              .tabBar(SECTION_LABELS[2].label)
+              .tabBar(this.sectionTab(2, SECTION_LABELS[2].label))
 
               TabContent() {
                 this.poemsSection(this.item)
               }
-              .tabBar(SECTION_LABELS[3].label)
+              .tabBar(this.sectionTab(3, SECTION_LABELS[3].label))
 
               TabContent() {
                 this.travelSection(this.item)
               }
-              .tabBar(SECTION_LABELS[4].label)
+              .tabBar(this.sectionTab(4, SECTION_LABELS[4].label))
 
               TabContent() {
                 this.graphSection()
               }
-              .tabBar(SECTION_LABELS[5].label)
+              .tabBar(this.sectionTab(5, SECTION_LABELS[5].label))
             }
             .barMode(BarMode.Scrollable)
-            .barHeight(48)
+            .barHeight(46)
+            .barBackgroundColor(AppColor.background)
+            .divider({ strokeWidth: 0 })
             .height(560)
             .onChange((index: number) => {
               this.activeIndex = index

@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
 import { CORE_ERAS, type ConflictRecord, type Favorite, type Note, type Progress, type Tag } from '../shared'
-import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { HeritageDao } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
 import { SyncService, type SyncProgressView, type SyncSummary } from '../service/sync/SyncService'
@@ -51,6 +51,8 @@ export struct ProfilePage {
   @State doc: StructuredDocument | undefined = undefined
   @State docText: string = ''
   @State docExportMsg: string = ''
+  /** 同步卡片里展开中的次级面板：'' / 'A' 配对 / 'B' 备份 / 'C' 快照 */
+  @State panel: string = ''
   @State loaded: boolean = false
   @State activePane: number = 0
   // ---- 同步 ----
@@ -295,12 +297,147 @@ export struct ProfilePage {
     this.syncBusy = false
   }
 
+  /** 一个折叠入口行 */
+  @Builder
+  entryRow(title: string, key: string, hint: string) {
+    Row({ space: 8 }) {
+      Column({ space: 2 }) {
+        Text(title)
+          .fontSize(AppFont.caption)
+          .fontFamily(this.panel === key ? FontFamily.serifBold : FontFamily.serif)
+          .fontColor(AppColor.textPrimary)
+          .width('100%')
+        Text(hint)
+          .fontSize(10)
+          .fontColor(AppColor.textTertiary)
+          .width('100%')
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Text(this.panel === key ? '⌃' : '›')
+        .fontSize(13)
+        .fontColor(AppColor.textTertiary)
+    }
+    .width('100%')
+    .padding({ top: 9, bottom: 9 })
+    .onClick(() => {
+      this.panel = this.panel === key ? '' : key
+    })
+  }
+
+  @Builder
+  pairPanel() {
+    Column({ space: 8 }) {
+      Row({ space: 8 }) {
+        Button(this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成配对码')
+          .fontSize(11)
+          .fontColor(AppColor.primary)
+          .backgroundColor(AppColor.background)
+          .borderWidth(1)
+          .borderColor(AppColor.divider)
+          .borderRadius(7)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.onCreatePairing()
+          })
+        Button('重置游标')
+          .fontSize(11)
+          .fontColor(AppColor.textTertiary)
+          .backgroundColor(AppColor.background)
+          .borderWidth(1)
+          .borderColor(AppColor.divider)
+          .borderRadius(7)
+          .onClick(() => {
+            this.onResetCursor()
+          })
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        TextInput({ text: this.joinCode, placeholder: '输入另一台设备的 6 位配对码' })
+          .fontSize(11)
+          .backgroundColor(AppColor.background)
+          .borderRadius(7)
+          .type(InputType.Number)
+          .maxLength(6)
+          .layoutWeight(1)
+          .onChange((value: string) => {
+            this.joinCode = value
+          })
+        Button('加入')
+          .fontSize(11)
+          .fontColor(AppColor.surface)
+          .backgroundColor(this.joinCode.trim().length === 6 ? AppColor.primary : AppColor.textTertiary)
+          .borderRadius(7)
+          .onClick(() => {
+            this.onJoinPairing()
+          })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({ bottom: 4 })
+  }
+
+  @Builder
+  backupPanel() {
+    Row({ space: 8 }) {
+      Button('导出备份')
+        .fontSize(11)
+        .fontColor(AppColor.primary)
+        .backgroundColor(AppColor.background)
+        .borderWidth(1)
+        .borderColor(AppColor.divider)
+        .borderRadius(7)
+        .layoutWeight(1)
+        .onClick(() => { this.onExportBackup() })
+      Button('导入恢复')
+        .fontSize(11)
+        .fontColor(AppColor.primary)
+        .backgroundColor(AppColor.background)
+        .borderWidth(1)
+        .borderColor(AppColor.divider)
+        .borderRadius(7)
+        .layoutWeight(1)
+        .onClick(() => { this.onImportBackup() })
+    }
+    .width('100%')
+    .padding({ bottom: 4 })
+  }
+
+  @Builder
+  snapshotPanel() {
+    Row({ space: 8 }) {
+      Button('存云端快照')
+        .fontSize(11)
+        .fontColor(AppColor.primary)
+        .backgroundColor(AppColor.background)
+        .borderWidth(1)
+        .borderColor(AppColor.divider)
+        .borderRadius(7)
+        .layoutWeight(1)
+        .onClick(() => { this.onSaveSnapshot() })
+      Button('从快照恢复')
+        .fontSize(11)
+        .fontColor(AppColor.primary)
+        .backgroundColor(AppColor.background)
+        .borderWidth(1)
+        .borderColor(AppColor.divider)
+        .borderRadius(7)
+        .layoutWeight(1)
+        .onClick(() => { this.onRestoreSnapshot() })
+    }
+    .width('100%')
+    .padding({ bottom: 4 })
+  }
+
   @Builder
   syncCard() {
     Column({ space: 10 }) {
       Text('跨设备同步')
-        .fontSize(AppFont.heading)
-        .fontWeight(FontWeight.Medium)
+        .fontSize(17)
+        .fontFamily(FontFamily.serifBold)
         .fontColor(AppColor.textPrimary)
         .width('100%')
 
@@ -315,95 +452,34 @@ export struct ProfilePage {
         (line: string) => line
       )
 
-      Row({ space: 8 }) {
-        Button(this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成配对码')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.surface)
-          .backgroundColor(AppColor.primary)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => {
-            this.onCreatePairing()
-          })
-        Button(this.syncBusy ? '…' : '立即同步')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.surface)
-          .borderWidth(1)
-          .borderColor(AppColor.primary)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => {
-            this.onSync()
-          })
-      }
-      .width('100%')
+      // 主操作：只留一个。原先九颗按钮挤成三排，用户不知道从哪下手
+      Button(this.syncBusy ? '同步中…' : '立即同步')
+        .fontSize(AppFont.caption)
+        .fontFamily(FontFamily.serif)
+        .fontColor(AppColor.surface)
+        .backgroundColor(AppColor.primary)
+        .borderRadius(8)
+        .width('100%')
+        .height(38)
+        .onClick(() => {
+          this.onSync()
+        })
 
-      Row({ space: 8 }) {
-        TextInput({ text: this.joinCode, placeholder: '输入另一台设备的 6 位配对码' })
-          .fontSize(AppFont.caption)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .type(InputType.Number)
-          .maxLength(6)
-          .layoutWeight(1)
-          .onChange((value: string) => {
-            this.joinCode = value
-          })
-        Button('重置游标')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.textTertiary)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .onClick(() => {
-            this.onResetCursor()
-          })
-        Button('加入')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.surface)
-          .backgroundColor(this.joinCode.trim().length === 6 ? AppColor.primary : AppColor.textTertiary)
-          .borderRadius(8)
-          .onClick(() => {
-            this.onJoinPairing()
-          })
+      // 次级功能收进入口，点开才展开 —— 默认界面从九块降到四块
+      this.entryRow('配对设备', 'A', this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '与另一台设备握手')
+      if (this.panel === 'A') {
+        this.pairPanel()
       }
-      .width('100%')
 
-      Row({ space: 8 }) {
-        Button('导出备份')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => { this.onExportBackup() })
-        Button('导入恢复')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => { this.onImportBackup() })
+      this.entryRow('备份与恢复', 'B', '导出为文件，或从备份合并')
+      if (this.panel === 'B') {
+        this.backupPanel()
       }
-      .width('100%')
 
-      Row({ space: 8 }) {
-        Button('存云端快照')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => { this.onSaveSnapshot() })
-        Button('从快照恢复')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
-          .layoutWeight(1)
-          .onClick(() => { this.onRestoreSnapshot() })
+      this.entryRow('云端快照', 'C', '把当前数据存到服务端，或取回')
+      if (this.panel === 'C') {
+        this.snapshotPanel()
       }
-      .width('100%')
 
       if (this.progressTotal > 0) {
         Column({ space: 4 }) {
@@ -479,7 +555,9 @@ export struct ProfilePage {
     .width('100%')
     .padding(AppSize.pagePadding)
     .backgroundColor(AppColor.surface)
-    .borderRadius(AppSize.cardRadius)
+    .borderRadius(10)
+    .borderWidth(1)
+    .borderColor(AppColor.divider)
   }
 
   @Builder
@@ -487,8 +565,8 @@ export struct ProfilePage {
     Column({ space: 10 }) {
       Row() {
         Text('学习进度')
-          .fontSize(AppFont.heading)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(17)
+          .fontFamily(FontFamily.serifBold)
           .fontColor(AppColor.textPrimary)
           .layoutWeight(1)
         Text(`${this.overallDone} / ${this.overallTotal}`)
@@ -537,7 +615,9 @@ export struct ProfilePage {
     .width('100%')
     .padding(AppSize.pagePadding)
     .backgroundColor(AppColor.surface)
-    .borderRadius(AppSize.cardRadius)
+    .borderRadius(10)
+    .borderWidth(1)
+    .borderColor(AppColor.divider)
   }
 
   @Builder
@@ -777,9 +857,10 @@ export struct ProfilePage {
   build() {
     Column() {
       Text('我的档案')
-        .fontSize(AppFont.title)
-        .fontWeight(FontWeight.Medium)
+        .fontSize(22)
+        .fontFamily(FontFamily.serifBold)
         .fontColor(AppColor.textPrimary)
+        .letterSpacing(3)
         .width('100%')
         .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, top: 16, bottom: 12 })
 
@@ -817,7 +898,9 @@ export struct ProfilePage {
           .width('100%')
           .padding(AppSize.pagePadding)
           .backgroundColor(AppColor.surface)
-          .borderRadius(AppSize.cardRadius)
+          .borderRadius(10)
+          .borderWidth(1)
+          .borderColor(AppColor.divider)
         }
         .width('100%')
         .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 16 })

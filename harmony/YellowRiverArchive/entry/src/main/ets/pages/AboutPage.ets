@@ -1,6 +1,6 @@
 import { router } from '@kit.ArkUI'
 
-import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 
 interface AboutSection {
   readonly title: string
@@ -63,9 +63,10 @@ struct AboutPage {
     Column() {
       Row() {
         Text('关于')
-          .fontSize(AppFont.title)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(22)
+          .fontFamily(FontFamily.serifBold)
           .fontColor(AppColor.textPrimary)
+          .letterSpacing(3)
           .layoutWeight(1)
         Text('返回')
           .fontSize(AppFont.caption)

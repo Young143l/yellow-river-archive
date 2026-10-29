@@ -2,7 +2,9 @@ import { common } from '@kit.AbilityKit'
 import { router } from '@kit.ArkUI'
 
 import { CITIES, CORE_ERAS, HERITAGE_TYPES } from '../shared'
-import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
+import { PageHeader } from '../components/PageHeader'
+import { FilterRow } from '../components/FilterRow'
 import { HeritageDao, type HeritageFilter } from '../service/HeritageDao'
 import { SearchService, type SearchHit } from '../service/SearchService'
 
@@ -16,6 +18,10 @@ import { SearchService, type SearchHit } from '../service/SearchService'
 @Component
 export struct SearchPage {
   @State keyword: string = ''
+  /** 筛选区是否展开。默认收起 —— 三行 chip 常显会吃掉半屏 */
+  @State filterOpen: boolean = false
+  /** 档案总数（副标题用） */
+  @State total: number = 0
   @State selectedCities: string[] = []
   @State selectedEras: string[] = []
   @State selectedTypes: string[] = []
@@ -33,6 +39,7 @@ export struct SearchPage {
       const context = this.getUIContext().getHostContext() as common.Context
       await HeritageDao.ready(context)
       this.ready = true
+      this.total = HeritageDao.list().length
       await this.runSearch()
     } catch (err) {
       this.error = `初始化失败：${(err as Error).message}`
@@ -153,58 +160,19 @@ export struct SearchPage {
   }
 
   @Builder
-  filterRow(kind: string) {
-    Row({ space: 8 }) {
-      Text(this.labelOf(kind))
-        .fontSize(AppFont.caption)
-        .fontColor(AppColor.textTertiary)
-        .width(30)
-
-      Scroll() {
-        Row({ space: 8 }) {
-          ForEach(
-            this.valuesOf(kind),
-            (v: string) => {
-              Text(v)
-                .fontSize(AppFont.caption)
-                .fontColor(this.selectedOf(kind).includes(v) ? AppColor.surface : AppColor.textSecondary)
-                .backgroundColor(this.selectedOf(kind).includes(v) ? AppColor.primary : AppColor.surface)
-                .borderRadius(14)
-                .borderWidth(1)
-                .borderColor(this.selectedOf(kind).includes(v) ? AppColor.primary : AppColor.divider)
-                .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-                .onClick(() => {
-                  this.applyToggle(kind, v)
-                })
-            },
-            (v: string) => `${kind}-${v}`
-          )
-        }
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .layoutWeight(1)
-    }
-    .width('100%')
-    .height(40)
-  }
-
-  @Builder
   hitCard(hit: SearchHit) {
     Column({ space: 6 }) {
       Row({ space: 8 }) {
         Text(hit.name)
-          .fontSize(AppFont.heading)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(18)
+          .fontFamily(FontFamily.serif)
           .fontColor(AppColor.textPrimary)
           .layoutWeight(1)
 
         Text(hit.reason)
-          .fontSize(11)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.divider)
-          .borderRadius(4)
-          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          .fontSize(10)
+          .fontColor(AppColor.earth)
+          .padding({ left: 2, right: 2 })
       }
       .width('100%')
 
@@ -223,67 +191,188 @@ export struct SearchPage {
     .alignItems(HorizontalAlign.Start)
     .padding(AppSize.cardGap)
     .backgroundColor(AppColor.surface)
-    .borderRadius(AppSize.cardRadius)
+    .borderRadius(10)
+    .borderWidth(1)
+    .borderColor(AppColor.divider)
     .onClick(() => {
       this.openDetail(hit.itemId)
     })
   }
 
   build() {
-    Column({ space: AppSize.cardGap }) {
-      TextInput({ text: this.keyword, placeholder: '搜索遗址、文物、诗词、时代' })
-        .fontSize(AppFont.body)
-        .height(44)
-        .backgroundColor(AppColor.surface)
-        .borderRadius(AppSize.cardRadius)
-        .onChange((value: string) => {
-          this.keyword = value
-          this.runSearch()
+    Column() {
+      // ---- 卷首 ----
+      Column({ space: 12 }) {
+        PageHeader({
+          title: '检索',
+          subtitle: `${this.total} 条档案 · 关键词或筛选`,
+          compact: true,
         })
 
-      this.filterRow('city')
-      this.filterRow('era')
-      this.filterRow('type')
-
-      Text(this.resultSummary())
-        .fontSize(AppFont.caption)
-        .fontColor(AppColor.textTertiary)
+        // 搜索框：加放大镜与宋体占位。原先是一个无装饰的圆角矩形，
+        // 与全站语汇无关。
+        Row({ space: 8 }) {
+          // 放大镜：Circle + Line 组合。
+          // 用 Path 的 A（圆弧）指令在 ArkUI 上渲染不完整（实测只画出一个小钩），
+          // 改用基本图形拼装更可靠。
+          Stack({ alignContent: Alignment.TopStart }) {
+            Circle({ width: 11, height: 11 })
+              .fill(Color.Transparent)
+              .stroke(AppColor.textTertiary)
+              .strokeWidth(1.5)
+              .position({ x: 1, y: 1 })
+            Line()
+              .startPoint([11, 11])
+              .endPoint([15.5, 15.5])
+              .stroke(AppColor.textTertiary)
+              .strokeWidth(1.5)
+          }
+          .width(17)
+          .height(17)
+          TextInput({ text: this.keyword, placeholder: '搜索遗址、文物、诗词、时代' })
+            .fontSize(AppFont.caption)
+            .placeholderColor(AppColor.textTertiary)
+            .backgroundColor(Color.Transparent)
+            .padding(0)
+            .layoutWeight(1)
+            .onChange((value: string) => {
+              this.keyword = value
+              this.runSearch()
+            })
+        }
         .width('100%')
+        .height(42)
+        .padding({ left: 12, right: 12 })
+        .backgroundColor(AppColor.surface)
+        .borderRadius(10)
+        .borderWidth(1)
+        .borderColor(AppColor.divider)
+      }
+      .width('100%')
+      .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, top: 14, bottom: 10 })
+
+      // ---- 筛选：默认收起，只显示已选项 ----
+      Column({ space: 6 }) {
+        if (this.filterOpen) {
+          FilterRow({
+            label: '城市',
+            values: CITIES,
+            selected: this.selectedCities,
+            onToggle: (v: string) => {
+              this.applyToggle('city', v)
+            },
+          })
+          FilterRow({
+            label: '时代',
+            values: CORE_ERAS,
+            selected: this.selectedEras,
+            onToggle: (v: string) => {
+              this.applyToggle('era', v)
+            },
+          })
+          FilterRow({
+            label: '类型',
+            values: HERITAGE_TYPES,
+            selected: this.selectedTypes,
+            onToggle: (v: string) => {
+              this.applyToggle('type', v)
+            },
+          })
+        }
+
+        Row({ space: 8 }) {
+          Text(this.filterOpen ? '收起筛选' : '筛选')
+            .fontSize(11)
+            .fontColor(AppColor.primary)
+            .onClick(() => {
+              this.filterOpen = !this.filterOpen
+            })
+          Text(this.filterSummary())
+            .fontSize(11)
+            .fontColor(AppColor.textTertiary)
+            .layoutWeight(1)
+          Text(this.resultSummary())
+            .fontSize(11)
+            .fontColor(AppColor.textTertiary)
+        }
+        .width('100%')
+      }
+      .width('100%')
+      .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 8 })
+
+      this.hairline()
 
       if (this.error.length > 0) {
         Text(this.error)
           .fontSize(AppFont.caption)
           .fontColor(AppColor.danger)
           .width('100%')
+          .padding({ left: AppSize.pagePadding, top: 8 })
       }
-
-      List({ space: AppSize.cardGap }) {
-        ForEach(
-          this.hits,
-          (hit: SearchHit) => {
-            ListItem() {
-              this.hitCard(hit)
-            }
-          },
-          (hit: SearchHit) => `${hit.itemId}-${hit.channel}-${hit.score}`
-        )
-      }
-      .layoutWeight(1)
-      .width('100%')
-      .scrollBar(BarState.Off)
 
       if (this.hits.length === 0 && !this.searching && this.ready) {
-        Text('没有匹配的档案，试试「洛阳」「唐三彩」「仰韶」')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.textTertiary)
-          .width('100%')
-          .textAlign(TextAlign.Center)
+        Column() {
+          Text('没有匹配的档案')
+            .fontSize(AppFont.body)
+            .fontFamily(FontFamily.serif)
+            .fontColor(AppColor.textSecondary)
+          Text('试试「洛阳」「唐三彩」「仰韶」')
+            .fontSize(11)
+            .fontColor(AppColor.textTertiary)
+            .margin({ top: 6 })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+      } else {
+        List({ space: 10 }) {
+          ForEach(
+            this.hits,
+            (hit: SearchHit) => {
+              ListItem() {
+                this.hitCard(hit)
+              }
+            },
+            (hit: SearchHit) => `${hit.itemId}-${hit.channel}-${hit.score}`
+          )
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .scrollBar(BarState.Off)
+        .padding({
+          left: AppSize.pagePadding,
+          right: AppSize.pagePadding,
+          top: 10,
+        })
       }
     }
     .width('100%')
     .height('100%')
-    .padding(AppSize.pagePadding)
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(AppColor.background)
+  }
+
+  /** 一条极细分隔线 */
+  @Builder
+  hairline() {
+    Row()
+      .width('100%')
+      .height(1)
+      .backgroundColor(AppColor.divider)
+  }
+
+  /** 已选筛选项的摘要文案 */
+  private filterSummary(): string {
+    const parts: string[] = []
+    for (const v of this.selectedCities) {
+      parts.push(v)
+    }
+    for (const v of this.selectedEras) {
+      parts.push(v)
+    }
+    for (const v of this.selectedTypes) {
+      parts.push(v)
+    }
+    return parts.length > 0 ? parts.join(' · ') : '未筛选'
   }
 }

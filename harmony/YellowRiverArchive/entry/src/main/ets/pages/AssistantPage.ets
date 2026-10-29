@@ -3,7 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit'
 import { router } from '@kit.ArkUI'
 
 import { SECTION_LABELS, type Citation, type GraphPath, type Section } from '../shared'
-import { AppColor, AppFont, AppSize } from '../constants/Theme'
+import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { QaBus, QaClient } from '../service/QaClient'
 import { SearchService, type SearchHit } from '../service/SearchService'
 
@@ -193,8 +193,8 @@ export struct AssistantPage {
   emptyState() {
     Column({ space: 12 }) {
       Text('黄河图志 · 档案助手')
-        .fontSize(AppFont.heading)
-        .fontWeight(FontWeight.Medium)
+        .fontSize(20)
+        .fontFamily(FontFamily.serifBold)
         .fontColor(AppColor.textPrimary)
       Text('基于本档案库的检索增强问答，每条结论都标注来源，可点击核对原文。')
         .fontSize(AppFont.caption)
@@ -313,7 +313,9 @@ export struct AssistantPage {
   build() {
     Column() {
       Text('档案助手')
-        .fontSize(AppFont.title)
+        .fontSize(22)
+        .fontFamily(FontFamily.serifBold)
+        .letterSpacing(3)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColor.textPrimary)
         .width('100%')
