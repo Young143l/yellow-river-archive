@@ -267,6 +267,19 @@ export struct HomePage {
     return 'img/river-bg.webp'
   }
 
+  /** 水纹叠层：只有白色短弧，透明底，覆盖在背景图之上 */
+  @Builder
+  rippleLayer() {
+    Canvas(this.ctx)
+      .width(this.RIVER_W)
+      .height('100%')
+      .onReady(() => {
+        this.riverReady = true
+        this.drawRipples()
+        this.startRiver()
+      })
+  }
+
   private startRiver(): void {
     if (!this.riverReady || this.timer !== -1) {
       return
@@ -484,31 +497,7 @@ export struct HomePage {
       } else {
         Scroll() {
           Stack({ alignContent: Alignment.TopStart }) {
-            // ---- 背景层：5 张水墨河流图循环堆叠 ----
-            // 放在 Scroll 内部才会随内容滚动；放在外面会固定在视口里（踩过）。
-            // Cover：图比内容高时裁掉底部多余部分，宽度按 684/3=228vp 自然对齐，
-            // 不会横向变形。
-            // 高度必须写 '100%' 而不是估算值 —— 写死高度会让 Stack 被图片撑高，
-            // 内容读完还能继续往下滑一截空白。'100%' 跟随 Stack，
-            // 而 Stack 的高度由正文列决定。
-            Image($rawfile(this.backgroundSource()))
-              .width('100%')
-              .height('100%')
-              .objectFit(ImageFit.Cover)
-              .position({ x: 0, y: 0 })
-
-            // ---- 水纹层：只有白色短弧，透明底 ----
-            Canvas(this.ctx)
-              .width(this.RIVER_W)
-              .height('100%')
-              .position({ x: 0, y: 0 })
-              .onReady(() => {
-                this.riverReady = true
-                this.drawRipples()
-                this.startRiver()
-              })
-
-            // ---- 正文 ----
+            // ---- 正文（背景由 backgroundImage 承担）----
             Column() {
               this.masthead()
 
@@ -547,6 +536,17 @@ export struct HomePage {
               bottom: 8,
             })
             .width('100%')
+            // 背景用 backgroundImage 而不是独立的 Image 组件：
+            // 独立 Image 的 height('100%') 在 Stack 里会被解析成**视口高度**，
+            // 只盖住第一屏（用户反馈「往下滑就没有背景了」）；
+            // 写死估算高度又会把 Stack 撑高，多出一段空白滚动。
+            // 挂在正文列上，高度天然等于内容高度，两边都对。
+            .backgroundImage($rawfile(this.backgroundSource()))
+            .backgroundImageSize(ImageSize.Cover)
+            .backgroundImagePosition(Alignment.Top)
+            // 水纹叠层走 overlay：它不影响布局尺寸，
+            // 若作为 Stack 的兄弟节点并给固定高度，又会把 Stack 撑高
+            .overlay(this.rippleLayer(), { align: Alignment.TopStart })
 
           }
           .width('100%')
