@@ -5,6 +5,7 @@ import { CITIES, CORE_ERAS, HERITAGE_TYPES } from '../shared'
 import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { PageHeader } from '../components/PageHeader'
 import { FilterRow } from '../components/FilterRow'
+import { TagChip } from '../components/TagChip'
 import { HeritageDao, type HeritageFilter } from '../service/HeritageDao'
 import { SearchService, type SearchHit } from '../service/SearchService'
 
@@ -164,15 +165,13 @@ export struct SearchPage {
     Column({ space: 6 }) {
       Row({ space: 8 }) {
         Text(hit.name)
-          .fontSize(18)
-          .fontFamily(FontFamily.serif)
+          .fontSize(AppFont.cardTitle)
+          .fontFamily(FontFamily.serifBold)
           .fontColor(AppColor.textPrimary)
+          .letterSpacing(1)
           .layoutWeight(1)
 
-        Text(hit.reason)
-          .fontSize(10)
-          .fontColor(AppColor.earth)
-          .padding({ left: 2, right: 2 })
+        TagChip({ label: hit.reason, tone: this.chipTone(hit.channel) })
       }
       .width('100%')
 
@@ -191,9 +190,9 @@ export struct SearchPage {
     .alignItems(HorizontalAlign.Start)
     .padding(AppSize.cardGap)
     .backgroundColor(AppColor.surface)
-    .borderRadius(10)
+    .borderRadius(AppSize.cardRadius)
     .borderWidth(1)
-    .borderColor(AppColor.divider)
+    .borderColor(AppColor.hairlineWarm)
     .onClick(() => {
       this.openDetail(hit.itemId)
     })
@@ -218,13 +217,13 @@ export struct SearchPage {
           Stack({ alignContent: Alignment.TopStart }) {
             Circle({ width: 11, height: 11 })
               .fill(Color.Transparent)
-              .stroke(AppColor.textTertiary)
+              .stroke(AppColor.earth)
               .strokeWidth(1.5)
               .position({ x: 1, y: 1 })
             Line()
               .startPoint([11, 11])
               .endPoint([15.5, 15.5])
-              .stroke(AppColor.textTertiary)
+              .stroke(AppColor.earth)
               .strokeWidth(1.5)
           }
           .width(17)
@@ -241,12 +240,12 @@ export struct SearchPage {
             })
         }
         .width('100%')
-        .height(42)
-        .padding({ left: 12, right: 12 })
-        .backgroundColor(AppColor.surface)
-        .borderRadius(10)
+        .height(46)
+        .padding({ left: 14, right: 14 })
+        .backgroundColor(Color.Transparent)
+        .borderRadius(AppSize.cardRadius)
         .borderWidth(1)
-        .borderColor(AppColor.divider)
+        .borderColor(AppColor.hairlineWarm)
       }
       .width('100%')
       .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, top: 14, bottom: 10 })
@@ -300,7 +299,13 @@ export struct SearchPage {
       .width('100%')
       .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 8 })
 
-      this.hairline()
+      // 筛选行下方一条石青细线：设计稿用它把「检索条件」和「结果」分开，
+      // 比灰色分隔线更有指向性
+      Row()
+        .width('100%')
+        .height(1)
+        .backgroundColor(AppColor.primary)
+        .opacity(0.5)
 
       if (this.error.length > 0) {
         Text(this.error)
@@ -350,6 +355,13 @@ export struct SearchPage {
     .height('100%')
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(AppColor.background)
+    .backgroundImage($rawfile('img/paper.webp'))
+    .backgroundImageSize(ImageSize.Cover)
+  }
+
+  /** 通道标签配色：向量走高亮石青，其余走赭黄 */
+  private chipTone(channel: string): string {
+    return channel === 'vector' ? 'primary' : 'earth'
   }
 
   /** 一条极细分隔线 */

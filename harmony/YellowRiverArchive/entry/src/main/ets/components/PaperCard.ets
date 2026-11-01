@@ -18,6 +18,8 @@ export struct PaperCard {
   @Prop radius: number = 10
   /** 是否需要描边。密集列表里若已经用分隔线，可关掉描边避免重线 */
   @Prop bordered: boolean = true
+  /** 暖金描边。视觉升级后卡片统一用暖金，灰米色留给列表内部的分隔线 */
+  @Prop warm: boolean = false
   @BuilderParam content: () => void = this.emptyContent
 
   @Builder
@@ -34,6 +36,6 @@ export struct PaperCard {
     .backgroundColor(AppColor.surface)
     .borderRadius(this.radius)
     .borderWidth(this.bordered ? 1 : 0)
-    .borderColor(AppColor.divider)
+    .borderColor(this.warm ? AppColor.hairlineWarm : AppColor.divider)
   }
 }

@@ -317,7 +317,12 @@ export struct GraphPage {
       // 手机端节点不能按桌面的尺度来 —— 3px 的点在手机上基本是灰尘。
       // 遗址 8–11，其余 4–7.5；选中再放大一半。
       const isSite: boolean = node.type === 'Site'
-      const baseR: number = isSite ? 8 + node.weight * 3 : 4 + node.weight * 3.5
+      // 枢纽放大：设计稿里遗址是明显大一号的朱砂圆，卫星是小彩点。
+      // 之前遗址只比卫星大一点（8–11 vs 4–7.5），远看分不出主次。
+      const baseR: number = isSite ? 10 + node.weight * 5 : 4 + node.weight * 3.5
+      // 朱砂是「郑重」的信号 —— 遗址就是档案本身，用印色标记最贴切；
+      // 卫星节点保留类型色，簇的色彩信息不丢。
+      const fillColor: string = isSite ? AppColor.seal : colorOf(node.type)
       const r: number = Math.max(3.4, baseR * this.viewScale()) * (isSelected ? 1.45 : 1)
       const nx: number = this.sx(node.x)
       const ny: number = this.sy(node.y)
@@ -327,12 +332,12 @@ export struct GraphPage {
       // 遗址节点带一点同色辉光，把视线引到「这几处是主干」
       if (isSite && !dim) {
         this.ctx.shadowBlur = 14
-        this.ctx.shadowColor = colorOf(node.type)
+        this.ctx.shadowColor = fillColor
       }
 
       this.ctx.beginPath()
       this.ctx.arc(nx, ny, r, 0, Math.PI * 2)
-      this.ctx.fillStyle = colorOf(node.type)
+      this.ctx.fillStyle = fillColor
       this.ctx.fill()
       this.ctx.shadowBlur = 0
 
@@ -340,7 +345,7 @@ export struct GraphPage {
         this.ctx.beginPath()
         this.ctx.arc(nx, ny, r + 3.5, 0, Math.PI * 2)
         this.ctx.lineWidth = 1.4
-        this.ctx.strokeStyle = colorOf(node.type)
+        this.ctx.strokeStyle = fillColor
         this.ctx.stroke()
       }
 
@@ -632,12 +637,14 @@ export struct GraphPage {
         .width('100%')
         .padding(AppSize.pagePadding)
         .backgroundColor(AppColor.surface)
-        .borderWidth({ top: 1 })
-        .borderColor({ top: AppColor.divider })
+        .borderWidth({ top: 2 })
+        .borderColor({ top: AppColor.gold })
       }
     }
     .width('100%')
     .height('100%')
     .backgroundColor(AppColor.background)
+    .backgroundImage($rawfile('img/paper.webp'))
+    .backgroundImageSize(ImageSize.Cover)
   }
 }

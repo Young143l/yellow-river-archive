@@ -500,6 +500,8 @@ export struct ProfilePage {
             type: ProgressType.Linear,
           })
             .color(AppColor.primary)
+            .backgroundColor(AppColor.trackCream)
+            .style({ strokeWidth: 6 })
             .width('100%')
         }
         .width('100%')
@@ -581,6 +583,8 @@ export struct ProfilePage {
         type: ProgressType.Linear,
       })
         .color(AppColor.primary)
+        .backgroundColor(AppColor.trackCream)
+        .style({ strokeWidth: 8 })
         .width('100%')
 
       // 按时代分段：只有读到过的时代才显示，避免一屏全是 0/0
@@ -598,7 +602,9 @@ export struct ProfilePage {
                 total: 100,
                 type: ProgressType.Linear,
               })
-                .color(p.visited > 0 ? AppColor.primaryLight : AppColor.divider)
+                .color(p.visited > 0 ? AppColor.primary : AppColor.trackCream)
+                .backgroundColor(AppColor.trackCream)
+                .style({ strokeWidth: 6 })
                 .layoutWeight(1)
               Text(`${p.visited}/${p.total}`)
                 .fontSize(AppFont.caption)
@@ -912,5 +918,7 @@ export struct ProfilePage {
     .width('100%')
     .height('100%')
     .backgroundColor(AppColor.background)
+    .backgroundImage($rawfile('img/paper.webp'))
+    .backgroundImageSize(ImageSize.Cover)
   }
 }

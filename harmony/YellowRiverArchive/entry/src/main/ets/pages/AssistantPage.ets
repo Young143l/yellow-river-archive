@@ -191,25 +191,38 @@ export struct AssistantPage {
 
   @Builder
   emptyState() {
-    Column({ space: 12 }) {
-      Text('黄河图志 · 档案助手')
-        .fontSize(20)
-        .fontFamily(FontFamily.serifBold)
-        .fontColor(AppColor.textPrimary)
-      Text('基于本档案库的检索增强问答，每条结论都标注来源，可点击核对原文。')
+    Column({ space: 14 }) {
+      // 青绿山水小景：豆包生成的透明底远山。
+      // 空状态放一幅画，比再写一句「请输入问题」有分量 —— 这是用户第一次
+      // 打开助手页看到的全部内容。
+      Image($rawfile('img/mountain.webp'))
+        .width(320)
+        .height(120)
+        .objectFit(ImageFit.Contain)
+        .margin({ top: 8, bottom: 4 })
+
+      Text('问它仰韶与夏商的承接、唐三彩的窑口，或某个遗址的考古发现。\n每条结论都标注来源，可点开核对原文。')
         .fontSize(AppFont.caption)
         .fontColor(AppColor.textSecondary)
         .textAlign(TextAlign.Center)
-      Column({ space: 8 }) {
+        .lineHeight(21)
+
+      Column({ space: 10 }) {
         ForEach(
           SUGGESTIONS,
           (item: string) => {
             Text(item)
               .fontSize(AppFont.caption)
+              .fontFamily(FontFamily.serif)
               .fontColor(AppColor.primary)
-              .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-              .backgroundColor(AppColor.surface)
-              .borderRadius(16)
+              .textAlign(TextAlign.Center)
+              .width('100%')
+              .height(44)
+              .padding({ left: 16, right: 16 })
+              .backgroundColor(Color.Transparent)
+              .borderRadius(22)
+              .borderWidth(1)
+              .borderColor(AppColor.hairlineWarm)
               .onClick(() => {
                 this.submit(item)
               })
@@ -218,9 +231,12 @@ export struct AssistantPage {
         )
       }
       .width('100%')
+      .margin({ top: 10 })
     }
     .width('100%')
-    .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, top: 48 })
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+    .padding({ left: AppSize.pagePadding + 4, right: AppSize.pagePadding + 4, bottom: 12 })
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -336,11 +352,14 @@ export struct AssistantPage {
         .scrollBar(BarState.Off)
       }
 
-      Row({ space: 8 }) {
+      Row({ space: 10 }) {
         TextInput({ text: this.draft, placeholder: '问点什么…' })
           .fontSize(AppFont.body)
-          .backgroundColor(AppColor.surface)
-          .borderRadius(8)
+          .backgroundColor(Color.Transparent)
+          .borderRadius(22)
+          .borderWidth(1)
+          .borderColor(AppColor.hairlineWarm)
+          .height(44)
           .layoutWeight(1)
           .onChange((value: string) => {
             this.draft = value
@@ -348,13 +367,17 @@ export struct AssistantPage {
           .onSubmit(() => {
             this.submit(this.draft)
           })
-        Button(this.pending ? '…' : '提问')
+        // 圆形石青发送键。文字按钮在这个语境里太轻，圆形更有「发出」的动作感
+        Button(this.pending ? '…' : '问')
           .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serif)
           .fontColor(AppColor.surface)
+          .width(48)
+          .height(44)
           .backgroundColor(
             this.draft.trim().length > 0 && !this.pending ? AppColor.primary : AppColor.textTertiary
           )
-          .borderRadius(8)
+          .borderRadius(22)
           .onClick(() => {
             this.submit(this.draft)
           })
@@ -365,5 +388,7 @@ export struct AssistantPage {
     .width('100%')
     .height('100%')
     .backgroundColor(AppColor.background)
+    .backgroundImage($rawfile('img/paper.webp'))
+    .backgroundImageSize(ImageSize.Cover)
   }
 }

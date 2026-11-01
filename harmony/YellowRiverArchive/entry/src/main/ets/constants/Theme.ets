@@ -38,15 +38,24 @@ export class AppColor {
   static readonly textPrimary: string = '#23303A'
   static readonly textSecondary: string = '#5A6B74'
   static readonly textTertiary: string = '#8D9AA1'
+  /** 细分隔线：比卡片描边浅，用于列表内部分隔 */
   static readonly divider: string = '#DED5C3'
+  /** 卡片与输入框描边：暖金。设计稿的核心识别色之一 */
+  static readonly hairlineWarm: string = '#C9A87C'
+  /** 进度条轨道：奶白 */
+  static readonly trackCream: string = '#E8DDC8'
+  /** 金：信息条顶边、装饰分隔 */
+  static readonly gold: string = '#B08D57'
+  /** 实心标签底色：赭黄 */
+  static readonly chipFill: string = '#B98A54'
   static readonly tabActive: string = '#3D7288'
   static readonly tabInactive: string = '#93A0A6'
 }
 
 export class AppSize {
   static readonly pagePadding: number = 16
-  static readonly cardRadius: number = 12
-  static readonly cardGap: number = 12
+  static readonly cardRadius: number = 14
+  static readonly cardGap: number = 14
   static readonly tabBarHeight: number = 56
 }
 
@@ -63,7 +72,11 @@ export class FontFamily {
 }
 
 export class AppFont {
+  /** 卷首/大字：进度总数、首页刊头 */
+  static readonly display: number = 30
   static readonly title: number = 22
+  /** 卡片标题：列表里的条目名 */
+  static readonly cardTitle: number = 21
   static readonly heading: number = 18
   static readonly body: number = 15
   static readonly caption: number = 13

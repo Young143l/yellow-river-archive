@@ -645,6 +645,8 @@ struct DetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(AppColor.background)
+    .backgroundImage($rawfile('img/paper.webp'))
+    .backgroundImageSize(ImageSize.Cover)
   }
 }
 
