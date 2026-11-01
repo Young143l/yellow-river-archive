@@ -258,7 +258,9 @@ export struct HomePage {
    * 肉眼可见的横向雾带 —— 短距离的溶解盖不住两图河道位置的错位。
    * 把合成放到离屏、把过渡拉到 400px，才能把错位真正抹平。
    *
-   * 684×6000 对应 3x 密度下 228vp × 2000vp，覆盖当前内容高度（约 1690vp）。
+   * 1080×6000 全屏宽（左 684px 是河 + 纸，右 396px 用镜像纸面续上）。
+   * 为什么要续到全宽：只铺 228vp 时，右侧 App 底色（#F2EDE0）与图片纸色
+   * （#F4EADB）差了几个色阶，交界处能看出一条竖线。铺满就没有边界了。
    * 数据增长后需要重新合成一张更高的。
    */
   private backgroundSource(): string {
@@ -486,16 +488,19 @@ export struct HomePage {
             // 放在 Scroll 内部才会随内容滚动；放在外面会固定在视口里（踩过）。
             // Cover：图比内容高时裁掉底部多余部分，宽度按 684/3=228vp 自然对齐，
             // 不会横向变形。
+            // 高度必须写 '100%' 而不是估算值 —— 写死高度会让 Stack 被图片撑高，
+            // 内容读完还能继续往下滑一截空白。'100%' 跟随 Stack，
+            // 而 Stack 的高度由正文列决定。
             Image($rawfile(this.backgroundSource()))
-              .width(this.BG_W)
-              .height(this.estimateHeight())
+              .width('100%')
+              .height('100%')
               .objectFit(ImageFit.Cover)
               .position({ x: 0, y: 0 })
 
             // ---- 水纹层：只有白色短弧，透明底 ----
             Canvas(this.ctx)
               .width(this.RIVER_W)
-              .height(this.estimateHeight())
+              .height('100%')
               .position({ x: 0, y: 0 })
               .onReady(() => {
                 this.riverReady = true

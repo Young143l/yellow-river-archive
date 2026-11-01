@@ -31,7 +31,7 @@ export class AppColor {
   static readonly danger: string = '#8E2F22'
 
   /** 页面底色：宣纸 */
-  static readonly background: string = '#F2EDE0'
+  static readonly background: string = '#F3EADB'
   /** 卡片/浮层底色：比纸略亮 */
   static readonly surface: string = '#FBF8F0'
   /** 墨：正文。带一点冷调，与石青呼应 */
