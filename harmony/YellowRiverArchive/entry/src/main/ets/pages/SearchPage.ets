@@ -171,11 +171,11 @@ export struct SearchPage {
           .letterSpacing(1)
           .layoutWeight(1)
 
-        TagChip({ label: hit.reason, tone: this.chipTone(hit.channel) })
+        TagChip({ label: this.channelLabel(hit.channel), tone: this.chipTone(hit.channel) })
       }
       .width('100%')
 
-      Text(`${hit.city} · ${hit.era} ｜ ${this.channelLabel(hit.channel)}`)
+      Text(`${hit.city} · ${hit.era}`)
         .fontSize(AppFont.caption)
         .fontColor(AppColor.textTertiary)
 

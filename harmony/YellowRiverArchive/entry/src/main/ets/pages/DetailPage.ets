@@ -594,32 +594,74 @@ struct DetailPage {
 
             Tabs({ barPosition: BarPosition.Start, index: this.activeIndex }) {
               TabContent() {
-                this.introSection(this.item)
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.introSection(this.item)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(0, SECTION_LABELS[0].label))
 
               TabContent() {
-                this.archaeologySection(this.item)
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.archaeologySection(this.item)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(1, SECTION_LABELS[1].label))
 
               TabContent() {
-                this.eventsSection(this.item)
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.eventsSection(this.item)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(2, SECTION_LABELS[2].label))
 
               TabContent() {
-                this.poemsSection(this.item)
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.poemsSection(this.item)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(3, SECTION_LABELS[3].label))
 
               TabContent() {
-                this.travelSection(this.item)
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.travelSection(this.item)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(4, SECTION_LABELS[4].label))
 
               TabContent() {
-                this.graphSection()
+                // TabContent 默认居中，内容比 tab 高度短时会浮在中间；包一层撑满并顶对齐
+                Column() {
+                  this.graphSection()
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Start)
+                .alignItems(HorizontalAlign.Start)
               }
               .tabBar(this.sectionTab(5, SECTION_LABELS[5].label))
             }

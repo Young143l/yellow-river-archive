@@ -297,6 +297,28 @@ export struct ProfilePage {
     this.syncBusy = false
   }
 
+  /**
+   * 分区标签：宋体 + 石青 + 短下划线。
+   *
+   * 用自定义 tabBar 替换默认字符串，因为默认选中态是系统蓝（#0A59F7）
+   * 且下划线是整条 barWidth 的粗条 —— 与全站石青细线完全不搭。
+   */
+  @Builder
+  paneTab(index: number, label: string, count: number) {
+    Column({ space: 4 }) {
+      Text(count >= 0 ? `${label} ${count}` : label)
+        .fontSize(AppFont.body)
+        .fontFamily(this.activePane === index ? FontFamily.serifBold : FontFamily.serif)
+        .fontColor(this.activePane === index ? AppColor.primary : AppColor.textSecondary)
+      Row()
+        .width(this.activePane === index ? 16 : 0)
+        .height(2)
+        .backgroundColor(AppColor.primary)
+    }
+    .justifyContent(FlexAlign.Center)
+    .height(44)
+  }
+
   /** 一个折叠入口行 */
   @Builder
   entryRow(title: string, key: string, hint: string) {
@@ -668,6 +690,9 @@ export struct ProfilePage {
       }
     }
     .width('100%')
+    .height('100%')
+    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
+    .justifyContent(FlexAlign.Start)
   }
 
   @Builder
@@ -711,6 +736,9 @@ export struct ProfilePage {
       }
     }
     .width('100%')
+    .height('100%')
+    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
+    .justifyContent(FlexAlign.Start)
   }
 
   /** 结构化知识文档视图：按「时代 → 遗址」两级聚合，可一键导出 */
@@ -814,6 +842,9 @@ export struct ProfilePage {
       }
     }
     .width('100%')
+    .height('100%')
+    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
+    .justifyContent(FlexAlign.Start)
   }
 
   private async onExportDoc(): Promise<void> {
@@ -858,6 +889,9 @@ export struct ProfilePage {
       }
     }
     .width('100%')
+    .height('100%')
+    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
+    .justifyContent(FlexAlign.Start)
   }
 
   build() {
@@ -881,32 +915,33 @@ export struct ProfilePage {
               TabContent() {
                 this.favoriteList()
               }
-              .tabBar(`收藏 ${this.favorites.length}`)
+              .tabBar(this.paneTab(0, '收藏', this.favorites.length))
 
               TabContent() {
                 this.noteList()
               }
-              .tabBar(`笔记 ${this.notes.length}`)
+              .tabBar(this.paneTab(1, '笔记', this.notes.length))
 
               TabContent() {
                 this.tagList()
               }
-              .tabBar(`标签 ${this.tags.length}`)
+              .tabBar(this.paneTab(2, '标签', this.tags.length))
 
               TabContent() {
                 this.docView()
               }
-              .tabBar('文档')
+              .tabBar(this.paneTab(3, '文档', -1))
             }
             .barMode(BarMode.Fixed)
+            .barHeight(46)
             .height(320)
           }
           .width('100%')
           .padding(AppSize.pagePadding)
           .backgroundColor(AppColor.surface)
-          .borderRadius(10)
+          .borderRadius(AppSize.cardRadius)
           .borderWidth(1)
-          .borderColor(AppColor.divider)
+          .borderColor(AppColor.hairlineWarm)
         }
         .width('100%')
         .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 16 })
