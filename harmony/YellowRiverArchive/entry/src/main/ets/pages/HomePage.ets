@@ -96,15 +96,6 @@ export struct HomePage {
   private readonly RIVER_W: number = 114
   /** 正文起始位置：河岸 114 + 8px 呼吸 */
   private readonly CONTENT_LEFT: number = 122
-  /**
-   * 相邻两张背景图的重叠量。
-   *
-   * 每张图的上下边缘都做了 alpha 软化（源图 34px，显示约 11vp）。
-   * 若首尾相接地堆，河流会在接缝处「淡出再淡入」，出现一个断口；
-   * 让它们重叠这 11vp，淡出与淡入就叠成一次交叉溶解，河流是连续的。
-   * 重叠后每张的实际步进 = BG_H - OVERLAP。
-   */
-  private readonly OVERLAP: number = 11
   /** 水纹横向范围（避开心滩与滩地） */
   private readonly RIPPLE_X0: number = 22
   private readonly RIPPLE_X1: number = 100
@@ -258,19 +249,20 @@ export struct HomePage {
   }
 
   /**
-   * 背景图序列。
+   * 背景图路径。
    *
-   * 对 5 张图循环取用。循环周期 = 5 × 507 = 2535vp，
-   * 一屏约 1400vp 只占 55%，滚动时不会看到明显的重复节奏。
+   * 5 张原稿在构建期就被**离屏合成为一张 684×6000 的长图**
+   * （上下各 400px 大幅淡入淡出衔接），运行时只显示这一张。
+   *
+   * 为什么不在 ArkUI 里拼接：曾经试过 11vp 的交叉溶解，接缝处仍有一条
+   * 肉眼可见的横向雾带 —— 短距离的溶解盖不住两图河道位置的错位。
+   * 把合成放到离屏、把过渡拉到 400px，才能把错位真正抹平。
+   *
+   * 684×6000 对应 3x 密度下 228vp × 2000vp，覆盖当前内容高度（约 1690vp）。
+   * 数据增长后需要重新合成一张更高的。
    */
-  private tileSources(): string[] {
-    const pitch: number = this.BG_H - this.OVERLAP
-    const need: number = Math.max(2, Math.ceil(this.estimateHeight() / pitch) + 2)
-    const out: string[] = []
-    for (let i = 0; i < need; i += 1) {
-      out.push(`img/river-${(i % 5) + 1}.webp`)
-    }
-    return out
+  private backgroundSource(): string {
+    return 'img/river-bg.webp'
   }
 
   private startRiver(): void {
@@ -492,23 +484,13 @@ export struct HomePage {
           Stack({ alignContent: Alignment.TopStart }) {
             // ---- 背景层：5 张水墨河流图循环堆叠 ----
             // 放在 Scroll 内部才会随内容滚动；放在外面会固定在视口里（踩过）。
-            Column() {
-              ForEach(
-                this.tileSources(),
-                (src: string, i: number) => {
-                  Image($rawfile(src))
-                    .width(this.BG_W)
-                    .height(this.BG_H)
-                    .objectFit(ImageFit.Fill)
-                    .margin({ top: i === 0 ? 0 : -this.OVERLAP })
-                },
-                (src: string, i: number) => `bg-${i}`
-              )
-            }
-            .width(this.BG_W)
-            .alignItems(HorizontalAlign.Start)
-            .position({ x: 0, y: 0 })
-            .backgroundColor(AppColor.background)
+            // Cover：图比内容高时裁掉底部多余部分，宽度按 684/3=228vp 自然对齐，
+            // 不会横向变形。
+            Image($rawfile(this.backgroundSource()))
+              .width(this.BG_W)
+              .height(this.estimateHeight())
+              .objectFit(ImageFit.Cover)
+              .position({ x: 0, y: 0 })
 
             // ---- 水纹层：只有白色短弧，透明底 ----
             Canvas(this.ctx)
