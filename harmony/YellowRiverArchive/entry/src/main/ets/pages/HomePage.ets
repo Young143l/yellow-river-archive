@@ -46,43 +46,6 @@ const BAND_SPECS: BandSpec[] = [
  * 黄河下游是著名的宽浅游荡型河道，沙洲与汊道是它的标志性地貌。
  * 画几处浅色滩地，河就不再是一条均匀的带子。
  */
-/** 汊道：offset 为相对河宽的横向偏移，freq/phase 决定摆动，width 为线宽 */
-class BraidSpec {
-  readonly offset: number
-  readonly freq: number
-  readonly phase: number
-  readonly width: number
-  readonly tint: string
-
-  constructor(offset: number, freq: number, phase: number, width: number, tint: string) {
-    this.offset = offset
-    this.freq = freq
-    this.phase = phase
-    this.width = width
-    this.tint = tint
-  }
-}
-
-/**
- * 次级水流。
- *
- * 黄河下游是宽浅游荡型河道：主槽之外还有多条汊道，之间夹着心滩。
- * 只画一条均匀的水带，无论配色多准都不像黄河；有汊道才有那种"散"的形态。
- */
-const BRAIDS: BraidSpec[] = [
-  new BraidSpec(-0.46, 0.0061, 0.4, 9, 'rgba(204, 170, 104, 0.55)'),
-  new BraidSpec(0.40, 0.0049, 2.1, 7, 'rgba(196, 160, 96, 0.50)'),
-  new BraidSpec(-0.02, 0.0077, 1.2, 5, 'rgba(212, 180, 116, 0.40)'),
-]
-
-const SANDBARS: number[][] = [
-  [0.16, 0.55, -0.30, 1.5],
-  [0.34, 0.42, 0.34, 1.1],
-  [0.55, 0.60, -0.22, 1.8],
-  [0.72, 0.38, 0.40, 1.0],
-  [0.86, 0.48, -0.34, 1.4],
-]
-
 /** 一个时代分组 */
 class EraGroup {
   readonly era: string
@@ -117,20 +80,34 @@ export struct HomePage {
   // 只够画一条"带子"——沙洲、汊道、宽窄变化都表现不出来，所以显得窄。
   // 加到 100px（约 28%）之后，河才有了"面"，能画宽浅游荡型河道的地貌。
   // 代价是正文从 240px 收窄到 218px，仍容得下约 17 个汉字/行。
-  /** 河道画布宽度 */
-  private readonly RIVER_W: number = 106
-  /** 河道中心线距屏幕左沿 */
-  private readonly RIVER_CX: number = 55
-  /** 河道半宽基准：实际宽度会在此基础上随流程起伏 */
-  private readonly RIVER_HW: number = 35
-  /** 右岸线位置 */
-  private readonly BANK_RIGHT: number = 97
-  /** 遗迹图形左沿（压在右岸上，不额外占用正文宽度） */
-  private readonly GLYPH_LEFT: number = 76
-  /** 正文起始位置 */
-  private readonly CONTENT_LEFT: number = 112
-  /** 遗迹图形宽 */
-  private readonly GLYPH_W: number = 30
+  /**
+   * 河流背景图规格。
+   *
+   * 河道的视觉由豆包生成的 5 张水墨背景图承担，代码只负责循环堆叠 + 水纹动效。
+   * 为什么要缩放到 228vp：豆包稿里河道最宽处占 50% 屏宽，直接铺满会压到正文；
+   * 等比缩放到 228vp 后河道正好落在 114vp 以内，右侧 132vp 用纸色续上
+   * （背景图右缘本来就是纯纸色带洒金，接缝看不出来）。
+   *
+   * 1080 × 2400 的源图等比缩放到 228 × 507。
+   */
+  private readonly BG_W: number = 228
+  private readonly BG_H: number = 507
+  /** 水纹画布宽度：与河道可见宽度一致 */
+  private readonly RIVER_W: number = 114
+  /** 正文起始位置：河岸 114 + 8px 呼吸 */
+  private readonly CONTENT_LEFT: number = 122
+  /**
+   * 相邻两张背景图的重叠量。
+   *
+   * 每张图的上下边缘都做了 alpha 软化（源图 34px，显示约 11vp）。
+   * 若首尾相接地堆，河流会在接缝处「淡出再淡入」，出现一个断口；
+   * 让它们重叠这 11vp，淡出与淡入就叠成一次交叉溶解，河流是连续的。
+   * 重叠后每张的实际步进 = BG_H - OVERLAP。
+   */
+  private readonly OVERLAP: number = 11
+  /** 水纹横向范围（避开心滩与滩地） */
+  private readonly RIPPLE_X0: number = 22
+  private readonly RIPPLE_X1: number = 100
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -214,251 +191,6 @@ export struct HomePage {
    * 叠上频率 3 倍与 7 倍的弱波之后，弯道变得长短不一，
    * 接近真实河道那种「一段缓弯接一个小折」的走向。
    */
-  private riverX(y: number): number {
-    const cx: number = this.RIVER_CX
-    return cx +
-      Math.sin(y * 0.0045 + 1.1) * 8.5 +
-      Math.sin(y * 0.0132 + 0.4) * 4.2 +
-      Math.sin(y * 0.0310 + 2.2) * 1.8
-  }
-
-  /**
-   * 河道半宽：随流程变宽变窄。
-   *
-   * 等宽的河道是蛇，不是河。真实河流在峡谷处收窄、在滩地散开，
-   * 黄河下游更是著名的宽浅游荡型河道。宽度变化是「河」最有效的信号之一。
-   */
-  private riverHalf(y: number, h: number): number {
-    // 不再在两端收尖。
-    //
-    // 之前两端收窄到 0.3、中段鼓到 1.1，形状就是一条鱼 —— 宽身子加尖头尖尾。
-    // 河不是物件，它应该从画面外流进来、再流出画面；两端收尖恰好把河
-    // 变成了一个封闭的图形。现在改为宽度基本恒定、只在首尾用透明度淡出，
-    // 观感是"河流出画"而不是"一条鱼"。
-    //
-    // 起伏也压平：真实河流在图上宽度相当稳定，靠弯曲与汊道提供形态，
-    // 不靠宽度鼓包。
-    const vary: number =
-      0.94 +
-      0.05 * Math.sin(y * 0.0052 + 2.0) +
-      0.04 * Math.sin(y * 0.0137 + 0.9)
-    return this.RIVER_HW * Math.max(0.84, Math.min(1.04, vary))
-  }
-
-  private traceRiver(h: number, dx: number): void {
-    this.ctx.beginPath()
-    for (let y = -12; y <= h + 12; y += 9) {
-      const x: number = this.riverX(y) + dx
-      if (y === -12) {
-        this.ctx.moveTo(x, y)
-      } else {
-        this.ctx.lineTo(x, y)
-      }
-    }
-  }
-
-  /**
-   * 绘制河道（青绿山水）。
-   *
-   * **河道是一条有边界的竖带，不是背景。** 上一版用多层描边叠出渐隐边缘，
-   * 结果是字的底下一层淡淡的色，读起来像背景纹理。这一版改成：
-   * 先用两岸围出一条**填充路径**，边缘清晰；再勾岸线；最后在河面里画水波。
-   * 条目通过连接线挂在右岸上，河与内容之间是明确的前后关系，不是叠压关系。
-   *
-   * 配色取青绿山水：石青为水、石绿为岸、赭石勾线。矿物颜料本身有分量，
-   * 不会像水墨那样在暖纸色上显得灰扑扑。
-   */
-  /** 在河道里填充一条水道：centerOff/halfRatio 都随流程变化，水道才会时分时合 */
-  private fillChannel(
-    h: number,
-    centerOff: (y: number) => number,
-    halfRatio: (y: number) => number,
-    tint: string
-  ): void {
-    this.ctx.beginPath()
-    for (let y = 0; y <= h; y += 5) {
-      const hw: number = this.riverHalf(y, h)
-      const x: number = this.riverX(y) + centerOff(y) * hw - halfRatio(y) * hw
-      if (y === 0) {
-        this.ctx.moveTo(x, y)
-      } else {
-        this.ctx.lineTo(x, y)
-      }
-    }
-    for (let y = h; y >= 0; y -= 5) {
-      const hw: number = this.riverHalf(y, h)
-      this.ctx.lineTo(this.riverX(y) + centerOff(y) * hw + halfRatio(y) * hw, y)
-    }
-    this.ctx.closePath()
-    this.ctx.fillStyle = tint
-    this.ctx.fill()
-  }
-
-  /**
-   * 绘制河道（宽浅游荡型）。
-   *
-   * 关键改动：**不再是"一整条填满的水"**。
-   * 之前把整个河带填成赭色，放大看就是一块扁平的黄色，汊道与心滩全被压住；
-   * 沙洲只能靠叠椭圆硬凑，结果成了一个个圆斑。
-   *
-   * 现在按真实黄河的地貌来组织：
-   *   1. 铺一层河漫滩（浅沙色）
-   *   2. 在滩地上开 3 条水道，各自的横向位置与宽度都随流程变化
-   *      —— 水道时宽时窄、时分时合，它们之间的空地自然就成了心滩沙洲
-   *   3. 水纹只画在水道里，滩地保持干燥
-   */
-  private drawRiver(): void {
-    const w: number = this.ctx.width
-    const h: number = this.ctx.height
-    if (w <= 0 || h <= 0) {
-      return
-    }
-    this.ctx.clearRect(0, 0, w, h)
-    this.ctx.lineCap = 'round'
-    this.ctx.lineJoin = 'round'
-
-    // ---- 1. 河漫滩：整条河带的底，浅沙色 ----
-    this.ctx.beginPath()
-    for (let y = 0; y <= h; y += 5) {
-      const x: number = this.riverX(y) - this.riverHalf(y, h)
-      if (y === 0) {
-        this.ctx.moveTo(x, y)
-      } else {
-        this.ctx.lineTo(x, y)
-      }
-    }
-    for (let y = h; y >= 0; y -= 5) {
-      this.ctx.lineTo(this.riverX(y) + this.riverHalf(y, h), y)
-    }
-    this.ctx.closePath()
-    // 滩地用赭石黄 —— 黄河的「黄」来自泥沙，落在滩地上，不是水体本身。
-    const flood: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, h)
-    flood.addColorStop(0, 'rgba(223, 203, 160, 0.88)')
-    flood.addColorStop(0.5, 'rgba(214, 192, 148, 0.92)')
-    flood.addColorStop(1, 'rgba(225, 206, 165, 0.86)')
-    this.ctx.fillStyle = flood
-    this.ctx.fill()
-
-    // ---- 2. 三条水道 ----
-    // 每条道的位置与宽度都是 y 的函数：错开的相位让它们时而并行、时交汇
-    this.fillChannel(
-      h,
-      (y: number) => -0.40 + Math.sin(y * 0.0042 + 0.8) * 0.14,
-      (y: number) => 0.33 + Math.sin(y * 0.0068 + 2.0) * 0.07,
-      'rgba(70, 126, 150, 0.92)'
-    )
-    this.fillChannel(
-      h,
-      (y: number) => 0.34 + Math.sin(y * 0.0051 + 2.6) * 0.13,
-      (y: number) => 0.25 + Math.sin(y * 0.0079 + 0.4) * 0.06,
-      'rgba(84, 142, 164, 0.88)'
-    )
-    this.fillChannel(
-      h,
-      (y: number) => -0.02 + Math.sin(y * 0.0033 + 3.4) * 0.22,
-      (y: number) => 0.09 + Math.sin(y * 0.0092 + 1.6) * 0.05,
-      'rgba(58, 112, 136, 0.90)'
-    )
-
-    // ---- 3. 河内细节（裁剪在河带内）----
-    this.ctx.save()
-    this.ctx.clip()
-
-    for (const b of BAND_SPECS) {
-      const y0: number = h * b.top
-      const bh: number = h * b.height
-      const g: CanvasGradient = this.ctx.createLinearGradient(0, y0, 0, y0 + bh)
-      g.addColorStop(0, 'rgba(0, 0, 0, 0)')
-      g.addColorStop(0.5, b.tint)
-      g.addColorStop(1, 'rgba(0, 0, 0, 0)')
-      this.ctx.fillStyle = g
-      this.ctx.fillRect(0, y0, this.ctx.width, bh)
-    }
-
-    this.ctx.restore()
-
-    // ---- 4. 岸线：河带外沿 ----
-    for (const side of [-1, 1]) {
-      this.ctx.beginPath()
-      for (let y = 0; y <= h; y += 5) {
-        const x: number = this.riverX(y) + side * this.riverHalf(y, h)
-        if (y === 0) {
-          this.ctx.moveTo(x, y)
-        } else {
-          this.ctx.lineTo(x, y)
-        }
-      }
-      this.ctx.lineWidth = 1.7
-      this.ctx.strokeStyle = 'rgba(132, 92, 48, 0.72)'
-      this.ctx.stroke()
-    }
-
-    // ---- 5. 滩地植被：岸外一线青绿 ----
-    for (const side of [-1, 1]) {
-      this.ctx.beginPath()
-      for (let y = 0; y <= h; y += 5) {
-        const x: number = this.riverX(y) + side * (this.riverHalf(y, h) + 2.2)
-        if (y === 0) {
-          this.ctx.moveTo(x, y)
-        } else {
-          this.ctx.lineTo(x, y)
-        }
-      }
-      this.ctx.lineWidth = 3.4
-      this.ctx.strokeStyle = 'rgba(104, 146, 104, 0.30)'
-      this.ctx.stroke()
-    }
-
-    // ---- 6. 水波：只落在水道范围内 ----
-    // 行距不再固定：固定行距会让水波排成横平竖直的网格，看着像缝线。
-    // 让每行的间距在 13-27 之间浮动，水波才「散」。
-    const drift: number = (this.phase * 9) % 18
-    this.ctx.lineWidth = 1.4
-
-    let k: number = 0
-    let y: number = -6
-    while (y <= h) {
-      const yy: number = y + drift
-      const hw: number = this.riverHalf(yy, h)
-      if (hw < 4) {
-        k += 1
-        y += 13 + ((k * 37) % 15)
-        continue
-      }
-      const cx: number = this.riverX(yy)
-      for (let i = 0; i < 3; i += 1) {
-        const seed: number = k * 11 + i * 17
-        // 落点对齐到三条水道的中心附近，水波才不会画到滩地上
-        const laneOff: number = i === 0 ? -0.40 : (i === 1 ? 0.34 : -0.02)
-        const jitter: number = (((seed * 29) % 100) / 100 - 0.5) * 0.22
-        const len: number = 6 + (seed % 5)
-        const x: number = cx + (laneOff + jitter) * hw
-        const yJ: number = yy + (((seed * 13) % 7) - 3) * 0.8
-        const alpha: number = 0.38 + (seed % 4) / 26
-        this.ctx.strokeStyle = `rgba(224, 242, 248, ${alpha})`
-        this.ripple(x - len / 2, yJ, len, seed % 2 === 0 ? 1 : -1)
-      }
-      k += 1
-      y += 13 + ((k * 37) % 15)
-    }
-
-    // ---- 7. 首尾淡出：用纸色渐变把两端抹开 ----
-    // 河不从收尖结束，而是"流出画面"。这两段遮罩盖住上下各约 56px。
-    const fadeH: number = Math.min(56, h * 0.06)
-    const top: CanvasGradient = this.ctx.createLinearGradient(0, 0, 0, fadeH)
-    top.addColorStop(0, 'rgba(244, 239, 227, 1)')
-    top.addColorStop(1, 'rgba(244, 239, 227, 0)')
-    this.ctx.fillStyle = top
-    this.ctx.fillRect(0, 0, w, fadeH)
-
-    const bottom: CanvasGradient = this.ctx.createLinearGradient(0, h - fadeH, 0, h)
-    bottom.addColorStop(0, 'rgba(244, 239, 227, 0)')
-    bottom.addColorStop(1, 'rgba(244, 239, 227, 1)')
-    this.ctx.fillStyle = bottom
-    this.ctx.fillRect(0, h - fadeH, w, fadeH)
-  }
-
-  /** 一道水波：短横弧；dir 取 ±1 让相邻笔起伏反向，才像水 */
   private ripple(x: number, y: number, len: number, dir: number): void {
     this.ctx.beginPath()
     this.ctx.moveTo(x, y)
@@ -466,20 +198,92 @@ export struct HomePage {
     this.ctx.stroke()
   }
 
+  /**
+   * 水纹叠层。
+   *
+   * 河床是静态背景图，只有这一层在动 —— 观感是「河不动、水在流」，
+   * 比让整张贴图滚动正确得多（贴图滚动会和内容滚动打架）。
+   *
+   * 横向限制在 RIPPLE_X0..RIPPLE_X1：背景图里的水道集中在这一带，
+   * 画到外面就会落在心滩或滩地上。
+   */
+  private drawRipples(): void {
+    const h: number = this.ctx.height
+    if (h <= 0) {
+      return
+    }
+    this.ctx.clearRect(0, 0, this.ctx.width, h)
+    this.ctx.lineWidth = 1.4
+    this.ctx.lineCap = 'round'
+
+    const drift: number = (this.phase * 9) % 18
+    const span: number = this.RIPPLE_X1 - this.RIPPLE_X0
+
+    let k: number = 0
+    let y: number = -6
+    while (y <= h) {
+      const yy: number = y + drift
+      // 每条水纹的位置按行号伪随机，避免排成网格
+      const seed: number = k * 37
+      const len: number = 4 + (seed % 6)
+      const x: number = this.RIPPLE_X0 + ((seed * 29) % 100) / 100 * span
+      const alpha: number = 0.22 + (seed % 4) / 30
+      this.ctx.strokeStyle = `rgba(240, 250, 253, ${alpha})`
+      this.ripple(x, yy, len, seed % 2 === 0 ? 1 : -1)
+      k += 1
+      y += 14 + ((k * 31) % 16)
+    }
+  }
+
+  /**
+   * 估算内容总高度。
+   *
+   * 不用 onAreaChange 测量：实测把 Column 放在 Stack 里时，
+   * onAreaChange 报回的值不触发重渲染，背景图永远只铺第一张
+   * （截图里河流滚到一半就断了）。
+   *
+   * 首页内容是确定结构 —— 卷首 + 每个时代一个标题 + 每条一个条目 + 卷末 ——
+   * 按固定行高估出来足够准，也不受布局时机影响。
+   */
+  private estimateHeight(): number {
+    let items: number = 0
+    for (const g of this.groups) {
+      items += g.items.length
+    }
+    const MASTHEAD: number = 200
+    const GROUP_HEADER: number = 92
+    const ITEM: number = 232
+    const COLOPHON: number = 110
+    return MASTHEAD + this.groups.length * GROUP_HEADER + items * ITEM + COLOPHON
+  }
+
+  /**
+   * 背景图序列。
+   *
+   * 对 5 张图循环取用。循环周期 = 5 × 507 = 2535vp，
+   * 一屏约 1400vp 只占 55%，滚动时不会看到明显的重复节奏。
+   */
+  private tileSources(): string[] {
+    const pitch: number = this.BG_H - this.OVERLAP
+    const need: number = Math.max(2, Math.ceil(this.estimateHeight() / pitch) + 2)
+    const out: string[] = []
+    for (let i = 0; i < need; i += 1) {
+      out.push(`img/river-${(i % 5) + 1}.webp`)
+    }
+    return out
+  }
+
   private startRiver(): void {
     if (!this.riverReady || this.timer !== -1) {
       return
     }
-    if (this.contentHeight > 9000) {
-      // 内容极长时（80 条档案）整条河每帧重绘会拖慢滚动，
-      // 退化为静态河道 —— 有动效是加分，掉帧是减分
-      this.drawRiver()
+    if (this.estimateHeight() > 9000) {
+      this.drawRipples()
       return
     }
-    // 30fps 足够表达水流；60fps 只是白烧电
     this.timer = setInterval(() => {
       this.phase += 0.022
-      this.drawRiver()
+      this.drawRipples()
     }, 33)
   }
 
@@ -574,69 +378,15 @@ export struct HomePage {
     .width('100%')
   }
 
+  /** 一条遗址 */
   /**
-   * 沿岸小景：按遗址类型画一个简笔图形。
+   * 一条遗址。
    *
-   * 用 Path 而不是每项一个 Canvas —— 一页十几二十个 Canvas 实例开销不小，
-   * 而这些图形只是静态线稿，Path 足够，也更省。
-   *
-   * 图形取赭石偏墨，压在青绿河岸上正好是「岸边有个老物件」的观感。
+   * 移除了原先的「岸边简笔图形 + 连接线」：河流背景图里已经有完整的岸线，
+   * 再叠一个 26px 的线稿会与水墨笔触打架。文字直接排在河岸右侧。
    */
   @Builder
-  siteGlyph(item: HeritageSummary) {
-    if (item.types.length > 0 && item.types[0] === '都城遗址') {
-      // 城墙带垛口
-      Path({ commands: 'M3 29 L3 16 L7 16 L7 12 L11 12 L11 16 L13 16 L13 12 L17 12 L17 16 L21 16 L21 12 L25 12 L25 16 L29 16 L29 29 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.62)
-    } else if (item.types.length > 0 && item.types[0] === '窑址') {
-      // 窑包 + 烟囱
-      Path({ commands: 'M4 29 Q4 17 16 17 Q28 17 28 29 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.60)
-      Path({ commands: 'M16 17 L16 8 L20 8 L20 17 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.66)
-    } else if (item.types.length > 0 && item.types[0] === '古建筑') {
-      // 塔：层层收分
-      Path({ commands: 'M16 3 L21 12 L19 12 L19 16 L23 16 L23 20 L19 20 L19 24 L24 24 L24 29 L8 29 L8 24 L13 24 L13 20 L9 20 L9 16 L13 16 L13 12 L11 12 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.66)
-    } else if (item.types.length > 0 && item.types[0] === '墓葬群') {
-      // 封土堆
-      Path({ commands: 'M3 29 Q16 9 29 29 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.56)
-    } else {
-      // 聚落：两间坡顶房
-      Path({ commands: 'M3 29 L3 19 L9 13 L16 19 L16 29 Z M17 29 L17 20 L24 15 L31 20 L31 29 Z' })
-        .width(32).height(32).fill(AppColor.earth).opacity(0.62)
-    }
-  }
-
-  /** 一条遗址 */
-  @Builder
   itemEntry(item: HeritageSummary) {
-    Stack({ alignContent: Alignment.TopStart }) {
-      // 连接线：从河岸一直画到正文，图形随后压在上面。
-      // 这样无论图形多宽，线都不会出现断口 —— 上一版从图形右沿起算，
-      // 因为留了间距，看起来就是「有些点没连上」。
-      Row()
-        .width(this.CONTENT_LEFT - this.BANK_RIGHT)
-        .height(1)
-        .backgroundColor(AppColor.earth)
-        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT), y: 24 })
-
-      // 岸端落点：线从河岸「长」出来的地方有个点
-      Column()
-        .width(5)
-        .height(5)
-        .borderRadius(3)
-        .backgroundColor(AppColor.earth)
-        .position({ x: -(this.CONTENT_LEFT - this.BANK_RIGHT) - 1, y: 21.5 })
-
-      // 岸边遗迹：压在连接线上，紧贴河道右岸
-      Column() {
-        this.siteGlyph(item)
-      }
-      .width(this.GLYPH_W)
-      .position({ x: -(this.CONTENT_LEFT - this.GLYPH_LEFT), y: 4 })
-
     Column({ space: 7 }) {
       Text(item.name)
         .fontSize(20)
@@ -681,7 +431,6 @@ export struct HomePage {
     .onClick(() => {
       this.openDetail(item.id)
     })
-    }
   }
 
   /** 条目之间的分隔：单细线，右端渐隐，比通栏实线轻 */
@@ -740,19 +489,39 @@ export struct HomePage {
         .padding(AppSize.pagePadding)
       } else {
         Scroll() {
-          // Stack 必须在 Scroll 内部。若把 Canvas 放在 Scroll 的兄弟位置，
-          // 它就固定在视口里 —— 滚动时只有连接点上移、河不动（实测如此）。
           Stack({ alignContent: Alignment.TopStart }) {
+            // ---- 背景层：5 张水墨河流图循环堆叠 ----
+            // 放在 Scroll 内部才会随内容滚动；放在外面会固定在视口里（踩过）。
+            Column() {
+              ForEach(
+                this.tileSources(),
+                (src: string, i: number) => {
+                  Image($rawfile(src))
+                    .width(this.BG_W)
+                    .height(this.BG_H)
+                    .objectFit(ImageFit.Fill)
+                    .margin({ top: i === 0 ? 0 : -this.OVERLAP })
+                },
+                (src: string, i: number) => `bg-${i}`
+              )
+            }
+            .width(this.BG_W)
+            .alignItems(HorizontalAlign.Start)
+            .position({ x: 0, y: 0 })
+            .backgroundColor(AppColor.background)
+
+            // ---- 水纹层：只有白色短弧，透明底 ----
             Canvas(this.ctx)
               .width(this.RIVER_W)
-              .height(this.contentHeight > 0 ? this.contentHeight : 1)
+              .height(this.estimateHeight())
               .position({ x: 0, y: 0 })
               .onReady(() => {
                 this.riverReady = true
-                this.drawRiver()
+                this.drawRipples()
                 this.startRiver()
               })
 
+            // ---- 正文 ----
             Column() {
               this.masthead()
 
@@ -791,13 +560,7 @@ export struct HomePage {
               bottom: 8,
             })
             .width('100%')
-            .onAreaChange((_old: Area, now: Area) => {
-              const h: number = Number(now.height)
-              if (h > 0 && Math.abs(h - this.contentHeight) > 1) {
-                this.contentHeight = h
-                this.drawRiver()
-              }
-            })
+
           }
           .width('100%')
         }
