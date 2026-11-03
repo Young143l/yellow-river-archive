@@ -1212,5 +1212,12 @@ ArkUI 对**嵌套状态**的观察粒度不如预期。实测把所有增量写�
 - **代码层面的核查结论**：不需要改代码。工程内 `@hms.*` 导入 0 处；权限只声明 `ohos.permission.INTERNET` 与 `ohos.permission.DISTRIBUTED_DATASYNC`；用到的 8 个 Kit（AbilityKit / ArkData / ArkTS / ArkUI / CoreFileKit / DistributedServiceKit / NetworkKit / PerformanceAnalysisKit）在 OpenHarmony SDK 中全部存在
 - **约束**：今后不引入任何 HMS 专有能力。`@kit.*` 别名在 OpenHarmony SDK 中同样存在，可继续使用
 - **测试链路的现实问题**：本机只有 HarmonyOS-7.0.0 模拟器镜像，没有 OpenHarmony 镜像。OpenHarmony 签名的 HAP 很可能装不进 HarmonyOS 模拟器（HarmonyOS NEXT 只认华为签发且绑定设备 UDID 的证书与 profile）
-- **应对**：先试全面切换；若模拟器拒装，则改为双 product —— `openharmony`（OpenHarmony + 开源证书，作为交付物）与 `harmony`（HarmonyOS + 华为证书，仅供本地测试），`devecocli build --product <名>` 选择
+- **实测结果（2026-11-03）**：
+  - OpenHarmony 签名的 HAP **能装进 HarmonyOS 模拟器**（HarmonyOS 7.0.0 / API 26），模拟器这条链路通
+  - 但**装不进华为真机**（畅享 90 Pro Max）：`error: failed to install bundle. code:9568257 error: fail to verify pkcs7 file`。真机只认华为签发、且 profile 里绑定设备 UDID 的证书
+- **最终方案：双 product**
+  - `default` —— `runtimeOS: OpenHarmony`，不配 `signingConfig`（hvigor 要求密码是 DevEco 加密的 32 位密文，命令行给不出），产出 unsigned HAP 后用 `tools/sign-openharmony.sh` 签。**这是交付物**
+  - `harmony` —— `runtimeOS: HarmonyOS` + 华为调试证书，hvigor 直接签出可装真机的 HAP。**仅用于真机自测**
+  - 用 `devecocli build --product <名>` 选择
+- **HarmonyOS product 的版本号**：DevEco 26 已不再附带 API 17，`5.0.5(17)` 会报 `00303313`。改用 `'26.0.0'` 字符串形式（与 OpenHarmony 一致），构建通过
 - **口径纪律**：对外文档、PPT、视频、界面文案一律写「开源鸿蒙（OpenHarmony）」，技术栈写「ArkTS / ArkUI / 分布式数据服务」，不写 HarmonyOS

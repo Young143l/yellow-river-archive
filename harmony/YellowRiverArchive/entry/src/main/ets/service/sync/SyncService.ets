@@ -25,11 +25,13 @@ import { SyncPhase } from './Types'
 /**
  * 默认服务端地址。
  *
- * 仿真器与宿主机处在同一网段，因此用局域网 IP 而非 127.0.0.1 ——
- * 后者在模拟器内部指向模拟器自己，连不到宿主机的服务。
- * 真机演示时改成服务器域名即可（可在同步中心页覆盖）。
+ * 用域名而不是 IP：真机不在开发机的局域网里，只能用公网地址。
+ * 运行时可在「我的 → 跨设备同步 → 云端」覆盖，改完即生效。
+ *
+ * 注意：走 https 是因为鸿蒙默认拦明文流量。若服务端暂时只有 http，
+ * 需要在 module.json5 里放行 cleartext，否则请求会被系统直接断掉。
  */
-export const DEFAULT_BASE_URL: string = 'http://10.60.228.176:8787'
+export const DEFAULT_BASE_URL: string = 'https://yra.young143.top'
 
 /**
  * 具名接口 —— ArkTS 不允许用内联对象字面量做类型声明

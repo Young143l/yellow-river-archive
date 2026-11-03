@@ -1,16 +1,63 @@
 {
   app: {
-    // 签名不在此处配置：hvigor 要求密码是 DevEco 加密后的 32 位密文，
-    // 命令行无法生成。改为构建出 unsigned HAP 后由
-    // tools/sign-openharmony.sh 用 SDK 自带的 hap-sign-tool 签名。
-    signingConfigs: [],
+    signingConfigs: [
+      /*
+       * 真机签名：华为调试证书。
+       *
+       * 华为真机只认华为签发、且 profile 里绑定了设备 UDID 的证书。
+       * OpenHarmony 官方测试证书在真机上会被拒（实测 code:9568257
+       * fail to verify pkcs7），所以真机自测必须走这份。
+       * 密码字段是 DevEco 加密后的密文，只能由 hvigor 使用。
+       *
+       * 交付物不用这份 —— 交付走 OpenHarmony，见下方 products.default
+       * 与 tools/sign-openharmony.sh。
+       */
+      {
+        name: 'harmony',
+        type: 'HarmonyOS',
+        material: {
+          certpath: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.cer',
+          keyAlias: 'debugKey',
+          keyPassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
+          profile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p7b',
+          signAlg: 'SHA256withECDSA',
+          storeFile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p12',
+          storePassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
+        },
+      },
+    ],
     products: [
       {
+        /*
+         * 交付物：开源鸿蒙。
+         *
+         * 不配 signingConfig —— hvigor 要求密码是 DevEco 加密后的 32 位密文，
+         * 命令行给不出来。这里只产出 unsigned HAP，签名由
+         * tools/sign-openharmony.sh 用 SDK 自带的 hap-sign-tool 完成。
+         */
         name: 'default',
         compileSdkVersion: '26.0.0',
         compatibleSdkVersion: '26.0.0',
         targetSdkVersion: '26.0.0',
         runtimeOS: 'OpenHarmony',
+        buildOption: {
+          strictMode: {
+            caseSensitiveCheck: true,
+            useNormalizedOHMUrl: true,
+          },
+        },
+      },
+      {
+        /*
+         * 真机自测：HarmonyOS + 华为调试证书，hvigor 直接签出可安装的 HAP。
+         * 仅用于在真机上验收界面与交互，不作为交付物。
+         */
+        name: 'harmony',
+        signingConfig: 'harmony',
+        compileSdkVersion: '26.0.0',
+        compatibleSdkVersion: '26.0.0',
+        targetSdkVersion: '26.0.0',
+        runtimeOS: 'HarmonyOS',
         buildOption: {
           strictMode: {
             caseSensitiveCheck: true,
@@ -37,6 +84,7 @@
           name: 'default',
           applyToProducts: [
             'default',
+            'harmony',
           ],
         },
       ],
