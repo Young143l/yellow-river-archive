@@ -67,15 +67,27 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   app.log.info(`分词器就绪：${vocabFile.entries.length} 个领域词`)
 
   // ---- 语义通道与精排 ----
-  const embedding: EmbeddingProvider = new DashScopeEmbedding(readEmbeddingEnv())
+  // 缺 Key 时仍然启动，语义通道与精排按请求降级（实测会落到纯 BM25）。
+  // 这是 ADR-037 四级降级的服务端一半：进程不能因为少一个 Key 就起不来。
+  const embedEnv = readEmbeddingEnv(true)
+  const embedding: EmbeddingProvider = new DashScopeEmbedding(embedEnv)
   const vectorChannel = createVectorChannel(embedding, vectors, db)
-  const rerankProvider: RerankProvider = new DashScopeRerank(readEmbeddingEnv())
-  app.log.info(`语义通道就绪：${embedding.model} @ ${embedding.dim} 维`)
-  app.log.info(`精排就绪：${rerankProvider.model}`)
+  const rerankProvider: RerankProvider = new DashScopeRerank(embedEnv)
+  if (embedEnv.dashscopeKey.length === 0) {
+    app.log.warn('未配置 DASHSCOPE_API_KEY：语义通道与精排不可用，检索降级为纯 BM25')
+  } else {
+    app.log.info(`语义通道就绪：${embedding.model} @ ${embedding.dim} 维`)
+    app.log.info(`精排就绪：${rerankProvider.model}`)
+  }
 
   // ---- 生成模型（问答用）----
-  const llm: LlmProvider = new DeepSeekLlm(readEnv())
-  app.log.info(`生成就绪：${llm.model}`)
+  const llmEnv = readEnv(true)
+  const llm: LlmProvider = new DeepSeekLlm(llmEnv)
+  if (llmEnv.deepseekKey.length === 0) {
+    app.log.warn('未配置 DEEPSEEK_API_KEY：问答生成不可用，/api/qa 只返回检索原文摘要')
+  } else {
+    app.log.info(`生成就绪：${llm.model}`)
+  }
 
   // ---- 实体词典（查询理解用）----
   const dict = buildEntityDictionary(db)

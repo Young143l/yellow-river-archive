@@ -22,8 +22,10 @@
     "type": "entry",
     "description": "$string:module_desc",
     "mainElement": "EntryAbility",
+    // OpenHarmony 的设备类型集合里没有 phone —— 手机归入 default。
+    // 用 phone 会报 00303060「systemCapability 集合交集为空」
     "deviceTypes": [
-      "phone"
+      "default"
     ],
     "deliveryWithInstall": true,
     "installationFree": false,

@@ -1,27 +1,16 @@
 {
   app: {
-    signingConfigs: [
-      {
-        name: 'default',
-        type: 'HarmonyOS',
-        material: {
-          certpath: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.cer',
-          keyAlias: 'debugKey',
-          keyPassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
-          profile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p7b',
-          signAlg: 'SHA256withECDSA',
-          storeFile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p12',
-          storePassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
-        },
-      },
-    ],
+    // 签名不在此处配置：hvigor 要求密码是 DevEco 加密后的 32 位密文，
+    // 命令行无法生成。改为构建出 unsigned HAP 后由
+    // tools/sign-openharmony.sh 用 SDK 自带的 hap-sign-tool 签名。
+    signingConfigs: [],
     products: [
       {
         name: 'default',
-        signingConfig: 'default',
-        targetSdkVersion: '5.0.5(17)',
-        compatibleSdkVersion: '5.0.5(17)',
-        runtimeOS: 'HarmonyOS',
+        compileSdkVersion: '26.0.0',
+        compatibleSdkVersion: '26.0.0',
+        targetSdkVersion: '26.0.0',
+        runtimeOS: 'OpenHarmony',
         buildOption: {
           strictMode: {
             caseSensitiveCheck: true,

@@ -36,9 +36,20 @@ export interface AiEnv {
   readonly deepseekModel: string
 }
 
-function require_(name: string): string {
+/**
+ * 读取必填变量。
+ *
+ * allowMissing 只给服务端用：服务端缺少 Key 时应当「启动但降级」，
+ * 而不是整个进程退出 —— 检索会退回纯 BM25，问答走端侧兜底。
+ * 构建期流水线（ai:check / data:embed / data:draft）必须让缺失直接报错，
+ * 否则会用空 Key 跑出一批无效数据，所以默认仍然是抛。
+ */
+function require_(name: string, allowMissing: boolean = false): string {
   const value: string | undefined = process.env[name]
   if (value === undefined || value.length === 0) {
+    if (allowMissing) {
+      return ''
+    }
     throw new Error(
       `缺少环境变量 ${name}。请在仓库根目录创建 .env（模板见 docs/env-template.md），` +
         `或直接以环境变量方式传入。`
@@ -52,15 +63,15 @@ function optional(name: string, fallback: string): string {
   return value !== undefined && value.length > 0 ? value : fallback
 }
 
-export function readEnv(): AiEnv {
+export function readEnv(allowMissing: boolean = false): AiEnv {
   loadEnv()
   return {
-    dashscopeKey: require_('DASHSCOPE_API_KEY'),
+    dashscopeKey: require_('DASHSCOPE_API_KEY', allowMissing),
     dashscopeBaseUrl: optional('DASHSCOPE_BASE_URL', 'https://dashscope.aliyuncs.com'),
     embeddingModel: optional('EMBEDDING_MODEL', 'text-embedding-v4'),
     embeddingDim: Number.parseInt(optional('EMBEDDING_DIM', '1024'), 10),
     rerankModel: optional('RERANK_MODEL', 'gte-rerank-v2'),
-    deepseekKey: require_('DEEPSEEK_API_KEY'),
+    deepseekKey: require_('DEEPSEEK_API_KEY', allowMissing),
     deepseekBaseUrl: optional('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
     deepseekModel: optional('DEEPSEEK_MODEL', 'deepseek-chat'),
   }
@@ -75,10 +86,10 @@ export interface EmbeddingEnv {
   readonly rerankModel: string
 }
 
-export function readEmbeddingEnv(): EmbeddingEnv {
+export function readEmbeddingEnv(allowMissing: boolean = false): EmbeddingEnv {
   loadEnv()
   return {
-    dashscopeKey: require_('DASHSCOPE_API_KEY'),
+    dashscopeKey: require_('DASHSCOPE_API_KEY', allowMissing),
     dashscopeBaseUrl: optional('DASHSCOPE_BASE_URL', 'https://dashscope.aliyuncs.com'),
     embeddingModel: optional('EMBEDDING_MODEL', 'text-embedding-v4'),
     embeddingDim: Number.parseInt(optional('EMBEDDING_DIM', '1024'), 10),
