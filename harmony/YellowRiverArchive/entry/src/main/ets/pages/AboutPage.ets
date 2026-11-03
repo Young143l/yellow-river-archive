@@ -50,9 +50,9 @@ const SECTIONS: AboutSection[] = [
   {
     title: '技术构成',
     body:
-      '客户端：HarmonyOS ArkTS / ArkUI，本地 SQLite 存储与全文检索。\n' +
+      '客户端：开源鸿蒙（OpenHarmony）ArkTS / ArkUI，本地 SQLite 存储与全文检索。\n' +
       '服务端：TypeScript，混合检索（BM25 + 向量）与检索增强问答。\n' +
-      '分布式：多端同步采用最后写入优先的冲突策略，支持备份与恢复。',
+      '分布式：基于开源鸿蒙分布式数据服务实现多端同步，冲突策略为最后写入优先。',
   },
 ]
 

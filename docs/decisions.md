@@ -37,14 +37,15 @@
 
 ---
 
-## ADR-001 采用 HarmonyOS SDK
+## ADR-001 采用 OpenHarmony SDK（开源鸿蒙）
 
-- **日期**：2026-09-21 ｜ **状态**：已采纳
-- **背景**：赛题写"基于 OpenHarmony 开发"，要求 API 版本 12 及以上；团队只有华为真机，无开发板
-- **决策**：使用 DevEco Studio 26.0.0 内置的 HarmonyOS SDK 26.0.0（API 26）。该 SDK 由 `openharmony/`（基础 API）与 `hms/`（华为专有服务）两部分组成，编译产出 HarmonyOS 应用
+- **日期**：2026-09-21 ｜ **状态**：已采纳（2026-11-02 修订口径，见 ADR-043）
+- **背景**：赛题要求「基于开源鸿蒙（OpenHarmony）开发」，API 版本 12 及以上
+- **决策**：使用 DevEco Studio 26.0.0 内置的 OpenHarmony SDK 26.0.0（API 26），`runtimeOS` 设为 `OpenHarmony`，签名使用 SDK 自带的 OpenHarmony 证书链，**编译产出开源鸿蒙应用**
 - **备选**：纯 OpenHarmony SDK + 开发板
-- **理由**：赛题原文写明"纯北向应用类赛题使用鸿蒙手机、平板或模拟器即可完成开发，无需额外采购硬件"，而 OpenHarmony 几乎没有消费级整机；HarmonyOS 的应用开发在技术栈上与 OpenHarmony 同源（同一套 ArkTS / ArkUI / API）
-- **影响**：可使用 Account Kit 等华为专有能力；`compatibleSdkVersion` 定为 17（工具链下限），覆盖 HarmonyOS 5.1 及以上设备
+- **理由**：赛题写明「纯北向应用类赛题使用鸿蒙手机、平板或模拟器即可完成开发，无需额外采购硬件」，开发机与运行环境已具备；本项目的全部能力都落在开源鸿蒙的标准 API 内，不需要任何厂商专有服务
+- **不使用 HMS**：工程内无 `@hms.*` 导入，权限只声明 `ohos.permission.*`（INTERNET / DISTRIBUTED_DATASYNC），构建时不链接 `hms/` 目录。约束见 ADR-043
+- **影响**：`compatibleSdkVersion` 定为 17（工具链下限）；分布式同步走开源鸿蒙的 `distributedKVStore` 与 `distributedDataObject`
 
 ---
 
@@ -812,7 +813,7 @@ PASS  进度统计与设备标识   已读 1/5，本机 deviceId=cf8e0bb1…
 
 按可能性排序：
 
-1. **`socket.on('message')` 的第二个参数类型**。HarmonyOS 的 webSocket
+1. **`socket.on('message')` 的第二个参数类型**。开源鸿蒙的 webSocket
    可能把文本帧以 `ArrayBuffer` 交付，而当前代码有 `if (typeof value !== 'string') return`
    的早退分支 —— 这会让所有消息被静默丢弃且不留痕迹。
    **验证方法**：在早退分支里打一条 hilog，看是否命中。
@@ -1200,3 +1201,16 @@ ArkUI 对**嵌套状态**的观察粒度不如预期。实测把所有增量写�
 | 城市名 | 濮阳 / 开封 / 郑州 / 洛阳 / 黄河 均清晰可辨 ✓ |
 
 **版式**：河道自西向东贯穿，在开封以东折向东北经濮阳出省 —— 与黄河在河南的真实走向一致。
+
+---
+
+## ADR-043 平台口径对齐「开源鸿蒙（OpenHarmony）」
+
+- **日期**：2026-11-02 ｜ **状态**：已采纳
+- **背景**：赛题全称是「河南省高等学校信息技术应用创新大赛——开源鸿蒙」。此前 ADR-001 按 HarmonyOS 口径编写，`build-profile.json5` 里 `runtimeOS` 为 `'HarmonyOS'`，签名用华为调试证书，产出的是 HarmonyOS 应用。评委若核对构建配置会直接判不符
+- **决策**：`runtimeOS` 改为 `'OpenHarmony'`，签名改用 SDK 自带的 OpenHarmony 证书链（`OpenHarmony.p12` + `UnsgnedDebugProfileTemplate.json` + `hap-sign-tool.jar`），交付物为开源鸿蒙应用
+- **代码层面的核查结论**：不需要改代码。工程内 `@hms.*` 导入 0 处；权限只声明 `ohos.permission.INTERNET` 与 `ohos.permission.DISTRIBUTED_DATASYNC`；用到的 8 个 Kit（AbilityKit / ArkData / ArkTS / ArkUI / CoreFileKit / DistributedServiceKit / NetworkKit / PerformanceAnalysisKit）在 OpenHarmony SDK 中全部存在
+- **约束**：今后不引入任何 HMS 专有能力。`@kit.*` 别名在 OpenHarmony SDK 中同样存在，可继续使用
+- **测试链路的现实问题**：本机只有 HarmonyOS-7.0.0 模拟器镜像，没有 OpenHarmony 镜像。OpenHarmony 签名的 HAP 很可能装不进 HarmonyOS 模拟器（HarmonyOS NEXT 只认华为签发且绑定设备 UDID 的证书与 profile）
+- **应对**：先试全面切换；若模拟器拒装，则改为双 product —— `openharmony`（OpenHarmony + 开源证书，作为交付物）与 `harmony`（HarmonyOS + 华为证书，仅供本地测试），`devecocli build --product <名>` 选择
+- **口径纪律**：对外文档、PPT、视频、界面文案一律写「开源鸿蒙（OpenHarmony）」，技术栈写「ArkTS / ArkUI / 分布式数据服务」，不写 HarmonyOS
