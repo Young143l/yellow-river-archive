@@ -64,7 +64,8 @@ export struct ProfilePage {
    */
   @StorageLink('personalVersion') @Watch('onPersonalChanged') personalVersion: number = 0
   // ---- 同步 ----
-  @State syncLines: string[] = []
+  /** 一句话同步状态，由 SyncService.statusLine() 给出 */
+  @State syncStatus: string = ''
   @State pairCode: string = ''
   @State joinCode: string = ''
   @State syncBusy: boolean = false
@@ -145,6 +146,26 @@ export struct ProfilePage {
     this.loaded = true
   }
 
+  /** 冲突记录里的表名转成人话。原来直接把 favorites / notes 摆在界面上 */
+  private tableLabel(table: string): string {
+    if (table === 'favorites') {
+      return '收藏'
+    }
+    if (table === 'notes') {
+      return '笔记'
+    }
+    if (table === 'tags') {
+      return '标签'
+    }
+    if (table === 'themes') {
+      return '主题'
+    }
+    if (table === 'visits') {
+      return '浏览记录'
+    }
+    return '记录'
+  }
+
   private openItem(id: string): void {
     router.pushUrl({ url: 'pages/DetailPage', params: { id } })
   }
@@ -153,7 +174,7 @@ export struct ProfilePage {
     try {
       const context = this.getUIContext().getHostContext() as common.Context
       await SyncService.init(context)
-      this.syncLines = await SyncService.channelReport(context)
+      this.syncStatus = await SyncService.statusLine(context)
       this.conflicts = await SyncService.recentConflicts(context, 5)
       // 进度回调只注册一次：重复注册会让同一条进度被处理多次
       if (!this.progressWired) {
@@ -165,7 +186,7 @@ export struct ProfilePage {
         })
       }
     } catch (err) {
-      this.syncLines = ['状态获取失败']
+      this.syncStatus = '暂时读不到同步状态'
     }
   }
 
@@ -453,16 +474,12 @@ export struct ProfilePage {
         .fontColor(AppColor.textPrimary)
         .width('100%')
 
-      ForEach(
-        this.syncLines,
-        (line: string) => {
-          Text(line)
-            .fontSize(11)
-            .fontColor(AppColor.textSecondary)
-            .width('100%')
-        },
-        (line: string) => line
-      )
+      // 只一句人话。原先这里是三行术语（主路径 / 兜底 / 信任环 / 身份 ID），
+      // 用户读不懂，也不是他们关心的事
+      Text(this.syncStatus)
+        .fontSize(AppFont.caption)
+        .fontColor(AppColor.textSecondary)
+        .width('100%')
 
       // 主操作：只留一个。原先九颗按钮挤成三排，用户不知道从哪下手
       Button(this.syncBusy ? '同步中…' : '立即同步')
@@ -478,17 +495,17 @@ export struct ProfilePage {
         })
 
       // 次级功能收进入口，点开才展开 —— 默认界面从九块降到四块
-      this.entryRow('配对设备', 'A', this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '与另一台设备握手')
+      this.entryRow('配对新设备', 'A', this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成 6 位码，在另一台输入')
       if (this.panel === 'A') {
         this.pairPanel()
       }
 
-      this.entryRow('备份与恢复', 'B', '导出为文件，或从备份合并')
+      this.entryRow('备份与恢复', 'B', '导出成本机文件，或从文件恢复')
       if (this.panel === 'B') {
         this.backupPanel()
       }
 
-      this.entryRow('云端快照', 'C', '把当前数据存到服务端，或取回')
+      this.entryRow('云端快照', 'C', '存一份到服务器，或取回')
       if (this.panel === 'C') {
         this.snapshotPanel()
       }
@@ -522,7 +539,7 @@ export struct ProfilePage {
       // 冲突列表：按赛题要求展示「双方版本、时间戳、最终采用哪一方」
       if (this.conflicts.length > 0) {
         Column({ space: 6 }) {
-          Text(`冲突记录 ${this.conflicts.length}`)
+          Text('有几处内容两边都改过，已保留更新的那一份')
             .fontSize(AppFont.caption)
             .fontColor(AppColor.textSecondary)
             .width('100%')
@@ -531,16 +548,16 @@ export struct ProfilePage {
             (c: ConflictRecord) => {
               Column({ space: 2 }) {
                 Row() {
-                  Text(`${c.table} · ${c.recordId.slice(0, 18)}`)
+                  Text(this.tableLabel(c.table))
                     .fontSize(11)
                     .fontColor(AppColor.textPrimary)
                     .layoutWeight(1)
-                  Text(c.winner === 'local' ? '采用本机' : '采用远端')
+                  Text(c.winner === 'local' ? '用了这台' : '用了那边')
                     .fontSize(11)
                     .fontColor(AppColor.primary)
                 }
                 .width('100%')
-                Text(`本机 ${PersonalDao.formatTime(c.localUpdatedAt)} ｜ 远端 ${PersonalDao.formatTime(c.remoteUpdatedAt)}`)
+                Text(`这台 ${PersonalDao.formatTime(c.localUpdatedAt)} ｜ 那边 ${PersonalDao.formatTime(c.remoteUpdatedAt)}`)
                   .fontSize(10)
                   .fontColor(AppColor.textTertiary)
                   .width('100%')

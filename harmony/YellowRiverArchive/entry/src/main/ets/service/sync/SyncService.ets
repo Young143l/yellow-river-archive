@@ -19,7 +19,7 @@ import { DataImportService } from '../DataImportService'
 import { PersonalDao } from '../PersonalDao'
 import { CloudSync } from './CloudSync'
 import { DistributedSync } from './DistributedSync'
-import type { ChangeListener, SyncOutcome } from './Types'
+import type { ChannelStatus, ChangeListener, SyncOutcome } from './Types'
 import { SyncPhase } from './Types'
 
 /**
@@ -338,11 +338,13 @@ export class SyncService {
       pulled: pulledCount,
       applied,
       conflicts,
-      direction: `${channelName} ↔ 本机`,
+      direction: channelName === '分布式软总线' ? '与其他设备' : '与云端',
       elapsedMs: finished - started,
-      message: ok
-        ? `经「${channelName}」同步完成：推送 ${pushed} 条、拉取 ${pulledCount} 条、应用 ${applied} 条`
-        : '同步通道不可用，请检查网络或身份绑定',
+      message: !ok
+        ? '连不上，检查一下网络'
+        : (pushed + applied === 0
+            ? '已经是最新的，没有新内容'
+            : `同步完成：本机发出 ${pushed} 条，收到 ${applied} 条`),
     }
 
     return { outcome, channel: channelName, conflicts }
@@ -435,6 +437,46 @@ export class SyncService {
   }
 
   /** 各通道的可读状态（同步中心页展示） */
+  /**
+   * 一句话同步状态。
+   *
+   * 界面上只留这一句人话。原先展示的是三条技术行话
+   * （「分布式软总线（主路径）：本机可用，信任环内未发现其他设备」、
+   *  「云端存储（兜底）：已连接 …」、「身份：u_xxx｜本机：xxx」），
+   * 用户看不出这些是什么意思，答辩时也不需要把它们摆在首页。
+   */
+  static async statusLine(context: common.Context): Promise<string> {
+    const cloud: CloudSync | undefined = SyncService.cloud
+    let link: string = '云端未连接'
+    if (cloud !== undefined) {
+      const status: ChannelStatus = await cloud.status()
+      link = status.available ? '云端已连接' : '云端未连接'
+    }
+    return `${link} · ${await SyncService.lastSyncWords(context)}`
+  }
+
+  /** 上次同步的相对时间。没同步过就说「还没同步过」，不要摆 1970 年 */
+  static async lastSyncWords(context: common.Context): Promise<string> {
+    const raw: string = await PersonalDao.getSyncMeta(context, SyncKeys.LAST_SYNC_AT)
+    const at: number = Number.parseInt(raw.length > 0 ? raw : '0', 10)
+    if (Number.isNaN(at) || at <= 0) {
+      return '还没同步过'
+    }
+    const minutes: number = Math.floor((new Date().getTime() - at) / 60000)
+    if (minutes < 1) {
+      return '刚刚同步过'
+    }
+    if (minutes < 60) {
+      return `${minutes} 分钟前同步过`
+    }
+    const hours: number = Math.floor(minutes / 60)
+    if (hours < 24) {
+      return `${hours} 小时前同步过`
+    }
+    return `${Math.floor(hours / 24)} 天前同步过`
+  }
+
+  /** 仅自检脚本使用：把两条通道的原始状态打出来 */
   static async channelReport(context: common.Context): Promise<string[]> {
     const lines: string[] = []
     const distributed: DistributedSync | undefined = SyncService.distributed

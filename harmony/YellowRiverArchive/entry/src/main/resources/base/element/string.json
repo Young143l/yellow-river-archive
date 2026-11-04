@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "黄河图志：河南段黄河文化遗产分布式数字档案"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "黄河图志"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "黄河图志"
     },
     {
       "name": "distributed_sync_reason",

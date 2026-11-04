@@ -42,6 +42,9 @@
         "exported": true,
         "skills": [
           {
+            // 官方文档《配置应用图标和名称》：入口 UIAbility 的判定条件是
+            // entities 含 entity.system.home 且 actions 含 ohos.want.action.home。
+            // 不要改成 action.system.home，那是旧文档写法，会导致桌面识别不到入口。
             "entities": [
               "entity.system.home"
             ],

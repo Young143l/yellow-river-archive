@@ -5,6 +5,7 @@ import { SECTION_LABELS, type HeritageItem, type Note } from '../shared'
 import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { HeritageDao, type RelatedItem } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
+import { MarkdownView } from '../components/MarkdownView'
 
 /** 路由参数 */
 interface DetailParams {
@@ -218,17 +219,19 @@ struct DetailPage {
           this.notes,
           (note: Note) => {
             Row({ space: 8 }) {
-              Column({ space: 2 }) {
-                Text(note.content)
-                  .fontSize(AppFont.caption)
-                  .fontColor(AppColor.textPrimary)
+              Column({ space: 4 }) {
+                // 按 Markdown 渲染：编辑面板里点的粗体、标题、列表要看得出效果，
+                // 否则用户看到的是一对星号
+                MarkdownView({ content: note.content, baseSize: AppFont.caption })
                   .width('100%')
-                Text(`${PersonalDao.formatTime(note.updatedAt)}${note.deviceId.length > 0 ? '' : ''}`)
+
+                Text(PersonalDao.formatTime(note.updatedAt))
                   .fontSize(11)
                   .fontColor(AppColor.textTertiary)
                   .width('100%')
               }
               .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
 
               Text('删除')
                 .fontSize(AppFont.caption)
