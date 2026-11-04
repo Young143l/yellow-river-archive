@@ -69,10 +69,22 @@ struct DetailPage {
     }
   }
 
+  /**
+   * 通知「我的」页重新拉取个人数据。
+   *
+   * 五个主页面挂在 Index 的 Tabs 里，只创建一次，aboutToAppear 也只跑一次。
+   * 从详情页返回时切回「我的」，它不会重新查库，笔记/收藏就停在旧值上。
+   * 用一个 AppStorage 计数器把变更广播出去（ProfilePage 用 @Watch 监听）。
+   */
+  private bumpPersonalVersion(): void {
+    AppStorage.setOrCreate<number>('personalVersion', (AppStorage.get<number>('personalVersion') ?? 0) + 1)
+  }
+
   private async toggleFavorite(): Promise<void> {
     try {
       const context = this.getUIContext().getHostContext() as common.Context
       this.favorited = await PersonalDao.toggleFavorite(context, 'site', this.itemId)
+      this.bumpPersonalVersion()
     } catch (err) {
       this.error = `收藏失败：${(err as Error).message}`
     }
@@ -89,6 +101,7 @@ struct DetailPage {
       await PersonalDao.addNote(context, 'site', this.itemId, content)
       this.noteDraft = ''
       this.notes = await PersonalDao.listNotes(context, this.itemId)
+      this.bumpPersonalVersion()
     } catch (err) {
       this.error = `保存笔记失败：${(err as Error).message}`
     }
@@ -100,6 +113,7 @@ struct DetailPage {
       const context = this.getUIContext().getHostContext() as common.Context
       await PersonalDao.deleteNote(context, id)
       this.notes = await PersonalDao.listNotes(context, this.itemId)
+      this.bumpPersonalVersion()
     } catch (err) {
       this.error = `删除笔记失败：${(err as Error).message}`
     }

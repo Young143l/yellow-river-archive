@@ -55,6 +55,14 @@ export struct ProfilePage {
   @State panel: string = ''
   @State loaded: boolean = false
   @State activePane: number = 0
+  /**
+   * 个人数据变更信号，由 DetailPage 在收藏/写笔记/删笔记后 +1。
+   *
+   * 五个主页面挂在 Index 的 Tabs 里只创建一次，aboutToAppear 不会重复触发，
+   * 所以从详情页返回时「我的」页拿不到新数据（笔记加了却看不到）。
+   * 用 AppStorage 传信号 + @Watch 触发重载。
+   */
+  @StorageLink('personalVersion') @Watch('onPersonalChanged') personalVersion: number = 0
   // ---- 同步 ----
   @State syncLines: string[] = []
   @State pairCode: string = ''
@@ -68,6 +76,10 @@ export struct ProfilePage {
   @State conflicts: ConflictRecord[] = []
 
   private progressWired: boolean = false
+
+  onPersonalChanged(): void {
+    this.load()
+  }
 
   aboutToAppear(): void {
     this.load()
