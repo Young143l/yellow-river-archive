@@ -5,6 +5,7 @@ import { CORE_ERAS, type ConflictRecord, type Favorite, type Note, type Progress
 import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { HeritageDao } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
+import { MarkdownView } from '../components/MarkdownView'
 import { SyncService, type SyncProgressView, type SyncSummary } from '../service/sync/SyncService'
 import {
   DocumentBuilder,
@@ -712,26 +713,32 @@ export struct ProfilePage {
         ForEach(
           this.notes,
           (note: NoteView) => {
-            Column({ space: 4 }) {
+            Column({ space: 6 }) {
               Row() {
+                // 条目名：石青 + 细下划线，表明这一点下去就是档案
                 Text(note.itemName)
                   .fontSize(AppFont.caption)
+                  .fontFamily(FontFamily.serifBold)
                   .fontColor(AppColor.primary)
+                  .decoration({ type: TextDecorationType.Underline, color: AppColor.primaryLight })
                   .layoutWeight(1)
                 Text(PersonalDao.formatTime(note.updatedAt))
                   .fontSize(11)
                   .fontColor(AppColor.textTertiary)
               }
               .width('100%')
-              Text(note.content)
-                .fontSize(AppFont.body)
-                .fontColor(AppColor.textPrimary)
+
+              // 正文按 Markdown 渲染：标题成标题、粗体成粗体，不再看见星号
+              MarkdownView({ content: note.content, baseSize: AppFont.body })
                 .width('100%')
             }
             .width('100%')
-            .padding(10)
-            .backgroundColor(AppColor.background)
-            .borderRadius(8)
+            .padding(12)
+            .backgroundColor(AppColor.surface)
+            .borderRadius(10)
+            .borderWidth(1)
+            .borderColor(AppColor.hairlineWarm)
+            .alignItems(HorizontalAlign.Start)
             .onClick(() => {
               this.openItem(note.targetId)
             })

@@ -44,13 +44,27 @@ export function parseMd(src: string): MdLine[] {
       lines.push(new MdLine('blank', ''))
       continue
     }
-    if (trimmed.startsWith('### ')) {
-      lines.push(new MdLine('h3', trimmed.slice(4)))
-    } else if (trimmed.startsWith('## ')) {
-      lines.push(new MdLine('h2', trimmed.slice(3)))
-    } else if (trimmed.startsWith('# ')) {
-      lines.push(new MdLine('h1', trimmed.slice(2)))
-    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+    if (trimmed.charAt(0) === '#') {
+      // 标题。CommonMark 要求 # 后面有空格，但笔记的作者是普通用户不是程序员，
+      // 「##标题」这种写法很常见，只把 ## 敲出来当分行用的也有 ——
+      // 一律按标题处理，别把语法当内容显示出来。
+      let level: number = 0
+      while (level < trimmed.length && trimmed.charAt(level) === '#' && level < 3) {
+        level = level + 1
+      }
+      const body: string = trimmed.slice(level).trim()
+      if (body.length === 0) {
+        // 只敲了井号没有内容：当空行，不留一行孤零零的 ##
+        lines.push(new MdLine('blank', ''))
+      } else if (level === 3) {
+        lines.push(new MdLine('h3', body))
+      } else if (level === 2) {
+        lines.push(new MdLine('h2', body))
+      } else {
+        lines.push(new MdLine('h1', body))
+      }
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') ||
+      (trimmed.length > 1 && (trimmed.charAt(0) === '-') && trimmed.charAt(1) !== ' ')) {
       lines.push(new MdLine('li', trimmed.slice(2)))
     } else if (trimmed.startsWith('> ')) {
       lines.push(new MdLine('quote', trimmed.slice(2)))
