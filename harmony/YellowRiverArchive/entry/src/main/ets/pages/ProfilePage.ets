@@ -297,28 +297,6 @@ export struct ProfilePage {
     this.syncBusy = false
   }
 
-  /**
-   * 分区标签：宋体 + 石青 + 短下划线。
-   *
-   * 用自定义 tabBar 替换默认字符串，因为默认选中态是系统蓝（#0A59F7）
-   * 且下划线是整条 barWidth 的粗条 —— 与全站石青细线完全不搭。
-   */
-  @Builder
-  paneTab(index: number, label: string, count: number) {
-    Column({ space: 4 }) {
-      Text(count >= 0 ? `${label} ${count}` : label)
-        .fontSize(AppFont.body)
-        .fontFamily(this.activePane === index ? FontFamily.serifBold : FontFamily.serif)
-        .fontColor(this.activePane === index ? AppColor.primary : AppColor.textSecondary)
-      Row()
-        .width(this.activePane === index ? 16 : 0)
-        .height(2)
-        .backgroundColor(AppColor.primary)
-    }
-    .justifyContent(FlexAlign.Center)
-    .height(44)
-  }
-
   /** 一个折叠入口行 */
   @Builder
   entryRow(title: string, key: string, hint: string) {
@@ -690,9 +668,7 @@ export struct ProfilePage {
       }
     }
     .width('100%')
-    .height('100%')
-    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
-    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -736,9 +712,7 @@ export struct ProfilePage {
       }
     }
     .width('100%')
-    .height('100%')
-    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
-    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Start)
   }
 
   /** 结构化知识文档视图：按「时代 → 遗址」两级聚合，可一键导出 */
@@ -842,9 +816,7 @@ export struct ProfilePage {
       }
     }
     .width('100%')
-    .height('100%')
-    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
-    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Start)
   }
 
   private async onExportDoc(): Promise<void> {
@@ -889,9 +861,7 @@ export struct ProfilePage {
       }
     }
     .width('100%')
-    .height('100%')
-    // TabContent 默认居中对齐子组件，列表会浮在框中间。撑满高度后自然顶到上面
-    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Start)
   }
 
   build() {
@@ -911,37 +881,118 @@ export struct ProfilePage {
           this.syncCard()
 
           Column() {
-            Tabs({ barPosition: BarPosition.Start, index: this.activePane }) {
-              TabContent() {
-                this.favoriteList()
-              }
-              .tabBar(this.paneTab(0, '收藏', this.favorites.length))
+            /*
+             * 分区切换：手写分段控件，不用 Tabs。
+             *
+             * Tabs 在这个场景有四个坑，逐个踩过：
+             *   1. 默认选中态是系统蓝 #0A59F7，与全站石青不搭
+             *   2. TabContent 默认居中对齐子组件，短列表会浮在框中间
+             *   3. 高度写死 320 会裁掉超出内容，且页签内部无处滚动
+             *   4. 自定义 tabBar 用 @Builder 带值参数时**不具备响应性** ——
+             *      这正是「点了能切换内容、但 tab 上不显示切换」的原因：
+             *      activePane 变了，但 @Builder 的参数是首次渲染时捕获的
+             *
+             * 手写之后，四个 tab 的选中态直接读 this.activePane，
+             * 且内容用 if 条件渲染，没有中间层，状态一定能穿透。
+             */
+            Column() {
+              Row() {
+                Column({ space: 4 }) {
+                  Text(`收藏 ${this.favorites.length}`)
+                    .fontSize(AppFont.body)
+                    .fontFamily(this.activePane === 0 ? FontFamily.serifBold : FontFamily.serif)
+                    .fontColor(this.activePane === 0 ? AppColor.primary : AppColor.textSecondary)
+                  Row()
+                    .width(this.activePane === 0 ? 16 : 0)
+                    .height(2)
+                    .backgroundColor(AppColor.primary)
+                }
+                .layoutWeight(1)
+                .justifyContent(FlexAlign.Center)
+                .onClick(() => {
+                  this.activePane = 0
+                })
 
-              TabContent() {
-                this.noteList()
-              }
-              .tabBar(this.paneTab(1, '笔记', this.notes.length))
+                Column({ space: 4 }) {
+                  Text(`笔记 ${this.notes.length}`)
+                    .fontSize(AppFont.body)
+                    .fontFamily(this.activePane === 1 ? FontFamily.serifBold : FontFamily.serif)
+                    .fontColor(this.activePane === 1 ? AppColor.primary : AppColor.textSecondary)
+                  Row()
+                    .width(this.activePane === 1 ? 16 : 0)
+                    .height(2)
+                    .backgroundColor(AppColor.primary)
+                }
+                .layoutWeight(1)
+                .justifyContent(FlexAlign.Center)
+                .onClick(() => {
+                  this.activePane = 1
+                })
 
-              TabContent() {
-                this.tagList()
-              }
-              .tabBar(this.paneTab(2, '标签', this.tags.length))
+                Column({ space: 4 }) {
+                  Text(`标签 ${this.tags.length}`)
+                    .fontSize(AppFont.body)
+                    .fontFamily(this.activePane === 2 ? FontFamily.serifBold : FontFamily.serif)
+                    .fontColor(this.activePane === 2 ? AppColor.primary : AppColor.textSecondary)
+                  Row()
+                    .width(this.activePane === 2 ? 16 : 0)
+                    .height(2)
+                    .backgroundColor(AppColor.primary)
+                }
+                .layoutWeight(1)
+                .justifyContent(FlexAlign.Center)
+                .onClick(() => {
+                  this.activePane = 2
+                })
 
-              TabContent() {
-                this.docView()
+                Column({ space: 4 }) {
+                  Text('文档')
+                    .fontSize(AppFont.body)
+                    .fontFamily(this.activePane === 3 ? FontFamily.serifBold : FontFamily.serif)
+                    .fontColor(this.activePane === 3 ? AppColor.primary : AppColor.textSecondary)
+                  Row()
+                    .width(this.activePane === 3 ? 16 : 0)
+                    .height(2)
+                    .backgroundColor(AppColor.primary)
+                }
+                .layoutWeight(1)
+                .justifyContent(FlexAlign.Center)
+                .onClick(() => {
+                  this.activePane = 3
+                })
               }
-              .tabBar(this.paneTab(3, '文档', -1))
+              .width('100%')
+              .height(44)
+
+              Row()
+                .width('100%')
+                .height(1)
+                .backgroundColor(AppColor.divider)
+
+              // 内容区：条件渲染。外层页面本身可滚，这里不再设固定高度，
+              // 列表多长就撑多长，不会像 Tabs 那样被 320vp 裁掉。
+              Column() {
+                if (this.activePane === 0) {
+                  this.favoriteList()
+                } else if (this.activePane === 1) {
+                  this.noteList()
+                } else if (this.activePane === 2) {
+                  this.tagList()
+                } else {
+                  this.docView()
+                }
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ top: 12 })
             }
-            .barMode(BarMode.Fixed)
-            .barHeight(46)
-            .height(320)
+            .width('100%')
           }
           .width('100%')
           .padding(AppSize.pagePadding)
           .backgroundColor(AppColor.surface)
           .borderRadius(AppSize.cardRadius)
           .borderWidth(1)
-          .borderColor(AppColor.hairlineWarm)
         }
         .width('100%')
         .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: 16 })
