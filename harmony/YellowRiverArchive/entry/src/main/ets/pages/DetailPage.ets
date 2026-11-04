@@ -28,8 +28,18 @@ struct DetailPage {
   @State notes: Note[] = []
   @State noteDraft: string = ''
   @State saving: boolean = false
+  /** 笔记编辑面板是否展开 */
+  @State editing: boolean = false
+  /**
+   * 光标位置。
+   *
+   * TextAreaController 只有 caretPosition(value) 这个**写入**接口，没有读取方法，
+   * 所以靠 onTextSelectionChange 自己记一份，工具条才能在光标处插入语法。
+   */
+  @State caret: number = 0
 
   private itemId: string = ''
+  private taController: TextAreaController = new TextAreaController()
 
   aboutToAppear(): void {
     const params = router.getParams() as DetailParams
@@ -90,6 +100,18 @@ struct DetailPage {
     }
   }
 
+  private openEditor(): void {
+    this.editing = true
+  }
+
+  /** 在光标处插入 Markdown 语法。粗体/代码传成对的符号，光标自然落在中间 */
+  private insertMarkdown(prefix: string, suffix: string): void {
+    const at: number = Math.min(this.caret, this.noteDraft.length)
+    this.noteDraft = this.noteDraft.slice(0, at) + prefix + suffix + this.noteDraft.slice(at)
+    this.caret = at + prefix.length
+    this.taController.caretPosition(this.caret)
+  }
+
   private async submitNote(): Promise<void> {
     const content: string = this.noteDraft.trim()
     if (content.length === 0 || this.saving) {
@@ -100,8 +122,10 @@ struct DetailPage {
       const context = this.getUIContext().getHostContext() as common.Context
       await PersonalDao.addNote(context, 'site', this.itemId, content)
       this.noteDraft = ''
+      this.caret = 0
       this.notes = await PersonalDao.listNotes(context, this.itemId)
       this.bumpPersonalVersion()
+      this.editing = false
     } catch (err) {
       this.error = `保存笔记失败：${(err as Error).message}`
     }
@@ -161,28 +185,28 @@ struct DetailPage {
       }
       .width('100%')
 
+      // 入口：看起来像一张待写的纸条。原先是单行输入框 + 添加按钮，
+      // 写不了第二行 —— 笔记变成一行命令，而不是笔记。
       Row({ space: 8 }) {
-        TextInput({ text: this.noteDraft, placeholder: '写一条笔记…' })
+        Text('写一条笔记…')
           .fontSize(AppFont.body)
-          .backgroundColor(AppColor.background)
-          .borderRadius(8)
+          .fontFamily(FontFamily.serif)
+          .fontColor(AppColor.textTertiary)
           .layoutWeight(1)
-          .onChange((value: string) => {
-            this.noteDraft = value
-          })
-          .onSubmit(() => {
-            this.submitNote()
-          })
-        Button(this.saving ? '…' : '添加')
-          .fontSize(AppFont.caption)
-          .fontColor(AppColor.surface)
-          .backgroundColor(this.noteDraft.trim().length > 0 ? AppColor.primary : AppColor.textTertiary)
-          .borderRadius(8)
-          .onClick(() => {
-            this.submitNote()
-          })
+        Text('＋')
+          .fontSize(AppFont.body)
+          .fontColor(AppColor.primary)
       }
       .width('100%')
+      .height(44)
+      .padding({ left: 14, right: 14 })
+      .backgroundColor(AppColor.background)
+      .borderRadius(12)
+      .borderWidth(1)
+      .borderColor(AppColor.hairlineWarm)
+      .onClick(() => {
+        this.openEditor()
+      })
 
       if (this.notes.length === 0) {
         Text('还没有笔记')
@@ -560,6 +584,108 @@ struct DetailPage {
     .padding({ left: 6, right: 6 })
   }
 
+  /** 工具条按钮：在光标处插入一段 Markdown 语法 */
+  @Builder
+  toolChip(label: string, prefix: string, suffix: string) {
+    Text(label)
+      .fontSize(AppFont.caption)
+      .fontFamily(FontFamily.serif)
+      .fontColor(AppColor.primary)
+      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+      .backgroundColor(AppColor.background)
+      .borderRadius(14)
+      .borderWidth(1)
+      .borderColor(AppColor.hairlineWarm)
+      .margin({ right: 8 })
+      .onClick(() => {
+        this.insertMarkdown(prefix, suffix)
+      })
+  }
+
+  /**
+   * 笔记编辑面板。
+   *
+   * 用 bindSheet 而不是自己搭遮罩：半屏弹层的遮罩、拖拽、下滑关闭、
+   * 软键盘避让都由系统处理，自己写反而容易在键盘弹出时把输入框顶没了。
+   */
+  @Builder
+  noteEditor() {
+    Column({ space: 12 }) {
+      // 工具条：横向可滚，窄屏放不下五个胶囊
+      Scroll() {
+        Row() {
+          this.toolChip('标题', '\n## ', '')
+          this.toolChip('粗体', '**', '**')
+          this.toolChip('列表', '\n- ', '')
+          this.toolChip('引用', '\n> ', '')
+          this.toolChip('代码', '`', '`')
+        }
+      }
+      .width('100%')
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .align(Alignment.Start)
+
+      TextArea({
+        text: this.noteDraft,
+        placeholder: '记下你的观察、疑问或出处。支持 Markdown：#、**粗体**、- 列表。',
+        controller: this.taController,
+      })
+        .fontSize(AppFont.body)
+        .fontFamily(FontFamily.serif)
+        .placeholderColor(AppColor.textTertiary)
+        .fontColor(AppColor.textPrimary)
+        .backgroundColor(AppColor.background)
+        .borderRadius(12)
+        .borderWidth(1)
+        .borderColor(AppColor.hairlineWarm)
+        .lineHeight(24)
+        .width('100%')
+        .layoutWeight(1)
+        .onChange((value: string) => {
+          this.noteDraft = value
+        })
+        .onTextSelectionChange((start: number, end: number) => {
+          this.caret = end
+        })
+
+      Row({ space: 10 }) {
+        Text(`${this.noteDraft.length} 字`)
+          .fontSize(11)
+          .fontColor(AppColor.textTertiary)
+          .layoutWeight(1)
+
+        Text('取消')
+          .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serif)
+          .fontColor(AppColor.textSecondary)
+          .padding({ left: 18, right: 18, top: 9, bottom: 9 })
+          .borderRadius(20)
+          .borderWidth(1)
+          .borderColor(AppColor.hairlineWarm)
+          .onClick(() => {
+            this.editing = false
+          })
+
+        Button(this.saving ? '保存中' : '保存')
+          .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serif)
+          .fontColor(AppColor.surface)
+          .backgroundColor(this.noteDraft.trim().length > 0 && !this.saving ? AppColor.primary : AppColor.textTertiary)
+          .borderRadius(20)
+          .height(38)
+          .onClick(() => {
+            this.submitNote()
+          })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: AppSize.pagePadding })
+    .justifyContent(FlexAlign.Start)
+  }
+
   build() {
     Column() {
       Row({ space: 8 }) {
@@ -739,6 +865,21 @@ struct DetailPage {
     .backgroundColor(AppColor.background)
     .backgroundImage($rawfile('img/paper.webp'))
     .backgroundImageSize(ImageSize.Cover)
+    .bindSheet($$this.editing, this.noteEditor(), {
+      height: 520,
+      // 上滑可展开到接近全屏：长笔记需要更大的书写区
+      detents: [520, SheetSize.LARGE],
+      preferType: SheetType.BOTTOM,
+      dragBar: true,
+      title: {
+        title: '写笔记',
+        subtitle: this.item !== undefined ? this.item.name : '',
+      },
+      // 点遮罩关闭时同步状态，否则 editing 仍为 true，第二次点入口没反应
+      onDisappear: () => {
+        this.editing = false
+      },
+    })
   }
 }
 
