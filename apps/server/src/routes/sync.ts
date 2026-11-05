@@ -16,7 +16,9 @@ import websocket from '@fastify/websocket'
 import type {
   ApiError,
   ChangeSet,
+  ConflictRecord,
   MsgError,
+  SyncableRecord,
   SyncClientMessage,
   SyncPull,
   SyncPush,
@@ -272,32 +274,52 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
 
       function handlePush(socket: WebSocket, message: SyncPush): void {
         try {
-          // 进度消息：先告知总量，客户端据此画进度条（对应赛题「清晰展示同步进度」）
-          socket.send(
-            JSON.stringify({
-              type: 'progress',
-              done: 0,
-              total: countRecords(message.changes),
-              direction: `${deviceName.length > 0 ? deviceName : deviceId.slice(0, 6)} → 云端`,
-            })
-          )
+          // 进度消息：分批发送，客户端进度条才会动。
+          // 之前只发一条 done:0 就在一个事务里全写完再发 applied，
+          // 中间没有任何增量，进度条永远停在 0 —— 等于没画。
+          const total: number = countRecords(message.changes)
+          const direction: string = '正在上传到云端'
+          const sendProgress = (done: number): void => {
+            socket.send(JSON.stringify({ type: 'progress', done, total, direction }))
+          }
+          sendProgress(0)
 
-          const result = applyPush(db, userId, message.changes)
+          // 按表分批：每批一个事务，批间发一次累加进度。
+          // 单表超过 BATCH_SIZE 再切，避免一条长笔记流把批次撑得过大
+          const BATCH_SIZE: number = 20
+          const batches: { table: string; records: SyncableRecord[] }[] = []
+          for (const set of message.changes) {
+            for (let i = 0; i < set.records.length; i += BATCH_SIZE) {
+              batches.push({ table: set.table, records: set.records.slice(i, i + BATCH_SIZE) })
+            }
+          }
+
+          let applied = 0
+          const conflicts: ConflictRecord[] = []
+          let done = 0
+          for (const batch of batches) {
+            const r = applyPush(db, userId, [{ table: batch.table, records: batch.records }])
+            applied += r.applied
+            conflicts.push(...r.conflicts)
+            done += batch.records.length
+            sendProgress(Math.min(done, total))
+          }
+
           socket.send(
             JSON.stringify({
               type: 'applied',
-              applied: result.applied,
-              conflicts: result.conflicts,
+              applied,
+              conflicts,
             })
           )
 
           // 服务端存的是权威版本，因此推来的变更也要广播给同用户的其他设备。
           // 不广播的话，三台设备两两同步的延迟会叠加。
-          if (result.applied > 0) {
+          if (applied > 0) {
             broadcast(userId, socket, {
               type: 'pulled',
               changes: message.changes,
-              conflicts: result.conflicts,
+              conflicts,
               cursor: currentCursor(db, userId),
               serverTime: Date.now(),
             } as SyncServerMessage)
@@ -311,7 +333,13 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
 
       function handlePull(socket: WebSocket, message: SyncPull): void {
         try {
+          socket.send(
+            JSON.stringify({ type: 'progress', done: 0, total: 1, direction: '正在从云端取回' })
+          )
           const result = applyPull(db, userId, message.since, message.deviceId)
+          socket.send(
+            JSON.stringify({ type: 'progress', done: 1, total: 1, direction: '正在从云端取回' })
+          )
           socket.send(
             JSON.stringify({
               type: 'pulled',

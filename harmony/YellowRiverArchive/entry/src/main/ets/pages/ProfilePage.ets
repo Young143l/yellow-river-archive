@@ -67,6 +67,14 @@ export struct ProfilePage {
   // ---- 同步 ----
   /** 一句话同步状态，由 SyncService.statusLine() 给出 */
   @State syncStatus: string = ''
+  /** 已登录的账号名，空串 = 未登录 */
+  @State accountName: string = ''
+  /** 登录面板 */
+  @State loginOpen: boolean = false
+  @State loginName: string = ''
+  @State loginPin: string = ''
+  @State loginBusy: boolean = false
+  @State loginError: string = ''
   @State pairCode: string = ''
   @State joinCode: string = ''
   @State syncBusy: boolean = false
@@ -147,6 +155,106 @@ export struct ProfilePage {
     this.loaded = true
   }
 
+  @Builder
+  loginPanel() {
+    Column({ space: 12 }) {
+      Text('起个名字，设一个 PIN。换个设备用它登录，收藏和笔记就跟过来了。')
+        .fontSize(AppFont.caption)
+        .fontColor(AppColor.textSecondary)
+        .lineHeight(20)
+        .width('100%')
+
+      TextInput({ text: this.loginName, placeholder: '用户名（2-20 字符）' })
+        .fontSize(AppFont.body)
+        .backgroundColor(AppColor.background)
+        .borderRadius(10)
+        .borderWidth(1)
+        .borderColor(AppColor.hairlineWarm)
+        .height(44)
+        .onChange((v: string) => {
+          this.loginName = v
+        })
+
+      TextInput({ text: this.loginPin, placeholder: 'PIN（4-6 位数字）' })
+        .fontSize(AppFont.body)
+        .type(InputType.Number)
+        .maxLength(6)
+        .backgroundColor(AppColor.background)
+        .borderRadius(10)
+        .borderWidth(1)
+        .borderColor(AppColor.hairlineWarm)
+        .height(44)
+        .onChange((v: string) => {
+          this.loginPin = v
+        })
+        .onSubmit(() => {
+          this.submitLogin()
+        })
+
+      if (this.loginError.length > 0) {
+        Text(this.loginError)
+          .fontSize(AppFont.caption)
+          .fontColor(AppColor.danger)
+          .width('100%')
+      }
+
+      Button(this.loginBusy ? '进入中…' : '进入')
+        .fontSize(AppFont.body)
+        .fontFamily(FontFamily.serif)
+        .fontColor(AppColor.surface)
+        .backgroundColor(this.loginBusy ? AppColor.textTertiary : AppColor.primary)
+        .borderRadius(22)
+        .width('100%')
+        .height(44)
+        .onClick(() => {
+          this.submitLogin()
+        })
+    }
+    .width('100%')
+    .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, bottom: AppSize.pagePadding })
+  }
+
+  private async submitLogin(): Promise<void> {
+    const name: string = this.loginName.trim()
+    const pin: string = this.loginPin.trim()
+    if (name.length < 2) {
+      this.loginError = '用户名至少 2 个字符'
+      return
+    }
+    if (!/^\d{4,6}$/.test(pin)) {
+      this.loginError = 'PIN 是 4-6 位数字'
+      return
+    }
+    this.loginBusy = true
+    this.loginError = ''
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      const baseUrl: string = await SyncService.resolveBaseUrl(context)
+      const result = await SyncService.login(context, baseUrl, name, pin)
+      if (result.ok) {
+        this.loginOpen = false
+        this.loginPin = ''
+        this.accountName = await SyncService.accountName(context)
+        this.syncStatus = await SyncService.statusLine(context)
+        // 换身份后数据集可能变了，个人数据与推荐都要重拉
+        this.load()
+        await this.onSync()
+      } else {
+        this.loginError = result.message
+      }
+    } catch (err) {
+      this.loginError = '登录出了点问题，再试一次'
+    }
+    this.loginBusy = false
+  }
+
+  private async doLogout(): Promise<void> {
+    const context = this.getUIContext().getHostContext() as common.Context
+    await SyncService.logout(context)
+    this.accountName = ''
+    this.syncStatus = await SyncService.statusLine(context)
+  }
+
   /** 冲突记录里的表名转成人话。原来直接把 favorites / notes 摆在界面上 */
   private tableLabel(table: string): string {
     if (table === 'favorites') {
@@ -175,6 +283,7 @@ export struct ProfilePage {
     try {
       const context = this.getUIContext().getHostContext() as common.Context
       await SyncService.init(context)
+      this.accountName = await SyncService.accountName(context)
       this.syncStatus = await SyncService.statusLine(context)
       this.conflicts = await SyncService.recentConflicts(context, 5)
       // 进度回调只注册一次：重复注册会让同一条进度被处理多次
@@ -474,6 +583,36 @@ export struct ProfilePage {
         .fontFamily(FontFamily.serifBold)
         .fontColor(AppColor.textPrimary)
         .width('100%')
+
+      // 账号行：一句话说清「为什么要点登录」。
+      // 未登录时云端通道不可用，这句直接给出动作
+      Row({ space: 8 }) {
+        Text(this.accountName.length > 0 ? `已登录 ${this.accountName}` : '未登录')
+          .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serifBold)
+          .fontColor(this.accountName.length > 0 ? AppColor.primary : AppColor.earth)
+          .layoutWeight(1)
+        if (this.accountName.length > 0) {
+          Text('退出登录')
+            .fontSize(11)
+            .fontColor(AppColor.textTertiary)
+            .onClick(() => {
+              this.doLogout()
+            })
+        } else {
+          Text('登录')
+            .fontSize(AppFont.caption)
+            .fontFamily(FontFamily.serif)
+            .fontColor(AppColor.surface)
+            .padding({ left: 14, right: 14, top: 5, bottom: 5 })
+            .backgroundColor(AppColor.primary)
+            .borderRadius(14)
+            .onClick(() => {
+              this.loginOpen = true
+            })
+        }
+      }
+      .width('100%')
 
       // 只一句人话。原先这里是三行术语（主路径 / 兜底 / 信任环 / 身份 ID），
       // 用户读不懂，也不是他们关心的事

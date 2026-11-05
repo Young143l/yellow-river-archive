@@ -3,6 +3,8 @@ import { router } from '@kit.ArkUI'
 
 import type { HeritageSummary } from '../service/HeritageDao'
 import { HeritageDao } from '../service/HeritageDao'
+import { PersonalDao } from '../service/PersonalDao'
+import { Recommender, type Recommendation } from '../utils/Recommender'
 import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 
 /** 赛题六段时代轴：分组与排序都以它为准 */
@@ -66,6 +68,14 @@ class EraGroup {
  * rawfile 里的五张「照片」实测是纯色渐变占位图，任何依赖图像的版式都撑不起来。
  * 于是把力气放在能控制的地方：宋体、留白、细线、朱砂色、印章、中文序号。
  */
+/** 「猜你想看」单条 */
+interface PickItem {
+  readonly id: string
+  readonly name: string
+  readonly era: string
+  readonly reason: string
+}
+
 @Component
 export struct HomePage {
   @State loading: boolean = true
@@ -116,8 +126,18 @@ export struct HomePage {
   @State contentHeight: number = 0
   private viewportHeight: number = 0
 
+  /** 个人数据变更信号：收藏/浏览变了推荐才跟着变（DetailPage 写入后 +1） */
+  @StorageLink('personalVersion') @Watch('onPersonalChanged') personalVersion: number = 0
+  /** 「猜你想看」数据。空数组 = 无行为数据，整块不渲染 */
+  @State picks: PickItem[] = []
+
+  onPersonalChanged(): void {
+    this.loadPicks()
+  }
+
   aboutToAppear(): void {
     this.load()
+    this.loadPicks()
   }
 
   aboutToDisappear(): void {
@@ -125,6 +145,42 @@ export struct HomePage {
       clearInterval(this.timer)
       this.timer = -1
     }
+  }
+
+  private async loadPicks(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.Context
+      await HeritageDao.ready(context)
+      const favorites = await PersonalDao.listFavorites(context)
+      const visits = await PersonalDao.listVisits(context)
+      if (favorites.length + visits.length === 0) {
+        this.picks = []
+        return
+      }
+      const recommender: Recommender = Recommender.build(HeritageDao.all(), favorites, visits)
+      const recs: Recommendation[] = recommender.topPicks(3)
+      const out: PickItem[] = []
+      for (const r of recs) {
+        const item: HeritageSummary | undefined = this.findSummary(r.itemId)
+        if (item !== undefined) {
+          out.push({ id: r.itemId, name: item.name, era: item.era, reason: r.reason })
+        }
+      }
+      this.picks = out
+    } catch (err) {
+      this.picks = []
+    }
+  }
+
+  private findSummary(id: string): HeritageSummary | undefined {
+    for (const g of this.groups) {
+      for (const it of g.items) {
+        if (it.id === id) {
+          return it
+        }
+      }
+    }
+    return undefined
   }
 
   private async load(): Promise<void> {
@@ -317,6 +373,69 @@ export struct HomePage {
     .rotate({ angle: 3 })
   }
 
+  /**
+   * 猜你想看：一行横排小卡，基于收藏与浏览的行为画像。
+   * 行为为空时整个区块不渲染 —— 首次启动的版面保持安静。
+   */
+  @Builder
+  pickStrip() {
+    Column({ space: 8 }) {
+      Row({ space: 8 }) {
+        Text('猜你想看')
+          .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serifBold)
+          .fontColor(AppColor.textPrimary)
+          .layoutWeight(1)
+        Text('根据你的收藏与浏览')
+          .fontSize(10)
+          .fontColor(AppColor.textTertiary)
+      }
+      .width('100%')
+
+      Scroll() {
+        Row({ space: 10 }) {
+          ForEach(
+            this.picks,
+            (pick: PickItem) => {
+              Column({ space: 5 }) {
+                Text(pick.name)
+                  .fontSize(AppFont.caption)
+                  .fontFamily(FontFamily.serifBold)
+                  .fontColor(AppColor.textPrimary)
+                  .maxLines(1)
+                Text(pick.reason)
+                  .fontSize(10)
+                  .fontColor(AppColor.textSecondary)
+                  .lineHeight(14)
+                  .maxLines(2)
+                Text(pick.era)
+                  .fontSize(10)
+                  .fontColor(AppColor.earth)
+              }
+              .width(150)
+              .alignItems(HorizontalAlign.Start)
+              .padding(12)
+              .backgroundColor(AppColor.surface)
+              .borderRadius(12)
+              .borderWidth(1)
+              .borderColor(AppColor.hairlineWarm)
+              .onClick(() => {
+                router.pushUrl({ url: 'pages/DetailPage', params: { id: pick.id } })
+              })
+            },
+            (pick: PickItem) => pick.id
+          )
+        }
+      }
+      .width('100%')
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .align(Alignment.Start)
+    }
+    .width('100%')
+    .margin({ top: 18 })
+  }
+
   /** 卷首 */
   @Builder
   masthead() {
@@ -500,6 +619,10 @@ export struct HomePage {
             // ---- 正文（背景由 backgroundImage 承担）----
             Column() {
               this.masthead()
+
+              if (this.picks.length > 0) {
+                this.pickStrip()
+              }
 
               ForEach(
                 this.groups,

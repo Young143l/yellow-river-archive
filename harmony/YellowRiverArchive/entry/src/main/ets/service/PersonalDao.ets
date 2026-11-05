@@ -36,6 +36,12 @@ import { Tables, SyncKeys } from '../model/Schema'
 import { DataImportService } from './DataImportService'
 import { isSameVersion, remoteWins, toEnvelope, type SyncEnvelope } from './sync/Types'
 
+/** 浏览记录行（推荐画像用） */
+export interface VisitRow {
+  readonly itemId: string
+  readonly visitedAt: number
+}
+
 /** 收藏目标的确定性 id */
 export function favoriteId(targetType: string, targetId: string): string {
   return `${targetType}:${targetId}`
@@ -153,6 +159,23 @@ export class PersonalDao {
        ON CONFLICT(item_id) DO NOTHING`,
       [itemId, now, now, now, deviceId]
     )
+  }
+
+  /** 浏览记录带时间（推荐画像需要时间衰减；visitedIds 只有 id） */
+  static async listVisits(context: common.Context): Promise<VisitRow[]> {
+    const store: relationalStore.RdbStore = await DataImportService.open(context)
+    const rs: relationalStore.ResultSet = await store.querySql(
+      `SELECT item_id, visited_at FROM ${Tables.VISITS} WHERE deleted = 0 ORDER BY visited_at DESC`
+    )
+    const list: VisitRow[] = []
+    while (rs.goToNextRow()) {
+      list.push({
+        itemId: rs.getString(rs.getColumnIndex('item_id')),
+        visitedAt: rs.getLong(rs.getColumnIndex('visited_at')),
+      })
+    }
+    rs.close()
+    return list
   }
 
   static async visitedIds(context: common.Context): Promise<Set<string>> {

@@ -82,6 +82,22 @@ export interface SyncProgressView {
   readonly direction: string
 }
 
+/** /api/auth 的响应体 */
+interface LoginParsed {
+  ok?: boolean
+  userId?: string
+  username?: string
+  message?: string
+  created?: boolean
+}
+
+/** 登录结果 */
+export interface LoginResult {
+  readonly ok: boolean
+  readonly message: string
+  readonly userId: string
+}
+
 /** 一次同步的汇总，供 UI 展示 */
 export interface SyncSummary {
   readonly outcome: SyncOutcome
@@ -138,6 +154,77 @@ export class SyncService {
   /** 当前绑定的身份（空串表示未绑定） */
   static async currentUserId(context: common.Context): Promise<string> {
     return PersonalDao.getSyncMeta(context, SyncKeys.USER_ID)
+  }
+
+  /** 已登录的账号名（空串表示未通过账号登录 —— 可能是配对进来的） */
+  static async accountName(context: common.Context): Promise<string> {
+    return PersonalDao.getSyncMeta(context, SyncKeys.ACCOUNT_NAME)
+  }
+
+  /**
+   * 登录（未注册则直接注册）。
+   *
+   * 服务端 /api/auth 单端点承担两件事：名字不存在即注册，存在即验 PIN。
+   * 返回的 userId 写进 sync_meta.USER_ID —— 同步/备份/快照全部吃这个 id，
+   * 所以「登录」对既有链路而言只是换了一个稳定来源的身份。
+   *
+   * 迁移逻辑：换身份必须清零两个游标。
+   *   LAST_PUSHED_AT=0 → 本地全部记录以新身份重推（老数据挂到账号名下）
+   *   LAST_PULLED_AT=0 → 把账号房间里已有的数据拉回来（重装/换机场景）
+   * 重推的旧记录在服务端按 LWW updated_at 判新旧，只会被跳过，不会重复。
+   */
+  static async login(context: common.Context, baseUrl: string, username: string, pin: string): Promise<LoginResult> {
+    let body: string
+    try {
+      body = await SyncService.postJson(
+        `${baseUrl}/api/auth`,
+        JSON.stringify({ username: username, pin: pin })
+      )
+    } catch (err) {
+      return { ok: false, message: `连不上服务器（${SyncService.describeError(err)}）`, userId: '' }
+    }
+    let parsed: LoginParsed
+    try {
+      parsed = JSON.parse(body) as LoginParsed
+    } catch (err) {
+      return { ok: false, message: '服务器响应无法解析', userId: '' }
+    }
+    if (!parsed.ok || parsed.userId === undefined || parsed.userId.length === 0) {
+      return { ok: false, message: parsed.message ?? '登录失败', userId: '' }
+    }
+
+    const oldId: string = await PersonalDao.getSyncMeta(context, SyncKeys.USER_ID)
+    const same: boolean = oldId === parsed.userId
+    await PersonalDao.setSyncMeta(context, SyncKeys.USER_ID, parsed.userId)
+    await PersonalDao.setSyncMeta(context, SyncKeys.ACCOUNT_NAME, parsed.username ?? '')
+    if (!same) {
+      // 换了身份才清游标。同一账号重复登录不清，避免无意义的全量重推
+      await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PUSHED_AT, '0')
+      await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, '0')
+    }
+
+    // 断开旧连接，下一轮 sync 会以新身份重连
+    const cloud: CloudSync | undefined = SyncService.cloud
+    if (cloud !== undefined) {
+      await cloud.close()
+    }
+    return { ok: true, message: same ? '欢迎回来' : '登录成功，正在把本机数据归到这个账号', userId: parsed.userId }
+  }
+
+  /**
+   * 退出登录。
+   * 只清本机的身份绑定 —— 云端数据保留在账号名下，再登录同一个名字即可找回。
+   * 本地的收藏与笔记原样保留（那是端侧数据，端侧优先）。
+   */
+  static async logout(context: common.Context): Promise<void> {
+    await PersonalDao.setSyncMeta(context, SyncKeys.USER_ID, '')
+    await PersonalDao.setSyncMeta(context, SyncKeys.ACCOUNT_NAME, '')
+    await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PUSHED_AT, '0')
+    await PersonalDao.setSyncMeta(context, SyncKeys.LAST_PULLED_AT, '0')
+    const cloud: CloudSync | undefined = SyncService.cloud
+    if (cloud !== undefined) {
+      await cloud.close()
+    }
   }
 
   /**
@@ -226,7 +313,8 @@ export class SyncService {
     }
   }
 
-  private static async resolveBaseUrl(context: common.Context): Promise<string> {
+  /** 解析云端地址：页面取态用（登录面板需要拿到 baseUrl 再调 login） */
+  static async resolveBaseUrl(context: common.Context): Promise<string> {
     const stored: string = await PersonalDao.getSyncMeta(context, 'syncBaseUrl')
     return stored.length > 0 ? stored : DEFAULT_BASE_URL
   }

@@ -6,6 +6,7 @@ import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { HeritageDao, type RelatedItem } from '../service/HeritageDao'
 import { PersonalDao } from '../service/PersonalDao'
 import { MarkdownView } from '../components/MarkdownView'
+import { Recommender } from '../utils/Recommender'
 
 /** 路由参数 */
 interface DetailParams {
@@ -58,7 +59,14 @@ struct DetailPage {
       if (this.item === undefined) {
         this.error = `未找到档案：${this.itemId}`
       } else {
-        this.related = await HeritageDao.related(context, this.itemId)
+        // 行为画像：收藏强信号、浏览弱信号。没有行为时 related 自动退回纯内容相似度
+        const favorites = await PersonalDao.listFavorites(context)
+        const visits = await PersonalDao.listVisits(context)
+        const recommender: Recommender | null =
+          favorites.length + visits.length > 0
+            ? Recommender.build(HeritageDao.all(), favorites, visits)
+            : null
+        this.related = await HeritageDao.related(context, this.itemId, recommender)
       }
       await this.loadPersonal()
     } catch (err) {

@@ -184,6 +184,8 @@ export class SyncKeys {
   static readonly LAST_PULLED_AT: string = 'lastPulledAt'
   static readonly LAST_SYNC_AT: string = 'lastSyncAt'
   static readonly USER_ID: string = 'userId'
+  /** 已登录的账号名。空串表示未登录（配对进来的用户没有这个名字） */
+  static readonly ACCOUNT_NAME: string = 'accountName'
 }
 
 /** 可同步的表名（顺序即推送顺序，无外键依赖） */

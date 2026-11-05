@@ -1,7 +1,8 @@
 import { common } from '@kit.AbilityKit'
 import { relationalStore } from '@kit.ArkData'
 
-import type { City, Era, HeritageItem, HeritageType, SimilarNeighbor } from '../shared'
+import type { City, Era, HeritageItem, HeritageType, SimilarEntry, SimilarNeighbor } from '../shared'
+import { Recommender, type Recommendation } from '../utils/Recommender'
 import { Tables } from '../model/Schema'
 import { DataImportService } from './DataImportService'
 
@@ -169,7 +170,13 @@ export class HeritageDao {
   }
 
   /** 关联推荐（读构建期预计算的邻居，离线可用且理由可解释） */
-  static async related(context: common.Context, itemId: string): Promise<RelatedItem[]> {
+  /**
+   * 相关推荐。
+   *
+   * recommender 传空时是纯内容相似度（冷启动，similar.json 建索引时预计算）；
+   * 传入行为画像后按「内容 × (1 + 0.6 × 画像)」重排，理由也换成人话。
+   */
+  static async related(context: common.Context, itemId: string, recommender: Recommender | null = null): Promise<RelatedItem[]> {
     await HeritageDao.ready(context)
     const store: relationalStore.RdbStore = await DataImportService.open(context)
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates(Tables.SIMILAR)
@@ -185,6 +192,23 @@ export class HeritageDao {
     }
 
     const neighbors: SimilarNeighbor[] = JSON.parse(raw) as SimilarNeighbor[]
+    if (recommender !== null) {
+      // 行为重排：分数与理由都由 Recommender 给
+      const recs: Recommendation[] = recommender.recommendFor(
+        itemId,
+        { itemId: itemId, neighbors: neighbors },
+        6
+      )
+      const result: RelatedItem[] = []
+      for (const r of recs) {
+        const target: HeritageItem | undefined = HeritageDao.byId.get(r.itemId)
+        if (target !== undefined) {
+          result.push({ id: r.itemId, name: target.name, score: r.score, reason: r.reason })
+        }
+      }
+      return result
+    }
+
     const result: RelatedItem[] = []
     for (const n of neighbors) {
       const target: HeritageItem | undefined = HeritageDao.byId.get(n.id)

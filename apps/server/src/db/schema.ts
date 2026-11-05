@@ -149,6 +149,17 @@ export const SCHEMA_STATEMENTS: string[] = [
     payload TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_snapshots_user ON backup_snapshots(user_id, created_at)`,
+  // ---- 自建账号 ----
+  // 登录的本质：给用户一个稳定的 userId。同步/备份/快照全部吃 userId，
+  // 账号只是给这个 id 一个可找回的名字 —— 解决「卸载后云端成野数据」。
+  // username 比对忽略大小写（COLLATE NOCASE），展示保留原样。
+  `CREATE TABLE IF NOT EXISTS accounts (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    pin_hash TEXT NOT NULL,
+    pin_salt TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS sync_devices (
     user_id TEXT NOT NULL,
     device_id TEXT NOT NULL,
