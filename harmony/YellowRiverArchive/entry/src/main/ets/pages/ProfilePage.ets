@@ -1115,5 +1115,18 @@ export struct ProfilePage {
     .backgroundColor(AppColor.background)
     .backgroundImage($rawfile('img/paper.webp'))
     .backgroundImageSize(ImageSize.Cover)
+    // 登录面板挂在页面根节点。曾挂在 Scroll 内部的子容器上，且初次提交时
+    // python replace 静默失败导致 bindSheet 根本没写进去 —— 登录键设了
+    // loginOpen=true 却没有任何东西渲染面板，表现为「点了没反应」。
+    // arkts 检查对「builder 定义了但未挂载」不报错，这类失败只能真机验证发现。
+    .bindSheet($$this.loginOpen, this.loginPanel(), {
+      height: 400,
+      preferType: SheetType.BOTTOM,
+      dragBar: true,
+      title: { title: '登录' },
+      onDisappear: () => {
+        this.loginOpen = false
+      },
+    })
   }
 }

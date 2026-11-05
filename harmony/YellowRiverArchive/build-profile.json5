@@ -13,18 +13,18 @@
        * 与 tools/sign-openharmony.sh。
        */
       {
-        name: 'harmony',
-        type: 'HarmonyOS',
-        material: {
-          certpath: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.cer',
-          keyAlias: 'debugKey',
-          keyPassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
-          profile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p7b',
-          signAlg: 'SHA256withECDSA',
-          storeFile: '/Users/young143/.ohos/config/default_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWIJY17amVIM=.p12',
-          storePassword: '0000001b95fd5ea35a8e18c97c24d20a259ce872759a53407ddbdcb580bb19ec6d4e2eefd73a82f36315ea',
-        },
-      },
+        "name": "harmony",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/young143/.ohos/config/harmony_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWI_JY17amVIM=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BC9FAB9824A9CCCC5293AA7EB3C406166F3C339F4F7F8455E4A485575843390E617A2421044967B",
+          "profile": "/Users/young143/.ohos/config/harmony_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWI_JY17amVIM=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/young143/.ohos/config/harmony_YellowRiverArchive_JGyjgwwhIle5YuXIMntDNbMZmx1PEqnWI_JY17amVIM=.p12",
+          "storePassword": "0000001B2ED8F31D47BC6F2B1DC4EF5DD0A94D60077D0DE4D62D6209494672F865BC89D4FB45CACB2CEBB5"
+        }
+      }
     ],
     products: [
       {
