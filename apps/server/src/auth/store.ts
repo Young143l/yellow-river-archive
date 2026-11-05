@@ -45,6 +45,14 @@ function hashPin(salt: string, pin: string): string {
   return createHash('sha256').update(`${salt}:${pin}`).digest('hex')
 }
 
+/** userId 是否属于某个已注册账号。ws 握手与备份/快照接口的准入检查 */
+export function isAccountUser(db: Db, userId: string): boolean {
+  const row: { id: string } | undefined = db
+    .prepare('SELECT id FROM accounts WHERE id = ?')
+    .get(userId) as { id: string } | undefined
+  return row !== undefined
+}
+
 /** 注册。用户名已占用时抛错（调用方转成 409） */
 export function createAccount(db: Db, username: string, pin: string): AccountResult {
   const name: string = username.trim()

@@ -28,13 +28,8 @@ import type { WebSocket } from 'ws'
 
 import type { Db } from '../db/index'
 import { createSnapshot, deleteSnapshot, listSnapshots, readSnapshotForRestore, snapshotStats } from '../sync/backup'
-import {
-  createPairing,
-  joinPairing,
-  listDevices,
-  purgeExpiredPairings,
-  touchDevice,
-} from '../sync/pairing'
+import { listDevices, touchDevice } from '../sync/pairing'
+import { isAccountUser } from '../auth/store'
 import { applyPull, applyPush, currentCursor, userStats } from '../sync/store'
 
 export interface SyncRouteOptions {
@@ -91,48 +86,23 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
 ) => {
   const { db } = options
 
-  const purged: number = purgeExpiredPairings(db)
-  if (purged > 0) {
-    app.log.info(`清理过期配对码 ${purged} 个`)
-  }
+  // 配对码已退役（ADR-044）：身份一律走 /api/auth
 
   await app.register(websocket)
 
   // -------------------------------------------------------------------------
-  // 配对码（REST，D4-8 兜底路径）
+  // 账号准入（ADR-044：配对码退役，云端身份一律走 /api/auth）
   // -------------------------------------------------------------------------
 
-  app.post<{ Body: { userId?: string } }>('/api/sync/pair', async (request, reply) => {
-    const existing: string = request.body?.userId ?? ''
-    try {
-      return createPairing(db, existing)
-    } catch (err) {
-      const e: ApiError = { code: 'E4001', message: (err as Error).message }
-      return reply.code(500).send(e)
-    }
-  })
-
-  app.post<{ Body: { code?: string; deviceId?: string; deviceName?: string } }>(
-    '/api/sync/pair/join',
-    async (request, reply) => {
-      const code: string = (request.body?.code ?? '').trim()
-      const deviceId: string = (request.body?.deviceId ?? '').trim()
-      if (code.length === 0 || deviceId.length === 0) {
-        const e: ApiError = { code: 'E4002', message: '需要 code 与 deviceId' }
-        return reply.code(400).send(e)
-      }
-      const result = joinPairing(db, code, deviceId)
-      if (!result.ok) {
-        const e: ApiError = { code: 'E4003', message: result.message }
-        return reply.code(400).send(e)
-      }
-      touchDevice(db, result.userId, deviceId, request.body?.deviceName ?? '')
-      return result
-    }
-  )
+  /** 未登录（userId 不属于任何账号）时的统一 401 应答 */
+  const unauthorized = (reply: { code: (n: number) => { send: (b: ApiError) => object } }): object =>
+    reply.code(401).send({ code: 'E4012', message: '请先登录' })
 
   app.get<{ Querystring: { userId?: string } }>('/api/sync/devices', async (request, reply) => {
     const userId: string = request.query.userId ?? ''
+    if (!isAccountUser(db, userId)) {
+      return unauthorized(reply)
+    }
     if (userId.length === 0) {
       const e: ApiError = { code: 'E4002', message: '需要 userId' }
       return reply.code(400).send(e)
@@ -146,6 +116,9 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
 
   app.post<{ Body: { userId?: string } }>('/api/backup/snapshot', async (request, reply) => {
     const userId: string = (request.body?.userId ?? '').trim()
+    if (!isAccountUser(db, userId)) {
+      return unauthorized(reply)
+    }
     if (userId.length === 0) {
       const e: ApiError = { code: 'E4002', message: '需要 userId' }
       return reply.code(400).send(e)
@@ -162,6 +135,9 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
     '/api/backup/snapshots',
     async (request, reply) => {
       const userId: string = (request.query.userId ?? '').trim()
+      if (!isAccountUser(db, userId)) {
+        return unauthorized(reply)
+      }
       if (userId.length === 0) {
         const e: ApiError = { code: 'E4002', message: '需要 userId' }
         return reply.code(400).send(e)
@@ -183,6 +159,9 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
     '/api/backup/snapshots/:id/restore',
     async (request, reply) => {
       const userId: string = (request.body?.userId ?? '').trim()
+      if (!isAccountUser(db, userId)) {
+        return unauthorized(reply)
+      }
       if (userId.length === 0) {
         const e: ApiError = { code: 'E4002', message: '需要 userId' }
         return reply.code(400).send(e)
@@ -201,6 +180,9 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
     '/api/backup/snapshots/:id',
     async (request, reply) => {
       const userId: string = (request.query.userId ?? '').trim()
+      if (!isAccountUser(db, userId)) {
+        return unauthorized(reply)
+      }
       if (userId.length === 0) {
         const e: ApiError = { code: 'E4002', message: '需要 userId' }
         return reply.code(400).send(e)
@@ -224,6 +206,13 @@ export const syncRoutes: FastifyPluginAsync<SyncRouteOptions> = async (
 
       if (userId.length === 0 || deviceId.length === 0) {
         socket.send(JSON.stringify(errorMessage('E4002', '连接需要 userId 与 deviceId 参数')))
+        socket.close()
+        return
+      }
+      // ADR-044：云端同步只认账号。未注册的 userId 一律拒绝 ——
+      // 之前不校验，任何人带上别人的 userId 就能读写那个房间
+      if (!isAccountUser(db, userId)) {
+        socket.send(JSON.stringify(errorMessage('E4012', '请先登录')))
         socket.close()
         return
       }

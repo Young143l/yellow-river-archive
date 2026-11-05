@@ -443,25 +443,6 @@ export interface UsageStats {
 // 身份
 // ---------------------------------------------------------------------------
 
-export type IdentityType = 'openid' | 'paired'
-
-export interface IdentityInfo {
-  readonly userId: string
-  readonly type: IdentityType
-  readonly displayName?: string
-}
-
-/** 配对码绑定 */
-export interface PairingRequest {
-  readonly code: string
-  readonly deviceId: string
-}
-
-export interface PairingResponse {
-  readonly code: string
-  /** 配对码有效期（秒） */
-  readonly expiresIn: number
-}
 
 // ---------------------------------------------------------------------------
 // 收藏（REST 备选通道，主通道为同步）

@@ -37,12 +37,6 @@ export const DEFAULT_BASE_URL: string = 'https://yra.young143.top'
  * 具名接口 —— ArkTS 不允许用内联对象字面量做类型声明
  * （arkts-no-obj-literals-as-types），因此每个返回形状都要有名字。
  */
-export interface PairingCreatedView {
-  readonly code: string
-  readonly userId: string
-  readonly message: string
-}
-
 /** 服务端备份接口的响应体 */
 export interface SnapshotResultView {
   readonly ok: boolean
@@ -57,19 +51,6 @@ export interface SnapshotRestoreView {
   readonly ok: boolean
   readonly message: string
   readonly changes: ChangeSet[]
-}
-
-/** 服务端 /api/sync/pair/join 的响应体 */
-export interface JoinApiResponse {
-  readonly ok: boolean
-  readonly userId: string
-  readonly message: string
-}
-
-/** 对 UI 暴露的配对结果 */
-export interface JoinResultView {
-  readonly ok: boolean
-  readonly message: string
 }
 
 /**
@@ -224,58 +205,6 @@ export class SyncService {
     const cloud: CloudSync | undefined = SyncService.cloud
     if (cloud !== undefined) {
       await cloud.close()
-    }
-  }
-
-  /**
-   * 设备 A：生成配对码（绑定新身份或复用现有身份）。
-   * 返回 6 位码与身份标识。
-   */
-  static async createPairing(
-    context: common.Context,
-    deviceName: string
-  ): Promise<PairingCreatedView> {
-    const baseUrl: string = await SyncService.resolveBaseUrl(context)
-    const existing: string = await PersonalDao.getSyncMeta(context, SyncKeys.USER_ID)
-    try {
-      const text: string = await SyncService.postJson(
-        `${baseUrl}/api/sync/pair`,
-        JSON.stringify({ userId: existing })
-      )
-      const body = JSON.parse(text) as PairingCreatedView
-      if (body.code === undefined || body.userId === undefined) {
-        return { code: '', userId: '', message: '服务端未返回配对码' }
-      }
-      await PersonalDao.setSyncMeta(context, SyncKeys.USER_ID, body.userId)
-      await PersonalDao.setSyncMeta(context, SyncKeys.DEVICE_NAME, deviceName)
-      return { code: body.code, userId: body.userId, message: '配对码已生成，请在另一台设备上输入' }
-    } catch (err) {
-      return { code: '', userId: '', message: `无法连接服务端（${SyncService.describeError(err)})` }
-    }
-  }
-
-  /** 设备 B：输入配对码加入 */
-  static async joinPairing(
-    context: common.Context,
-    code: string,
-    deviceName: string
-  ): Promise<JoinResultView> {
-    const baseUrl: string = await SyncService.resolveBaseUrl(context)
-    const deviceId: string = await PersonalDao.getDeviceId(context)
-    try {
-      const text: string = await SyncService.postJson(
-        `${baseUrl}/api/sync/pair/join`,
-        JSON.stringify({ code: code, deviceId: deviceId, deviceName: deviceName })
-      )
-      const body = JSON.parse(text) as JoinApiResponse
-      if (body.ok !== true) {
-        return { ok: false, message: body.message !== undefined ? body.message : '配对失败' }
-      }
-      await PersonalDao.setSyncMeta(context, SyncKeys.USER_ID, body.userId)
-      await PersonalDao.setSyncMeta(context, SyncKeys.DEVICE_NAME, deviceName)
-      return { ok: true, message: '配对成功' }
-    } catch (err) {
-      return { ok: false, message: `无法连接服务端（${SyncService.describeError(err)})` }
     }
   }
 

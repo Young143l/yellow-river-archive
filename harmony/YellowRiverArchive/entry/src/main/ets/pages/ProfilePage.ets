@@ -52,7 +52,7 @@ export struct ProfilePage {
   @State doc: StructuredDocument | undefined = undefined
   @State docText: string = ''
   @State docExportMsg: string = ''
-  /** 同步卡片里展开中的次级面板：'' / 'A' 配对 / 'B' 备份 / 'C' 快照 */
+  /** 同步卡片里展开中的次级面板：'' / 'B' 备份 / 'C' 快照（配对面板已随 ADR-044 移除） */
   @State panel: string = ''
   @State loaded: boolean = false
   @State activePane: number = 0
@@ -75,8 +75,6 @@ export struct ProfilePage {
   @State loginPin: string = ''
   @State loginBusy: boolean = false
   @State loginError: string = ''
-  @State pairCode: string = ''
-  @State joinCode: string = ''
   @State syncBusy: boolean = false
   @State syncMessage: string = ''
   /** 同步进度：赛题要求「清晰展示同步进度」，因此要有 done/total 与方向 */
@@ -306,47 +304,6 @@ export struct ProfilePage {
     return id.slice(0, 6)
   }
 
-  private async onCreatePairing(): Promise<void> {
-    if (this.syncBusy) {
-      return
-    }
-    this.syncBusy = true
-    this.syncMessage = '正在生成配对码…'
-    try {
-      const context = this.getUIContext().getHostContext() as common.Context
-      const label: string = await this.deviceLabel(context)
-      const result = await SyncService.createPairing(context, `设备-${label}`)
-      this.pairCode = result.code
-      this.syncMessage = result.message
-      await this.refreshSyncStatus()
-    } catch (err) {
-      this.syncMessage = '生成失败'
-    }
-    this.syncBusy = false
-  }
-
-  private async onJoinPairing(): Promise<void> {
-    const code: string = this.joinCode.trim()
-    if (code.length === 0 || this.syncBusy) {
-      return
-    }
-    this.syncBusy = true
-    this.syncMessage = '正在配对…'
-    try {
-      const context = this.getUIContext().getHostContext() as common.Context
-      const label: string = await this.deviceLabel(context)
-      const result = await SyncService.joinPairing(context, code, `设备-${label}`)
-      this.syncMessage = result.message
-      if (result.ok) {
-        this.joinCode = ''
-        await this.refreshSyncStatus()
-      }
-    } catch (err) {
-      this.syncMessage = '配对异常'
-    }
-    this.syncBusy = false
-  }
-
   private async onResetCursor(): Promise<void> {
     try {
       const context = this.getUIContext().getHostContext() as common.Context
@@ -390,6 +347,10 @@ export struct ProfilePage {
   }
 
   private async onSaveSnapshot(): Promise<void> {
+    if (this.accountName.length === 0) {
+      this.syncMessage = '云端快照需要先登录'
+      return
+    }
     if (this.syncBusy) { return }
     this.syncBusy = true
     this.syncMessage = '正在保存云端快照…'
@@ -404,6 +365,10 @@ export struct ProfilePage {
   }
 
   private async onRestoreSnapshot(): Promise<void> {
+    if (this.accountName.length === 0) {
+      this.syncMessage = '云端快照需要先登录'
+      return
+    }
     if (this.syncBusy) { return }
     this.syncBusy = true
     this.syncMessage = '正在读取云端快照…'
@@ -470,59 +435,6 @@ export struct ProfilePage {
   }
 
   @Builder
-  pairPanel() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Button(this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成配对码')
-          .fontSize(11)
-          .fontColor(AppColor.primary)
-          .backgroundColor(AppColor.background)
-          .borderWidth(1)
-          .borderColor(AppColor.divider)
-          .borderRadius(7)
-          .layoutWeight(1)
-          .onClick(() => {
-            this.onCreatePairing()
-          })
-        Button('重置游标')
-          .fontSize(11)
-          .fontColor(AppColor.textTertiary)
-          .backgroundColor(AppColor.background)
-          .borderWidth(1)
-          .borderColor(AppColor.divider)
-          .borderRadius(7)
-          .onClick(() => {
-            this.onResetCursor()
-          })
-      }
-      .width('100%')
-
-      Row({ space: 8 }) {
-        TextInput({ text: this.joinCode, placeholder: '输入另一台设备的 6 位配对码' })
-          .fontSize(11)
-          .backgroundColor(AppColor.background)
-          .borderRadius(7)
-          .type(InputType.Number)
-          .maxLength(6)
-          .layoutWeight(1)
-          .onChange((value: string) => {
-            this.joinCode = value
-          })
-        Button('加入')
-          .fontSize(11)
-          .fontColor(AppColor.surface)
-          .backgroundColor(this.joinCode.trim().length === 6 ? AppColor.primary : AppColor.textTertiary)
-          .borderRadius(7)
-          .onClick(() => {
-            this.onJoinPairing()
-          })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding({ bottom: 4 })
-  }
-
   @Builder
   backupPanel() {
     Row({ space: 8 }) {
@@ -621,25 +533,47 @@ export struct ProfilePage {
         .fontColor(AppColor.textSecondary)
         .width('100%')
 
-      // 主操作：只留一个。原先九颗按钮挤成三排，用户不知道从哪下手
-      Button(this.syncBusy ? '同步中…' : '立即同步')
-        .fontSize(AppFont.caption)
-        .fontFamily(FontFamily.serif)
-        .fontColor(AppColor.surface)
-        .backgroundColor(AppColor.primary)
-        .borderRadius(8)
+      // 主操作：登录后才有同步。未登录时这里不是一颗灰按钮，
+      // 而是一句「为什么值得登录」+ 一颗登录键（ADR-044）
+      if (this.accountName.length === 0) {
+        Column({ space: 10 }) {
+          Text('登录后，收藏和笔记会在你的设备之间同步')
+            .fontSize(AppFont.caption)
+            .fontColor(AppColor.textSecondary)
+            .width('100%')
+          Button('登录')
+            .fontSize(AppFont.caption)
+            .fontFamily(FontFamily.serif)
+            .fontColor(AppColor.surface)
+            .backgroundColor(AppColor.primary)
+            .borderRadius(8)
+            .width('100%')
+            .height(38)
+            .onClick(() => {
+              this.loginOpen = true
+            })
+        }
         .width('100%')
-        .height(38)
-        .onClick(() => {
-          this.onSync()
-        })
-
-      // 次级功能收进入口，点开才展开 —— 默认界面从九块降到四块
-      this.entryRow('配对新设备', 'A', this.pairCode.length > 0 ? `配对码 ${this.pairCode}` : '生成 6 位码，在另一台输入')
-      if (this.panel === 'A') {
-        this.pairPanel()
+        .padding(12)
+        .backgroundColor(AppColor.background)
+        .borderRadius(10)
+        .borderWidth(1)
+        .borderColor(AppColor.hairlineWarm)
+      } else {
+        Button(this.syncBusy ? '同步中…' : '立即同步')
+          .fontSize(AppFont.caption)
+          .fontFamily(FontFamily.serif)
+          .fontColor(AppColor.surface)
+          .backgroundColor(AppColor.primary)
+          .borderRadius(8)
+          .width('100%')
+          .height(38)
+          .onClick(() => {
+            this.onSync()
+          })
       }
 
+      // 次级功能收进入口，点开才展开 —— 默认界面从九块降到四块
       this.entryRow('备份与恢复', 'B', '导出成本机文件，或从文件恢复')
       if (this.panel === 'B') {
         this.backupPanel()

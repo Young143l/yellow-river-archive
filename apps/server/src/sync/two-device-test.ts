@@ -68,6 +68,40 @@ class FakeDevice {
     this.socket = socket
   }
 
+  /** 探测连接：服务端校验 userId 是否属于账号。被拒返回 rejected:true */
+  static async tryConnect(
+    userId: string,
+    deviceId: string,
+    name: string
+  ): Promise<{ rejected: boolean; reason: string }> {
+    const url: string = `${WS_BASE}/api/sync?userId=${encodeURIComponent(userId)}&deviceId=${deviceId}&deviceName=${encodeURIComponent(name)}`
+    return new Promise((resolve) => {
+      const socket = new WebSocket(url)
+      let reason = ''
+      const done = (rejected: boolean): void => {
+        try {
+          socket.close()
+        } catch {
+          // 已关闭
+        }
+        resolve({ rejected, reason })
+      }
+      socket.on('message', (raw: Buffer) => {
+        const msg = JSON.parse(String(raw)) as { type?: string; code?: string; message?: string }
+        if (msg.type === 'error' || msg.code !== undefined) {
+          reason = `${msg.code ?? ''} ${msg.message ?? ''}`
+          done(true)
+        }
+      })
+      socket.on('open', () => {
+        // 开了不代表准入通过；等 500ms 看有没有错误帧
+        setTimeout(() => done(reason.length > 0), 500)
+      })
+      socket.on('close', () => done(reason.length > 0))
+      socket.on('error', () => done(reason.length > 0))
+    })
+  }
+
   static async connect(userId: string, deviceId: string, name: string): Promise<FakeDevice> {
     const url: string = `${WS_BASE}/api/sync?userId=${encodeURIComponent(userId)}&deviceId=${deviceId}&deviceName=${encodeURIComponent(name)}`
     const socket = new WebSocket(url)
@@ -177,38 +211,48 @@ function findRecord(message: Record<string, unknown> | undefined, recordId: stri
 async function main(): Promise<void> {
   console.log('=== 双设备同步协议验证 ===\n')
 
-  // ---- 1. 配对码绑定同一身份 ----
-  console.log('[1] 身份绑定（配对码兜底路径）')
-  const pairing = await post<{ code: string; userId: string; expiresAt: number }>('/api/sync/pair', {})
-  check('设备 A 生成配对码', /^\d{6}$/.test(pairing.code), `code=${pairing.code} userId=${pairing.userId}`)
-
-  const joined = await post<{ ok: boolean; userId: string; code: string; message: string }>(
-    '/api/sync/pair/join',
-    { code: pairing.code, deviceId: 'device-B', deviceName: '模拟设备B' }
+  // ---- 1. 账号身份（ADR-044：配对码退役，多设备 = 登录同一账号）----
+  console.log('[1] 身份（账号注册与登录）')
+  const stamp: string = Date.now().toString(36)
+  const auth = await post<{ ok: boolean; userId: string; username: string; created: boolean }>(
+    '/api/auth',
+    { username: `t_${stamp}`, pin: '1234' }
   )
   check(
-    '设备 B 用配对码加入，得到同一 userId',
-    joined.ok && joined.userId === pairing.userId,
-    `${joined.message}，两端 userId 一致=${joined.userId === pairing.userId}`
+    '注册账号',
+    auth.ok && /^a_[0-9a-f]{8}$/.test(auth.userId),
+    `userId=${auth.userId} created=${auth.created}`
   )
 
-  // 配对码是一次性的
-  const reuseResponse = await fetch(`${BASE}/api/sync/pair/join`, {
+  const loginAgain = await post<{ ok: boolean; userId: string; created: boolean }>(
+    '/api/auth',
+    { username: `t_${stamp}`, pin: '1234' }
+  )
+  check(
+    '同名同 PIN 再登录 → 同一 userId',
+    loginAgain.ok && loginAgain.userId === auth.userId && loginAgain.created === false,
+    `created=${loginAgain.created} userId 一致=${loginAgain.userId === auth.userId}`
+  )
+
+  const wrongPin = await fetch(`${BASE}/api/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: pairing.code, deviceId: 'device-C' }),
+    body: JSON.stringify({ username: `t_${stamp}`, pin: '9999' }),
   })
-  const reuse = (await reuseResponse.json()) as { code?: string; message?: string }
+  check('错 PIN 被拒', wrongPin.status === 401, `HTTP ${wrongPin.status}`)
+
+  // 未注册身份不得进同步房间
+  const ghostResp = await FakeDevice.tryConnect('u_ghost', 'device-G', '幽灵设备')
   check(
-    '配对码一次性（重放被拒）',
-    reuseResponse.status === 400,
-    `HTTP ${reuseResponse.status} ${reuse.message ?? ''}`
+    '未注册 userId 连 ws 被拒（E4012）',
+    ghostResp.rejected,
+    ghostResp.rejected ? `收到: ${ghostResp.reason}` : '居然连上了'
   )
 
   // ---- 2. 建连 ----
   console.log('\n[2] 建立同步连接')
-  const deviceA = await FakeDevice.connect(pairing.userId, 'device-A', '模拟设备A')
-  const deviceB = await FakeDevice.connect(pairing.userId, 'device-B', '模拟设备B')
+  const deviceA = await FakeDevice.connect(auth.userId, 'device-A', '模拟设备A')
+  const deviceB = await FakeDevice.connect(auth.userId, 'device-B', '模拟设备B')
   // 必须验证真的收到了 state 帧 —— 只看 cursor 是无意义的（它初值就是 0）
   const aState = deviceA.drain().find((m) => m.type === 'state')
   const bState = deviceB.drain().find((m) => m.type === 'state')
@@ -367,7 +411,7 @@ async function main(): Promise<void> {
 
   // ---- 8. 冲突日志 ----
   console.log('\n[8] 冲突记录')
-  const devicesResp = await (await fetch(`${BASE}/api/sync/devices?userId=${encodeURIComponent(pairing.userId)}`)).json() as {
+  const devicesResp = await (await fetch(`${BASE}/api/sync/devices?userId=${encodeURIComponent(auth.userId)}`)).json() as {
     devices: { deviceId: string }[]
     records: number
     conflicts: number
