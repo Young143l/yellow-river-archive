@@ -2,11 +2,53 @@
   "entries": [
     {
       "itemId": "kf-kaibaosi-ta",
-      "neighbors": []
+      "neighbors": [
+        {
+          "id": "ly-erlitou",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "sms-yangshao",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "py-xishuipo",
+          "score": 0.029,
+          "reason": "相距约 115 公里，同处黄河中游"
+        },
+        {
+          "id": "zz-gongyi-yao",
+          "score": 0.016,
+          "reason": "相距约 122 公里，同处黄河中游"
+        }
+      ]
     },
     {
       "itemId": "ly-erlitou",
-      "neighbors": []
+      "neighbors": [
+        {
+          "id": "zz-gongyi-yao",
+          "score": 0.208,
+          "reason": "相距约 22 公里，同处黄河中游"
+        },
+        {
+          "id": "kf-kaibaosi-ta",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "py-xishuipo",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "sms-yangshao",
+          "score": 0.07,
+          "reason": "相距约 94 公里，同处黄河中游"
+        }
+      ]
     },
     {
       "itemId": "py-xishuipo",
@@ -15,6 +57,21 @@
           "id": "sms-yangshao",
           "score": 0.67,
           "reason": "同属仰韶时期"
+        },
+        {
+          "id": "ly-erlitou",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "zz-gongyi-yao",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "kf-kaibaosi-ta",
+          "score": 0.029,
+          "reason": "相距约 115 公里，同处黄河中游"
         }
       ]
     },
@@ -25,12 +82,48 @@
           "id": "py-xishuipo",
           "score": 0.67,
           "reason": "同属仰韶时期"
+        },
+        {
+          "id": "kf-kaibaosi-ta",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "ly-erlitou",
+          "score": 0.07,
+          "reason": "相距约 94 公里，同处黄河中游"
+        },
+        {
+          "id": "zz-gongyi-yao",
+          "score": 0.029,
+          "reason": "相距约 115 公里，同处黄河中游"
         }
       ]
     },
     {
       "itemId": "zz-gongyi-yao",
-      "neighbors": []
+      "neighbors": [
+        {
+          "id": "ly-erlitou",
+          "score": 0.208,
+          "reason": "相距约 22 公里，同处黄河中游"
+        },
+        {
+          "id": "py-xishuipo",
+          "score": 0.12,
+          "reason": "同在河南段黄河沿线"
+        },
+        {
+          "id": "sms-yangshao",
+          "score": 0.029,
+          "reason": "相距约 115 公里，同处黄河中游"
+        },
+        {
+          "id": "kf-kaibaosi-ta",
+          "score": 0.016,
+          "reason": "相距约 122 公里，同处黄河中游"
+        }
+      ]
     }
   ]
 }

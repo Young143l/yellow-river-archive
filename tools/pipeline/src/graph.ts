@@ -10,6 +10,7 @@
  * 每个条目自成一个"主题"，等于没做聚合。实测在 5 条样例数据上就是如此。
  */
 
+import { distanceKm } from './geo'
 import type { GraphEdge, GraphNode, HeritageItem, SimilarEntry } from '@yra/shared'
 
 export interface GraphResult {
@@ -52,17 +53,6 @@ const NEARBY_KM: number = 130
  * 同时天然做到「稠密区分得清、稀疏区也连得上」—— 5 条数据时照样能连通。
  */
 const KNN_K: number = 3
-
-/** 两点间球面距离（Haversine，公里） */
-function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (d: number): number => (d * Math.PI) / 180
-  const dLat: number = toRad(lat2 - lat1)
-  const dLng: number = toRad(lng2 - lng1)
-  const a: number =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 export function buildGraph(
   items: readonly HeritageItem[],
