@@ -139,6 +139,9 @@ export struct HomePage {
     this.loadPicks()
   }
 
+  /** 是否存在按内容高度合成的长背景（构建期生成，缺失时回退原图） */
+  private hasLongBg: boolean = true
+
   aboutToAppear(): void {
     this.load()
     this.loadPicks()
@@ -325,7 +328,11 @@ export struct HomePage {
    * 时才切过去，条数少的时候保持清晰。
    */
   private backgroundSource(): string {
-    return this.estimateHeight() > this.BG_HEAD_H ? 'img/river-bg-long.webp' : 'img/river-bg.webp'
+    // 长图只在资源存在时才用（构建期按内容高度生成；条数少时不生成）
+    if (this.estimateHeight() > this.BG_HEAD_H && this.hasLongBg) {
+      return 'img/river-bg-long.webp'
+    }
+    return 'img/river-bg.webp'
   }
 
   /** 水纹叠层：只有白色短弧，透明底，覆盖在背景图之上 */

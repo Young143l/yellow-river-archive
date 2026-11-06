@@ -44,6 +44,19 @@ const LEGEND_TYPES: string[] = [
   'Site', 'Artifact', 'Event', 'Figure', 'Poem', 'Museum', 'Era', 'City', 'Type',
 ]
 
+/** 逐帧力导向的节点上限：超过就只算一次静态布局 */
+const ANIMATE_LIMIT: number = 150
+
+/**
+ * 全图默认只显示主干类型。
+ *
+ * 304 节点里大半是文物、事件、人物这类卫星，全铺开就是一团毛线，
+ * 读不出「哪几处遗址、什么时代、在哪个城市」这个主干结构。
+ * 想看细节走聚焦模式（点遗址 → 它的一跳邻居全出来），
+ * 比在全图里翻找有效得多。
+ */
+const CORE_TYPES: string[] = ['Site', 'Era', 'City']
+
 function colorOf(type: string): string {
   const c: string | undefined = TYPE_COLORS.get(type)
   return c !== undefined ? c : '#98A3AB'
@@ -270,15 +283,41 @@ export struct GraphPage {
     this.startLoop()
   }
 
-  /** 切回全图：全部可见。小图收敛后自动冻结；大图直接用种子布局，不动画 */
-  private applyFull(): void {
-    this.layout.nodes.forEach((node: SimNode) => {
-      node.hidden = false
-      node.fixed = false
+  /**
+   * 全图模式下展开某个主干节点的一跳子节点。
+   *
+   * 先把非主干全部收起，再放出这一个节点的邻居 —— 常驻骨架 + 单点展开，
+   * 视线有落点，不会同时铺开十几个簇。
+   */
+  private expandFrom(idx: number): void {
+    const nbs: number[] = this.neighbors.get(idx) ?? []
+    this.layout.nodes.forEach((node: SimNode, i: number) => {
+      const core: boolean = CORE_TYPES.includes(node.type)
+      node.hidden = !(core || i === idx || nbs.includes(i))
     })
+    this.visibleCount = this.layout.nodes.filter((n: SimNode) => !n.hidden).length
+    this.selected = idx
+    const node: SimNode = this.layout.nodes[idx]
+    this.selectedName = node.name
+    const label: string | undefined = TYPE_LABELS.get(node.type)
+    this.selectedType = label !== undefined ? label : node.type
+    this.selectedItemId = node.type === 'Site' ? node.id : ''
+    this.startLoop()
+  }
+
+  /** 切回全图：只留主干类型，卫星隐藏。小图收敛后自动冻结；大图用种子布局 */
+  private applyFull(): void {
+    let sites: number = 0
+    this.layout.nodes.forEach((node: SimNode) => {
+      node.hidden = !CORE_TYPES.includes(node.type)
+      node.fixed = false
+      if (!node.hidden) {
+        sites += 1
+      }
+    })
+    this.visibleCount = sites
     this.focusIndex = -1
     this.focusName = ''
-    this.visibleCount = this.layout.nodes.length
     this.selected = -1
     this.selectedName = ''
     this.selectedType = ''
@@ -289,7 +328,11 @@ export struct GraphPage {
     // 且高密度下网格桶也截不掉多少节点对（实测桌面基准近似持平）。
     // 种子布局（簇心环 + 黄金角螺旋）本身就是结构清晰的静态图；
     // 小图（<=500 节点）保持力导向动画，收敛后自动冻结。
-    if (this.layout.nodes.length <= GRID_BUCKET_THRESHOLD) {
+    // 阈值取 150 而不是 GRID_BUCKET_THRESHOLD(500)：斥力是 O(n²)，
+    // 300 节点一轮约 9 万次配对，端侧实测逐帧会明显掉帧。
+    // 种子布局（簇心环 + 黄金角螺旋）本身就是可读的结构图，
+    // 大图直接静态呈现，滚动缩放仍流畅。
+    if (this.layout.nodes.length <= ANIMATE_LIMIT) {
       this.startLoop()
     } else {
       this.stopLoop()
@@ -495,6 +538,12 @@ export struct GraphPage {
       this.applyFocus(best)
       return
     }
+
+    // 全图模式下点主干节点 = 展开它的一跳子节点（文物/事件/人物…），
+    // 同时收起上一个展开。骨架常驻、细节按需，才不会一团毛线。
+    if (best >= 0 && this.viewMode === 'full' && CORE_TYPES.includes(this.layout.nodes[best].type)) {
+      this.expandFrom(best)
+    }
     this.selected = best
     if (best >= 0) {
       const node: SimNode = this.layout.nodes[best]
@@ -655,7 +704,7 @@ export struct GraphPage {
           .width('100%')
           .padding({ left: AppSize.pagePadding, bottom: 6 })
       } else {
-        Text(`全图 · ${this.nodeCount} 节点 · ${this.edgeCount} 连边`)
+        Text(`全图 · 主干 ${this.visibleCount} 节点（共 ${this.nodeCount}）`)
           .fontSize(10)
           .fontColor(AppColor.textTertiary)
           .width('100%')

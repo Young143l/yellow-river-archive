@@ -27,14 +27,14 @@ TMP="$(mktemp -d)"
 trap "rm -rf '$TMP'" EXIT
 
 H=1440    # tile 高（480vp @3x）
-K=240     # 周期溶合带宽（80vp）
-FADE=480  # 过渡带高（160vp）
+K=360     # 周期溶合带宽（120vp）
+FADE=720  # 过渡带高（240vp）
 PAPER='#F3EADB'
 
 # ---- 1) 取深水段并与纸色混合成淡纹 ----
 magick "$SRC" -crop 1080x${H}+0+4400 +repage "$TMP/deep.png"
 magick -size 1080x${H} "xc:$PAPER" "$TMP/deep.png" \
-  -define compose:args=65,35 -compose blend -composite "$TMP/pale.png"
+  -define compose:args=88,12 -compose blend -composite "$TMP/pale.png"
 
 # ---- 2) 周期化：底部 K 行与顶部 K 行交叉溶解 ----
 magick -size 1080x${K} gradient:black-white "$TMP/mask.png"
@@ -47,14 +47,14 @@ magick "$TMP/bot.png" "$TMP/top_a.png" -compose Over -composite "$TMP/joint.png"
 magick "$TMP/pale.png" -crop 1080x$((H-K))+0+0 +repage "$TMP/body.png"
 magick "$TMP/body.png" "$TMP/joint.png" -append "$TMP/tile.png"
 
-# ---- 3) 过渡带：卷首末段 → tile 顶行 ----
-# 过渡带的起点必须是卷首的**最后一行**（平铺处上方就是它），
-# 取末行复制成条带，保证 y=2000vp 处颜色完全接上
-magick "$SRC" -crop 1080x1+0+5999 +repage -resize 1080x${FADE}\! "$TMP/head.png"
-magick "$TMP/tile.png" -crop 1080x1+0+0 +repage -resize 1080x${FADE}\! "$TMP/goal.png"
-magick -size 1080x${FADE} gradient:black-white "$TMP/fmask.png"
-magick "$TMP/goal.png" "$TMP/fmask.png" -alpha off -compose CopyOpacity -composite "$TMP/goal_a.png"
-magick "$TMP/head.png" "$TMP/goal_a.png" -compose Over -composite "$TMP/fade.png"
+# ---- 3) 过渡带：严格取卷首末行与 tile 首行做纵向插值 ----
+# 旧做法用 gradient 掩膜把「卷首末段」和「tile 首行」混合，看似对，
+# 实测两端对不上（fade 底行 158 vs tile 顶行 117），接缝就在那儿。
+# 现在直接取两条真实像素行，构成 2 行图再纵向放大 —— 两端颜色严格相等，
+# 中间是墨色渐隐，这一带当成「雾」看即可。
+magick "$SRC" -crop 1080x1+0+5999 +repage "$TMP/row_head.png"
+magick "$TMP/tile.png" -crop 1080x1+0+0 +repage "$TMP/row_tile.png"
+magick "$TMP/row_head.png" "$TMP/row_tile.png" -append -filter Triangle -resize 1080x${FADE}\! "$TMP/fade.png"
 
 # ---- 4) 导出 ----
 magick "$TMP/tile.png" -quality 82 -define webp:method=6 "$OUT_TILE"
@@ -82,7 +82,7 @@ magick "$SRC" -format "卷首末行 %[pixel:p{150,5999}]\n" info:
 LONG_H_VP="${1:-19500}"          # 目标内容高度（vp）
 TILE_VP=480                       # tile 铺满后的高
 HEAD_VP=2000
-FADE_VP=160
+FADE_VP=240
 W=270
 N_TILE=$(( (LONG_H_VP - HEAD_VP - FADE_VP + TILE_VP - 1) / TILE_VP ))
 TOTAL_VP=$(( HEAD_VP + FADE_VP + N_TILE * TILE_VP ))

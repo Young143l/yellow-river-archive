@@ -146,7 +146,9 @@ export class ForceLayout {
     // 结果是所有节点挤进一个直径不到 300px 的团里，标签全糊。
     // 面积法：每节点应占约 1/1.6² 的均分面积，再开方得间距
     const area: number = this.width * this.height
-    const idealLength: number = Math.max(64, Math.min(200, Math.sqrt(area / n) * 1.55))
+    // 系数从 1.55 提到 1.85：节点变少（主干过滤）后按原系数会挤在一起，
+    // 拉开间距才读得出簇与簇的分界
+    const idealLength: number = Math.max(64, Math.min(230, Math.sqrt(area / n) * 1.85))
     const repulsion: number = idealLength * idealLength
     const damping: number = 0.82
     const centerPull: number = 0.012
