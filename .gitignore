@@ -77,7 +77,15 @@ docs-toolkit/*.batch.json.result.json
 submission/.work/
 
 # 演示 PPT 超过仓库单文件 5MB 限制，作为平台提交材料单独存放，不入库
-黄河图志 · 演示版V3.pptx
+黄河图志-演示PPT.pptx
 
 # 真机投屏的临时帧
 .shots/mirror/
+
+# 本地归档：PPT 历史版本与原始录像，体积大且可再生
+.work/归档/
+.work/录像原始/
+
+# 最终交付物：体积超仓库单文件限制，已上传提交平台，本地保留不入库
+submission/*.rar
+submission/黄河图志-演示视频.mp4
