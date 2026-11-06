@@ -146,7 +146,7 @@ export struct GraphPage {
       this.edgeCount = this.layout.edges.length
       this.layout.seed()
       // 默认聚焦：取权重最高的遗址作焦点。
-      // 80 条时全图约 700 节点，手机上读不动也拖不动；
+      // 全量语料下全图约 700 节点，手机上读不动也拖不动；
       // 聚焦子图（约 20 节点）才是移动端该给的默认视图。
       let best: number = -1
       let bestWeight: number = -1

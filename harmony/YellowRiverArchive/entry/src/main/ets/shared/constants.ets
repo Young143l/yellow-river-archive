@@ -12,25 +12,25 @@ export type City = '三门峡' | '洛阳' | '郑州' | '开封' | '濮阳'
 
 export const CITIES: City[] = ['三门峡', '洛阳', '郑州', '开封', '濮阳']
 
-/** 城市元信息：ID 前缀与档案配额（配额依据 ADR-014） */
+/**
+ * 城市元信息：ID 前缀。
+ *
+ * 实际条数以数据包 meta.json 的 itemCount 为准，不在代码里写死，
+ * 否则补录数据后界面分母会与库里的真实条数不一致。
+ */
 export interface CityMeta {
   readonly name: City
   /** 条目 ID 前缀，如 ly-erlitou */
   readonly idPrefix: string
-  /** 该市档案条数配额 */
-  readonly quota: number
 }
 
 export const CITY_META: CityMeta[] = [
-  { name: '洛阳', idPrefix: 'ly', quota: 20 },
-  { name: '郑州', idPrefix: 'zz', quota: 20 },
-  { name: '开封', idPrefix: 'kf', quota: 16 },
-  { name: '三门峡', idPrefix: 'sms', quota: 14 },
-  { name: '濮阳', idPrefix: 'py', quota: 10 },
+  { name: '洛阳', idPrefix: 'ly' },
+  { name: '郑州', idPrefix: 'zz' },
+  { name: '开封', idPrefix: 'kf' },
+  { name: '三门峡', idPrefix: 'sms' },
+  { name: '濮阳', idPrefix: 'py' },
 ]
-
-/** 档案总条数 */
-export const TOTAL_QUOTA: number = 80
 
 // ---------------------------------------------------------------------------
 // 时代

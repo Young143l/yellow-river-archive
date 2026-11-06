@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 
 import { buildChunks } from './chunk'
 import { generateCovers, fixImageCredit, type CoverReport } from './covers'
+import { fetchSources, type SourceReport } from './fetch-source'
 import { runEmbedding, type EmbedReport } from './embed'
 import { exportPreset } from './export'
 import { buildGraph } from './graph'
@@ -195,6 +196,30 @@ async function main(): Promise<void> {
     if (errorCount > 0) {
       process.exit(1)
     }
+    return
+  }
+
+  // sources 子命令：抓公开页面正文，落成来源摘录文件（起草门禁的输入）
+  if (command === 'sources') {
+    const onlyArg: string | undefined = process.argv.find((a) => a.startsWith('--id='))?.slice('--id='.length)
+    const limitArg: string | undefined = process.argv.find((a) => a.startsWith('--limit='))?.slice('--limit='.length)
+    const all: boolean = process.argv.includes('--all')
+    const reports: SourceReport[] = await fetchSources({
+      indexFile: SITES_INDEX,
+      sourcesDir: SOURCES_DIR,
+      // 默认只补缺口，已存在的摘录不覆盖（人工改过的内容比抓取结果贵）
+      onlyMissing: !all,
+      ...(onlyArg !== undefined ? { onlyId: onlyArg } : {}),
+      ...(limitArg !== undefined ? { limit: Number.parseInt(limitArg, 10) } : {}),
+    })
+    console.log('[sources] 来源摘录采集')
+    for (const r of reports) {
+      console.log(`  ${r.status === 'ok' ? 'OK  ' : r.status === 'thin' ? 'THIN' : 'FAIL'} ${r.id.padEnd(22, ' ')} ${r.message}`)
+    }
+    const ok: number = reports.filter((r) => r.status === 'ok').length
+    const thin: number = reports.filter((r) => r.status === 'thin').length
+    const fail: number = reports.filter((r) => r.status === 'fail').length
+    console.log(`[sources] 可用 ${ok}，偏薄待人工 ${thin}，未取到 ${fail}`)
     return
   }
 

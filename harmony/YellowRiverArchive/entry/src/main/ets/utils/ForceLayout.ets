@@ -154,7 +154,7 @@ export class ForceLayout {
     // ---- 斥力 ----
     // 节点数超阈值时用网格桶：斥力本就随距离平方衰减，远于 2 倍理想边长
     // 的节点对贡献可忽略。按截断半径分格，只扫自身与相邻 8 格。
-    // 80 条档案约 700 节点，朴素 O(n²) 实测约 80ms/帧（12fps，动画不可用）；
+    // 全量语料规模下约 700 节点，朴素 O(n²) 实测约 80ms/帧（12fps，动画不可用）；
     // 桶化后每节点只与常数个邻居交互，降到几毫秒级。
     const useBuckets: boolean = n > GRID_BUCKET_THRESHOLD
     const cutoff: number = idealLength * 2

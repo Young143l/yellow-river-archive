@@ -53,7 +53,7 @@ function typesFromPayload(item: HeritageItem): string[] {
 /**
  * 档案数据访问。
  *
- * 条目总数只有 80 条，因此一次性读进内存并缓存：筛选、检索都在内存里做，
+ * 条目总量为百条级，因此一次性读进内存并缓存：筛选、检索都在内存里做，
  * 比每次拼 SQL 更快也更简单。RDB 仍是持久化与离线存储的落点。
  */
 export class HeritageDao {

@@ -15,7 +15,8 @@
     "env:init": "tsx src/env-init.ts",
     "lint": "tsx src/index.ts lint",
     "draft": "tsx src/index.ts draft",
-    "covers": "tsx src/index.ts covers"
+    "covers": "tsx src/index.ts covers",
+    "sources": "tsx src/index.ts sources"
   },
   "dependencies": {
     "@yra/ai": "workspace:*",
