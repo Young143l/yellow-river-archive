@@ -63,7 +63,8 @@ sites:
     priority: P0
     status: 已核
     confidence: high
-
+    content: sites/ly-yanshi-shangcheng.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%81%83%E5%B8%88%E5%95%86%E5%9F%8E%E9%81%97%E5%9D%80
   - id: ly-hanwei-gucheng
     name: 汉魏洛阳故城
     city: 洛阳
@@ -76,7 +77,8 @@ sites:
     status: 已核
     confidence: high
     notes: 亦为世界遗产「丝绸之路」系列遗产点
-
+    content: sites/ly-hanwei-gucheng.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%B1%89%E9%AD%8F%E6%B4%9B%E9%98%B3%E6%95%85%E5%9F%8E
   - id: ly-suitang-cheng
     name: 隋唐洛阳城遗址
     city: 洛阳
@@ -88,7 +90,8 @@ sites:
     priority: P0
     status: 已核
     confidence: high
-
+    content: sites/ly-suitang-cheng.yaml
+    sourceUrl: https://baike.baidu.com/item/%E9%9A%8B%E5%94%90%E6%B4%9B%E9%98%B3%E5%9F%8E%E9%81%97%E5%9D%80
   - id: ly-longmen-shiku
     name: 龙门石窟
     city: 洛阳
@@ -114,7 +117,8 @@ sites:
     status: 已核
     confidence: high
     notes: 现存建筑多为元明清重建，时代按文化主体归类为汉唐
-
+    content: sites/ly-baima-si.yaml
+    sourceUrl: https://baike.baidu.com/item/%E7%99%BD%E9%A9%AC%E5%AF%BA
   - id: ly-mangshan-lingmuqun
     name: 邙山陵墓群
     city: 洛阳
@@ -189,7 +193,8 @@ sites:
     priority: P2
     status: 待核
     confidence: medium
-
+    content: sites/ly-huoluo-cang.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%9B%9E%E6%B4%9B%E4%BB%93%E9%81%97%E5%9D%80
   - id: ly-zhougong-miao
     name: 洛阳周公庙
     city: 洛阳
@@ -214,7 +219,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：是否作为白马寺国保范围的一部分；塔为金代重建
-
+    content: sites/ly-qiyun-ta.yaml
+    sourceUrl: https://baike.baidu.com/item/%E9%BD%90%E4%BA%91%E5%A1%94
   - id: ly-shan-shaan-huiguan
     name: 洛阳山陕会馆
     city: 洛阳
@@ -226,7 +232,8 @@ sites:
     priority: P2
     status: 待核
     confidence: medium
-
+    content: sites/ly-shan-shaan-huiguan.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%B4%9B%E9%98%B3%E5%B1%B1%E9%99%95%E4%BC%9A%E9%A6%86
   - id: ly-luze-huiguan
     name: 洛阳潞泽会馆
     city: 洛阳
@@ -263,7 +270,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别与窑址具体分布
-
+    content: sites/ly-huangye-yao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%96%B0%E5%AE%89%E7%AA%91%E5%9D%80
   - id: ly-he-nan-fu-wenmiao
     name: 河南府文庙
     city: 洛阳
@@ -275,7 +283,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/ly-he-nan-fu-wenmiao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%B2%B3%E5%8D%97%E5%BA%9C%E6%96%87%E5%BA%99
   - id: ly-yiyang-yao
     name: 宜阳窑址
     city: 洛阳
@@ -600,7 +609,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：国保批次；现存建筑多为清代重建，时代按文化主体归入宋
-
+    content: sites/kf-daxiangguo-si.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%A4%A7%E7%9B%B8%E5%9B%BD%E5%AF%BA/166309?fromModule=disambiguation
   - id: kf-zhouqiao
     name: 州桥遗址
     city: 开封
@@ -624,7 +634,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：是否含于北宋东京城遗址国保范围
-
+    content: sites/kf-xinzheng-men.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%96%B0%E9%83%91%E9%97%A8%E9%81%97%E5%9D%80
   - id: kf-bianhe
     name: 汴河遗址
     city: 开封
@@ -649,7 +660,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：批次；现存城墙主体为明清
-
+    content: sites/kf-chengqiang.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%BC%80%E5%B0%81%E5%9F%8E%E5%A2%99
   - id: kf-shanshangan-huiguan
     name: 山陕甘会馆
     city: 开封
@@ -673,7 +685,8 @@ sites:
     priority: P1
     status: 待核
     confidence: medium
-
+    content: sites/kf-yanqingguan.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%BB%B6%E5%BA%86%E8%A7%82
   - id: kf-longting
     name: 龙亭
     city: 开封
@@ -685,7 +698,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别；现存建筑为清代所建，其下叠压北宋皇宫遗址
-
+    content: sites/kf-longting.yaml
+    sourceUrl: https://baike.baidu.com/item/%E9%BE%99%E4%BA%AD
   - id: kf-yuwangtai
     name: 禹王台
     city: 开封
@@ -709,7 +723,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/kf-yuefei-miao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%9C%B1%E4%BB%99%E9%95%87%E5%B2%B3%E9%A3%9E%E5%BA%99
   - id: kf-zhenhe-tiexi
     name: 镇河铁犀
     city: 开封
@@ -733,7 +748,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/kf-fu-wenmiao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%BC%80%E5%B0%81%E5%BA%9C%E6%96%87%E5%BA%99
   - id: kf-dongdasi
     name: 开封东大寺
     city: 开封
@@ -789,7 +805,8 @@ sites:
     status: 已核
     confidence: high
     notes: 两周之际虢国贵族墓地，出土大量青铜器与玉器
-
+    content: sites/sms-guoguo-mudi.yaml
+    sourceUrl: https://baike.baidu.com/item/%E8%99%A2%E5%9B%BD%E5%A2%93%E5%9C%B0
   - id: sms-hanguan
     name: 函谷关
     city: 三门峡
@@ -802,7 +819,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：国保批次；指灵宝秦函谷关
-
+    content: sites/sms-hanguan.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%87%BD%E8%B0%B7%E5%85%B3
   - id: sms-xipo
     name: 西坡遗址
     city: 三门峡
@@ -815,7 +833,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 发现仰韶中期大型房址
-
+    content: sites/sms-xipo.yaml
+    sourceUrl: https://baike.baidu.com/item/%E8%A5%BF%E5%9D%A1%E9%81%97%E5%9D%80/8721449?fromModule=disambiguation
   - id: sms-xiaohan-gudao
     name: 崤函古道石壕段
     city: 三门峡
@@ -828,7 +847,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 待确认：是否随「丝绸之路」列入世界遗产点
-
+    content: sites/sms-xiaohan-gudao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%B4%A4%E5%87%BD%E5%8F%A4%E9%81%93%E7%9F%B3%E5%A3%95%E6%AE%B5
   - id: sms-baolunsi-ta
     name: 宝轮寺塔
     city: 三门峡
@@ -854,7 +874,8 @@ sites:
     status: 待核
     confidence: medium
     notes: 位于义马市
-
+    content: sites/sms-hongqing-si.yaml
+    sourceUrl: https://baike.baidu.com/item/%E9%B8%BF%E5%BA%86%E5%AF%BA%E7%9F%B3%E7%AA%9F
   - id: sms-shanzhou-gucheng
     name: 陕州故城
     city: 三门峡
@@ -901,7 +922,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/sms-lushi-chenghuang-miao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%8D%A2%E6%B0%8F%E5%9F%8E%E9%9A%8D%E5%BA%99
   - id: sms-qinzhao-tai
     name: 秦赵会盟台
     city: 三门峡
@@ -913,7 +935,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别；传为渑池之会故址，现存台址为后世重修
-
+    content: sites/sms-qinzhao-tai.yaml
+    sourceUrl: https://baike.baidu.com/item/%E7%A7%A6%E8%B5%B5%E4%BC%9A%E7%9B%9F%E5%8F%B0
   - id: sms-lingbao-wenmiao
     name: 灵宝文庙
     city: 三门峡
@@ -980,7 +1003,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别与批次
-
+    content: sites/py-weiguo-gucheng.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%8D%AB%E5%9B%BD%E6%95%85%E5%9F%8E/3313578?fromModule=disambiguation
   - id: py-xiaqiu
     name: 瑕丘遗址
     city: 濮阳
@@ -1002,7 +1026,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/py-kuaikui-tai.yaml
+    sourceUrl: https://baike.baidu.com/item/%E8%92%AF%E8%81%A9%E5%8F%B0%E9%81%97%E5%9D%80
   - id: py-cangjie-ling
     name: 仓颉陵
     city: 濮阳
@@ -1014,7 +1039,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别；传说性遗存，位于南乐县
-
+    content: sites/py-cangjie-ling.yaml
+    sourceUrl: https://baike.baidu.com/item/%E4%BB%93%E9%A2%89%E9%99%B5
   - id: py-nanle-wenmiao
     name: 南乐文庙
     city: 濮阳
@@ -1025,7 +1051,8 @@ sites:
     priority: P2
     status: 待核
     confidence: low
-
+    content: sites/py-nanle-wenmiao.yaml
+    sourceUrl: https://baike.baidu.com/item/%E5%8D%97%E4%B9%90%E6%96%87%E5%BA%99
   - id: py-puzhaosi
     name: 普照寺大雄宝殿
     city: 濮阳
@@ -1037,7 +1064,8 @@ sites:
     status: 待核
     confidence: low
     notes: 待确认：保护级别；位于清丰县
-
+    content: sites/py-puzhaosi.yaml
+    sourceUrl: https://baike.baidu.com/item/%E6%99%AE%E7%85%A7%E5%AF%BA%E5%A4%A7%E9%9B%84%E5%AE%9D%E6%AE%BF
   - id: py-chenghuang-miao
     name: 濮阳城隍庙
     city: 濮阳

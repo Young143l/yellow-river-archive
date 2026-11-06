@@ -1,14 +1,15 @@
 {
-  "dataVersion": "2026.11.6",
-  "contentHash": "9d053a3508fb38b8",
-  "generatedAt": "2026-11-06T07:17:07.469Z",
-  "itemCount": 5,
-  "chunkCount": 57,
-  "imageCount": 5,
-  "vocabSize": 1087,
+  "dataVersion": "2026.11.6-e34c7ce5",
+  "contentHash": "e34c7ce5b4583573",
+  "generatedAt": "2026-11-06T09:22:59.942Z",
+  "itemCount": 30,
+  "chunkCount": 302,
+  "imageCount": 30,
+  "vocabSize": 3864,
   "sourceDeclarations": [
     "中国大百科全书·考古学",
-    "国家文物局 · 全国重点文物保护单位名录"
+    "国家文物局 · 全国重点文物保护单位名录",
+    "百度百科"
   ],
   "pipelineVersion": "0.1.0"
 }

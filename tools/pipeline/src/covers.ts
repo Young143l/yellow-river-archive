@@ -101,34 +101,40 @@ function buildArgs(
   paperPath: string,
   outPath: string
 ): string[] {
-  const [main, deep] = eraColors(item.era)
-  const symbol: string = symbolFor(item)
-  const meta: string = `${item.era} · ${item.city} · ${item.level}`
+  const [main] = eraColors(item.era)
+  const meta: string = `${item.era}  ·  ${item.city}  ·  ${item.level}`
+  // 取名字里最有信息量的一字做淡墨大水印：避开「遗」「址」「寺」这类通名
+  const glyph: string = pickGlyph(item.name)
+  const vertical: string = item.name.split('').slice(0, 6).join('\n')
 
   return [
     '-background', '#F3EADB',
-    // 纸纹底：tile 后叠一层半透明纸色，压住纹理使文字可读
+    // 纸纹底 + 一层纸色压淡，保证字压得住
     '(', '-size', `${W}x${H}`, `tile:${paperPath}`, ')',
     '(', '-size', `${W}x${H}`, 'xc:#F3EADB', '-alpha', 'on',
-    '-channel', 'A', '-evaluate', 'set', '58%', '+channel', ')',
+    '-channel', 'A', '-evaluate', 'set', '72%', '+channel', ')',
     '-compose', 'over', '-composite',
-    // 时代色带：左侧竖条 + 底部淡染
-    '-draw', `fill '${main}' rectangle 0,0 26,${H}`,
-    '-draw', `fill '${main}' fill-opacity 0.14 rectangle 0,556,${W},${H}`,
-    // 类型线描符号
-    '-draw',
-    `stroke '${deep}' stroke-width 9 stroke-linecap round stroke-linejoin round fill none ` +
-      `translate 700,120 scale 1.25,1.25 path '${symbol}'`,
-    // 遗址名 + 元信息行
+    // 淡墨大字水印：右半边，几乎与纸同色，只作质感不抢字
     '-font', fontPath,
-    '-fill', INK, '-pointsize', String(nameSize(item.name)),
-    '-gravity', 'SouthWest', '-annotate', '+66+118', item.name,
-    '-fill', META, '-pointsize', '40',
-    '-gravity', 'SouthWest', '-annotate', '+70+56', meta,
-    // 朱砂章
-    '-draw', `fill '${SEAL_RED}' roundrectangle 920,592 1024,696 14,14`,
-    '-fill', SEAL_WHITE, '-pointsize', '64',
-    '-gravity', 'SouthEast', '-annotate', '+66+36', '河',
+    '-fill', `rgba(${hexToRgb(main)},0.085)`,
+    '-pointsize', '470',
+    '-gravity', 'Center', '-annotate', '+250+0', glyph,
+    // 左侧细致竖线：地方志里的界栏
+    '-draw', `stroke '${main}' stroke-width 2 stroke-opacity 0.30 line 86,96 86,624`,
+    '-draw', `fill 'rgba(176,58,46,0.85)' rectangle 0,0 8,${H}`,
+    // 竖排遗址名（朱砂）
+    '-fill', '#8E3B2E',
+    '-pointsize', '86',
+    '-interline-spacing', '18',
+    '-gravity', 'NorthWest', '-annotate', '+140+96', vertical,
+    // 元信息：留白多、字号小、字距松
+    '-fill', META, '-pointsize', '30',
+    '-gravity', 'SouthWest', '-annotate', '+140+64', meta,
+    // 朱砂小章（右下）
+    '-fill', 'rgba(176,58,46,0.92)',
+    '-draw', 'roundrectangle 946,596 1024,674 10,10',
+    '-fill', SEAL_WHITE, '-pointsize', '44',
+    '-gravity', 'SouthEast', '-annotate', '+86+42', '河',
     '-quality', '82', '-define', 'webp:method=6', outPath,
   ]
 }
@@ -179,3 +185,24 @@ export async function generateCovers(opts: {
 }
 
 export { fixImageCredit }
+
+/** 通名字表：水印避开通名，取真正指代这处遗址的那个字 */
+const GENERIC: string[] = ['遗', '址', '寺', '庙', '塔', '墓', '群', '故', '城', '窑', '关', '宫']
+
+function pickGlyph(name: string): string {
+  for (const ch of name) {
+    if (!GENERIC.includes(ch)) {
+      return ch
+    }
+  }
+  return name.slice(0, 1)
+}
+
+/** #RRGGBB → "r,g,b"，ImageMagick 的 rgba() 只吃分量 */
+function hexToRgb(hex: string): string {
+  const h: string = hex.replace('#', '')
+  const r: number = Number.parseInt(h.slice(0, 2), 16)
+  const g: number = Number.parseInt(h.slice(2, 4), 16)
+  const b: number = Number.parseInt(h.slice(4, 6), 16)
+  return `${r},${g},${b}`
+}

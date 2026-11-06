@@ -40,11 +40,19 @@ export interface ExportResult {
   readonly meta: PresetMeta
 }
 
-function todayVersion(now: Date): string {
+/**
+ * 端侧导入的幂等键。
+ *
+ * 必须带上内容哈希：端侧按 dataVersion 相等就跳过导入，
+ * 只写日期的话，同一天内改了内容再装包，手机上还是旧数据
+ * （实测：补到 30 条后真机仍显示「5 处遗址」）。
+ * 日期放前面便于人读，哈希前缀负责失效判定。
+ */
+function dataVersionOf(now: Date, contentHash: string): string {
   const y: number = now.getFullYear()
   const m: number = now.getMonth() + 1
   const d: number = now.getDate()
-  return `${y}.${m}.${d}`
+  return `${y}.${m}.${d}-${contentHash.slice(0, 8)}`
 }
 
 export async function exportPreset(input: ExportInput): Promise<ExportResult> {
@@ -61,7 +69,7 @@ export async function exportPreset(input: ExportInput): Promise<ExportResult> {
   }
 
   const meta: PresetMeta = {
-    dataVersion: todayVersion(now),
+    dataVersion: dataVersionOf(now, contentHash),
     contentHash,
     generatedAt: now.toISOString(),
     itemCount: input.items.length,
