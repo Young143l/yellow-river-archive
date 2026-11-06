@@ -7,6 +7,8 @@
  * 配套命令：pnpm data:sites
  */
 
+import { existsSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
 import { parse as parseYaml } from 'yaml'
@@ -81,7 +83,6 @@ export interface SitesReport {
 
 /** 生成体检报告；problems 非空表示需要处理 */
 export function reportSites(doc: SitesDoc, contentDir: string): SitesReport {
-  void contentDir
   const lines: string[] = []
   const problems: string[] = []
   const sites: SiteEntry[] = doc.sites
@@ -130,6 +131,31 @@ export function reportSites(doc: SitesDoc, contentDir: string): SitesReport {
       problems.push(`赛题点名类型不足：${t} 仅 ${count} 条（目标 ≥6）`)
     }
   }
+
+  /*
+   * 交付缺口：按**已入库正文**算，不按台账算。
+   *
+   * 原先这里只报「待撰写 N 条」，看不出还差多少才够交付线 ——
+   * 而 lint 的硬指标是六时代各 ≥8、五城各 ≥8、四类点名类型各 ≥6，
+   * 台账有 80 条但只写了 5 条的话，时间轴与地图上依然只有 5 个点。
+   */
+  const written: SiteEntry[] = sites.filter(
+    (s) => s.content !== undefined && existsSync(join(contentDir, basename(s.content)))
+  )
+  lines.push(`已写正文   ${written.length} / ${sites.length}`)
+  const wEra: Map<string, number> = tallyBy(written, (s) => s.era)
+  const wCity: Map<string, number> = tallyBy(written, (s) => s.city)
+  const gap = (label: string, map: Map<string, number>, keys: string[], floor: number): string => {
+    const short: string[] = keys.filter((k) => (map.get(k) ?? 0) < floor).map((k) => `${k} ${map.get(k) ?? 0}/${floor}`)
+    return short.length === 0 ? `${label} 全部达标（≥${floor}）` : `${label} 未达标：${short.join('  ｜  ')}`
+  }
+  lines.push(`  ${gap('时代', wEra, ['仰韶', '龙山', '夏商', '周', '汉唐', '宋'], 8)}`)
+  lines.push(`  ${gap('城市', wCity, Object.keys(doc.meta.allocation), 8)}`)
+  const wType: Map<string, number> = tallyBy(
+    written.flatMap((s) => s.types.map((x) => ({ ...s, _t: x } as SiteEntry & { _t: string }))),
+    (s) => (s as SiteEntry & { _t: string })._t
+  )
+  lines.push(`  ${gap('类型', wType, ['都城遗址', '墓葬群', '窑址', '古建筑'], 6)}`)
 
   // P0 批次
   const p0: SiteEntry[] = sites.filter((s) => s.priority === 'P0')

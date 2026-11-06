@@ -16,7 +16,9 @@
     "lint": "tsx src/index.ts lint",
     "draft": "tsx src/index.ts draft",
     "covers": "tsx src/index.ts covers",
-    "sources": "tsx src/index.ts sources"
+    "sources": "tsx src/index.ts sources",
+    "rewrite": "tsx src/index.ts rewrite",
+    "promote": "tsx src/index.ts promote"
   },
   "dependencies": {
     "@yra/ai": "workspace:*",

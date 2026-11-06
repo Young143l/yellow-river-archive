@@ -41,6 +41,85 @@ interface ChatCompletionResponse {
   readonly error?: { readonly message?: string }
 }
 
+/**
+ * 百炼（DashScope）生成 provider。
+ *
+ * 存在的理由很实际：DeepSeek 账户余额耗尽时（HTTP 402），
+ * 流水线不该整条停摆。百炼提供 OpenAI 兼容的 chat/completions，
+ * 换 baseUrl 与 model 即可，接口形状与 DeepSeek 一致。
+ * 默认用 qwen-plus —— 中文长文改写质量够，价格远低于 deepseek-chat。
+ */
+export class DashScopeLlm implements LlmProvider {
+  readonly model: string
+
+  private readonly apiKey: string
+  private readonly endpoint: string
+  private totalTokens: number = 0
+  private callCount: number = 0
+
+  constructor(env: AiEnv, model?: string) {
+    this.apiKey = env.dashscopeKey
+    this.model = model ?? env.dashscopeLlmModel
+    // 百炼的兼容模式路径是 /compatible-mode/v1
+    this.endpoint = `${env.dashscopeBaseUrl}/compatible-mode/v1/chat/completions`
+  }
+
+  get usage(): { readonly calls: number; readonly tokens: number } {
+    return { calls: this.callCount, tokens: this.totalTokens }
+  }
+
+  addTokens(n: number): void {
+    this.totalTokens += n
+  }
+
+  private headers(): Record<string, string> {
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` }
+  }
+
+  async complete(messages: readonly ChatMessage[], options?: ChatOptions): Promise<string> {
+    const body: Record<string, unknown> = {
+      model: this.model,
+      messages,
+      temperature: options?.temperature ?? 0.3,
+      max_tokens: options?.maxTokens ?? 4096,
+      stream: false,
+    }
+    if (options?.jsonMode === true) {
+      body.response_format = { type: 'json_object' }
+    }
+    const response: Response = await fetch(this.endpoint, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 120_000),
+    })
+    if (!response.ok) {
+      const text: string = await response.text()
+      throw new Error(`生成请求失败 HTTP ${response.status}：${text.slice(0, 300)}`)
+    }
+    const parsed = (await response.json()) as ChatCompletionResponse
+    const content: string | undefined = parsed.choices?.[0]?.message?.content
+    if (content === undefined) {
+      throw new Error('生成接口没有返回内容')
+    }
+    this.callCount += 1
+    this.totalTokens += parsed.usage?.total_tokens ?? 0
+    return content
+  }
+
+  async stream(
+    messages: readonly ChatMessage[],
+    options?: ChatOptions
+  ): Promise<AsyncIterable<string>> {
+    // 改写是一次性取全文，不需要流式；这里复用 complete 包一层，
+    // 保持接口完整（服务端问答仍走 DeepSeek 的流式实现）
+    const full: string = await this.complete(messages, options)
+    return (async function* (): AsyncIterable<string> {
+      yield full
+    })()
+  }
+}
+
 export class DeepSeekLlm implements LlmProvider {
   readonly model: string
 

@@ -28,6 +28,7 @@ export function loadEnv(): void {
 export interface AiEnv {
   readonly dashscopeKey: string
   readonly dashscopeBaseUrl: string
+  readonly dashscopeLlmModel: string
   readonly embeddingModel: string
   readonly embeddingDim: number
   readonly rerankModel: string
@@ -68,6 +69,7 @@ export function readEnv(allowMissing: boolean = false): AiEnv {
   return {
     dashscopeKey: require_('DASHSCOPE_API_KEY', allowMissing),
     dashscopeBaseUrl: optional('DASHSCOPE_BASE_URL', 'https://dashscope.aliyuncs.com'),
+    dashscopeLlmModel: optional('DASHSCOPE_LLM_MODEL', 'qwen-plus'),
     embeddingModel: optional('EMBEDDING_MODEL', 'text-embedding-v4'),
     embeddingDim: Number.parseInt(optional('EMBEDDING_DIM', '1024'), 10),
     rerankModel: optional('RERANK_MODEL', 'gte-rerank-v2'),

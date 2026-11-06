@@ -28,7 +28,9 @@
     "sync:conflict": "pnpm --filter @yra/server run sync:conflict",
     "server:dev": "pnpm --filter @yra/server run dev",
     "data:covers": "pnpm --filter @yra/pipeline run covers",
-    "data:sources": "pnpm --filter @yra/pipeline run sources"
+    "data:sources": "pnpm --filter @yra/pipeline run sources",
+    "data:rewrite": "pnpm --filter @yra/pipeline run rewrite",
+    "data:promote": "pnpm --filter @yra/pipeline run promote"
   },
   "devDependencies": {
     "@types/node": "26.6.4",

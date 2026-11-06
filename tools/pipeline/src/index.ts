@@ -14,6 +14,8 @@ import { fileURLToPath } from 'node:url'
 import { buildChunks } from './chunk'
 import { generateCovers, fixImageCredit, type CoverReport } from './covers'
 import { fetchSources, type SourceReport } from './fetch-source'
+import { promoteAll, type PromoteReport } from './promote'
+import { rewriteAll, type RewriteReport } from './rewrite'
 import { runEmbedding, type EmbedReport } from './embed'
 import { exportPreset } from './export'
 import { buildGraph } from './graph'
@@ -56,6 +58,8 @@ const RAWFILE_DIR: string = join(
 const FONT: string = join(RAWFILE_DIR, 'fonts', 'NotoSerifSC-SemiBold.ttf')
 const PAPER: string = join(RAWFILE_DIR, 'img', 'paper.webp')
 const IMG_DIR: string = join(RAWFILE_DIR, 'img')
+const READY_DIR: string = join(REPO_ROOT, 'packages', 'data', 'ready')
+const PROVENANCE_FILE: string = join(REPO_ROOT, 'packages', 'data', 'provenance.json')
 
 /** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
 const VOCAB_TOP_N: number = 12000
@@ -196,6 +200,40 @@ async function main(): Promise<void> {
     if (errorCount > 0) {
       process.exit(1)
     }
+    return
+  }
+
+  // promote 子命令：把改写通过的条目装配成 sites/<id>.yaml
+  if (command === 'promote') {
+    const reports: PromoteReport[] = await promoteAll({
+      readyDir: READY_DIR,
+      sourcesDir: SOURCES_DIR,
+      sitesDir: SITES_DIR,
+      indexFile: SITES_INDEX,
+      provenanceFile: PROVENANCE_FILE,
+    })
+    console.log('[promote] 条目装配入库')
+    for (const r of reports) {
+      console.log(`  ${r.ok ? 'OK  ' : 'SKIP'} ${r.id.padEnd(24, ' ')} ${r.message}`)
+    }
+    const ok = reports.filter((r) => r.ok).length
+    console.log(`[promote] 入库 ${ok} 条，跳过 ${reports.length - ok} 条`)
+    return
+  }
+
+  // rewrite 子命令：把贴源草稿改写成自己的话，机器验收 15 字重合
+  if (command === 'rewrite') {
+    const limitArg: string | undefined = process.argv.find((a) => a.startsWith('--limit='))?.slice('--limit='.length)
+    const reports: RewriteReport[] = await rewriteAll({
+      draftsDir: DRAFTS_DIR,
+      sourcesDir: SOURCES_DIR,
+      outDir: READY_DIR,
+      onlyMissing: !process.argv.includes('--redo'),
+      ...(limitArg !== undefined ? { limit: Number.parseInt(limitArg, 10) } : {}),
+    })
+    const ok: number = reports.filter((r) => r.ok).length
+    console.log(`[rewrite] 通过 ${ok}/${reports.length}，未过退回人工 ${reports.length - ok}`)
+    console.log(`[rewrite] 产物 -> ${READY_DIR.replace(REPO_ROOT + '/', '')}`)
     return
   }
 

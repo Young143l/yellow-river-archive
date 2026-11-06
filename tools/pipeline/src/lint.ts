@@ -19,7 +19,7 @@ import { join } from 'node:path'
 import type { HeritageItem, VocabEntry, Chunk } from '@yra/shared'
 
 /** n-gram 长度：连续重合超过这个字数即判为抄袭风险 */
-const NGRAM_SIZE: number = 15
+export const NGRAM_SIZE: number = 15
 
 /** 各字段的推荐字数区间（与 Zod 的硬边界不同，这里更严，仅提醒） */
 const RECOMMENDED: Record<string, { min: number; max: number }> = {
