@@ -1,0 +1,45 @@
+@startuml
+' 图 2-1 系统组件图（构建期加工链在正文说明，不入图，避免跨包连线）
+!include style.iuml
+skinparam componentStyle rectangle
+
+package "«subsystem» 端侧应用（开源鸿蒙 · ArkTS）" {
+  component "界面\n首页 · 检索 · 图谱 · 助手 · 我的" as UI
+  component "检索服务" as SRCH
+  component "问答客户端" as QA
+  component "推荐引擎" as REC
+  component "同步服务" as SYNC
+  component "数据访问\nRDB · FTS5" as DAO
+  component "分布式 KV\n软总线" as KV
+}
+
+package "«subsystem» 云侧服务（Node.js）" {
+  component "接口入口\nHTTP / WebSocket" as API
+  component "检索服务" as CSEA
+  component "问答服务" as CQA
+  component "同步服务" as CSYN
+  component "账号服务" as CACC
+  database "SQLite\n档案 · 索引 · 个人数据" as DB
+}
+
+UI --> SRCH
+UI --> QA
+UI --> REC
+UI --> SYNC
+SRCH --> DAO
+QA --> DAO
+REC --> DAO
+SYNC --> DAO
+SYNC --> KV
+
+API --> CSEA
+API --> CQA
+API --> CSYN
+API --> CACC
+CSEA --> DB
+CQA --> DB
+CSYN --> DB
+CACC --> DB
+
+QA ..> API : «use» HTTPS / WSS
+@enduml

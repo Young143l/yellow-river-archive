@@ -1,0 +1,21 @@
+@startuml
+' 图 6-1 检索活动图
+!include style.iuml
+
+start
+:接收查询;
+:分词与别名扩展\n（领域词典 1087 词）;
+if (云端可用？) then (是)
+  fork
+    :关键词召回\nBM25;
+  fork again
+    :语义向量召回;
+  end fork
+  :RRF 融合 k = 60;
+  :精排与片段抽取;
+else (否)
+  :端侧关键词检索\nFTS5 · BM25;
+endif
+:结果列表渲染;
+stop
+@enduml

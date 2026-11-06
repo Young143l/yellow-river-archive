@@ -1,0 +1,81 @@
+@startuml
+' 图 4-1 数据模型类图
+!include style.iuml
+hide circle
+skinparam classAttributeIconSize 0
+
+class "档案条目 items" as Item <<table>> {
+  id : TEXT  «PK»
+  name / city / era / types
+  eraRange / level / geo
+  summary : TEXT
+  intro · archaeology · events
+  poems · travel · artifacts
+}
+
+class "文本块 chunks" as Chunk <<table>> {
+  id : TEXT  «PK»
+  itemId : TEXT  «FK»
+  text : TEXT
+  tokens : TEXT
+}
+
+class "图谱节点 nodes" as Node <<table>> {
+  id : TEXT  «PK»
+  type / label
+  weight : REAL
+  cluster : INTEGER
+}
+
+class "图谱关系 edges" as Edge <<table>> {
+  src : TEXT  «FK»
+  dst : TEXT  «FK»
+  kind : TEXT
+  weight : REAL
+}
+
+class "收藏 favorites" as Fav <<table>> {
+  id : TEXT  «PK» 目标确定性标识
+  targetType : TEXT
+  updatedAt : INTEGER
+  deleted : INTEGER
+}
+
+class "笔记 notes" as Note <<table>> {
+  id : TEXT  «PK»
+  itemId / section  «FK»
+  body : TEXT
+  updatedAt / deleted
+}
+
+class "浏览 visits" as Visit <<table>> {
+  itemId : TEXT  «FK»
+  sections : TEXT
+  ts : INTEGER
+}
+
+class "同步游标 sync_meta" as Meta <<table>> {
+  userId : TEXT
+  accountName : TEXT
+  pushCursor / pullCursor
+}
+
+class "账号 accounts（云侧）" as Acct <<table>> {
+  username : TEXT  «UK NOCASE»
+  salt / pwdHash
+  userId : TEXT  稳定标识
+}
+
+Item "1" --> "0..*" Chunk : 切分
+Item "1" --> "1" Node : 映射为节点
+Node "1" --> "0..*" Edge : 端点
+Item "1" <-- "0..*" Fav : 被收藏
+Item "1" <-- "0..*" Note : 被锚定
+Item "1" <-- "0..*" Visit : 被记录
+Acct "1" --> "0..*" Meta : 持有
+
+note bottom of Meta
+个人数据表均带 updatedAt 与 deleted；
+deleted 为软删标记，用于跨设备收敛
+end note
+@enduml

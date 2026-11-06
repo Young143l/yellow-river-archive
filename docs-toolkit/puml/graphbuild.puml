@@ -1,0 +1,20 @@
+@startuml
+' 图 6-4 图谱构建活动图
+!include style.iuml
+
+start
+:抽取六类实体节点\n遗址 · 文物 · 事件 · 人物 · 诗词 · 博物馆;
+:建立硬关系边\n出土于 · 藏于 · 参与 · 创作;
+repeat
+  :应用四条跨遗址规则\n同时代 / 同城市 / 同类型 / 相距 ≤130 km;
+  if (邻居数超上限？) then (是)
+    :裁剪至最近 3 个邻居;
+  else (否)
+  endif
+repeat while (仍有规则未处理？) is (是)
+->否;
+:PageRank 定枢纽\n标签传播聚簇并按簇配色;
+:力导向布局预计算;
+:输出 graph.json 随包下发;
+stop
+@enduml

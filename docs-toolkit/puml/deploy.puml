@@ -1,0 +1,27 @@
+@startuml
+' 图 2-2 部署图（两台同构设备合为一个节点标注，避免自动布局把对等节点排成上下级）
+!include style.iuml
+
+node "«device»\n开源鸿蒙设备 ×2（同一信任环）" as D {
+  artifact "黄河图志.hap" as HAP
+  artifact "应用进程 · RDB · FTS5 · 分布式 KV" as EE
+}
+
+node "«device»\n云侧服务器" as SRV {
+  frame "«execution environment»\nopenresty\nTLS 终止 · WS 升级" as NG
+  frame "«execution environment»\nNode.js 进程\n检索 · 问答 · 同步 · 账号" as ND
+  database "«artifact»\nSQLite 文件库" as DB
+}
+
+node "«device»\n外部模型服务" as AI {
+  frame "«execution environment»\n嵌入 · 生成 · 精排" as AIE
+}
+
+D -- SRV : «HTTPS / WSS»
+SRV -- AI : «HTTPS»
+
+note bottom of D
+两台设备之间另有一条 «软总线» 通信路径：
+同一信任环内直接对拷，不经过服务器
+end note
+@enduml

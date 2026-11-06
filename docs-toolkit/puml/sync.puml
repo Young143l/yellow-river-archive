@@ -1,0 +1,38 @@
+@startuml
+' 图 6-3 双设备同步时序图
+!include style.iuml
+
+participant "«part»\n设备 A" as A
+participant "«part»\n云同步服务" as S
+participant "«part»\n云端数据库" as DB
+participant "«part»\n设备 B" as B
+
+A -> S : 登录（用户名 + 口令）
+activate S
+S -> DB : 校验口令摘要
+activate DB
+DB --> S : 稳定用户标识
+deactivate DB
+S --> A : 登录成功
+deactivate S
+
+A -> S : 推送变更\n（本机时间戳游标之后）
+activate S
+S -> DB : 按 updatedAt 后写覆盖
+activate DB
+alt 更新时间较新
+  DB --> S : 覆盖并留痕
+else 较旧
+  DB --> S : 丢弃并记录冲突
+end
+deactivate DB
+S --> A : 游标推进
+deactivate S
+
+B -> S : 拉取增量\n（服务端序号游标之后）
+activate S
+S --> B : 增量与软删标记
+deactivate S
+
+A -> B : 近场直连对拷\n（不经服务器）
+@enduml

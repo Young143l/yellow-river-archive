@@ -1,0 +1,65 @@
+' 黄河图志 · 插图统一风格（黑白，GB/T 8567 体例）
+' 目标：与既有插图观感一致——白底、黑细线、直角框、黑底白字表名条、宋体
+' 不用 monochrome：它会把「黑底白字」的表名条反转成白底黑字；
+' 配色改由下面各 skinparam 显式指定 black/white，同样保证无彩色。
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam defaultFontName "Songti SC"
+skinparam defaultFontSize 18
+skinparam dpi 150
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam ArrowColor black
+skinparam ArrowThickness 1.2
+skinparam ArrowFontSize 15
+skinparam componentStyle rectangle
+skinparam note {
+  BackgroundColor white
+  BorderColor black
+  FontSize 15
+}
+skinparam class {
+  BackgroundColor white
+  BorderColor black
+  HeaderFontSize 18
+  AttributeFontColor black
+  AttributeFontSize 15
+  BorderThickness 1.2
+}
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+  FontSize 17
+}
+skinparam package {
+  BackgroundColor white
+  BorderColor black
+  FontSize 17
+  FontStyle Bold
+}
+skinparam actor {
+  BackgroundColor white
+  BorderColor black
+  FontSize 16
+}
+skinparam usecase {
+  BackgroundColor white
+  BorderColor black
+  FontSize 16
+}
+skinparam sequence {
+  LifeLineBorderColor black
+  LifeLineBackgroundColor white
+  ParticipantBackgroundColor white
+  ParticipantBorderColor black
+  ParticipantFontSize 17
+  ArrowFontSize 15
+}
+skinparam activity {
+  BackgroundColor white
+  BorderColor black
+  FontSize 17
+  DiamondBackgroundColor white
+  DiamondBorderColor black
+  DiamondFontSize 16
+}

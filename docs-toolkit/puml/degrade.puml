@@ -1,0 +1,22 @@
+@startuml
+' 图 6-2 问答四级降级活动图
+!include style.iuml
+
+start
+:接收提问\n并做本地检索;
+if (云端检索可用？) then (是)
+  :检索增强生成\n带编号引用;
+else (否)
+  if (图谱数据可用？) then (是)
+    :图谱增强回答;
+  else (否)
+    if (模型密钥可用？) then (是)
+      :抽取式回答\n不调用模型;
+    else (否)
+      :端侧本地检索兜底\n标注云端不可用;
+    endif
+  endif
+endif
+:输出答案与引用;
+stop
+@enduml

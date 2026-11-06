@@ -65,3 +65,16 @@ coverage/
 
 # 服务端运行数据（SQLite 与个人数据存储）
 apps/server/data/
+
+# playwright-cli 的会话产物（快照与控制台日志，不入库）
+.playwright-cli/
+
+# 文档生成脚手架（officecli batch 输入与结果，可重建）
+docs-toolkit/*.batch.json
+docs-toolkit/*.batch.json.result.json
+
+# 文档生成的临时产物（WPS 转 PDF 与逐页截图，可重建）
+submission/.work/
+
+# 演示 PPT 超过仓库单文件 5MB 限制，作为平台提交材料单独存放，不入库
+黄河图志 · 演示版V3.pptx

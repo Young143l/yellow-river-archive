@@ -1,0 +1,28 @@
+@startuml
+' 图 3-1 用例图（只画参与者与用例的关联；«include» 等包含关系移到图下说明，
+' 因为自动布局会把被包含的用例拉离主簇，导致关联线绕行）
+!include style.iuml
+left to right direction
+
+actor "沿河文化爱好者" as A1
+actor "文史研究者" as A2
+actor "学生 / 教师" as A3
+
+rectangle "«subsystem» 黄河图志（端侧应用）" {
+  usecase "浏览档案长卷" as U1
+  usecase "检索档案" as U2
+  usecase "查看遗址详情" as U3
+  usecase "收藏与撰写笔记" as U4
+  usecase "查看知识图谱" as U5
+  usecase "向助手提问" as U6
+  usecase "跨设备同步" as U7
+}
+
+A1 --> U1
+A1 --> U2
+A1 --> U3
+A2 --> U4
+A2 --> U5
+A2 --> U6
+A3 --> U7
+@enduml
