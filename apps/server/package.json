@@ -9,7 +9,8 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "sync:test": "tsx src/sync/two-device-test.ts",
-    "sync:conflict": "tsx src/sync/conflict-seed.ts"
+    "sync:conflict": "tsx src/sync/conflict-seed.ts",
+    "cleanup": "tsx src/db/cleanup.ts"
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.3",

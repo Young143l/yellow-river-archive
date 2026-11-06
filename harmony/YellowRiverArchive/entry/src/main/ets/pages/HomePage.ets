@@ -102,6 +102,10 @@ export struct HomePage {
    */
   private readonly BG_W: number = 228
   private readonly BG_H: number = 507
+  /** 卷首长图铺满高度：1080x6000 的 1/3 = 360x2000vp */
+  private readonly BG_HEAD_H: number = 2000
+  /** 过渡带高度（一次性，不是 tile） */
+  private readonly BG_FADE_H: number = 160
   /** 水纹画布宽度：与河道可见宽度一致 */
   private readonly RIVER_W: number = 114
   /** 正文起始位置：河岸 114 + 8px 呼吸 */
@@ -135,7 +139,10 @@ export struct HomePage {
     this.loadPicks()
   }
 
+  private t0: number = 0 // TEMP 性能探针
+
   aboutToAppear(): void {
+    this.t0 = Date.now() // TEMP 性能探针
     this.load()
     this.loadPicks()
   }
@@ -305,22 +312,42 @@ export struct HomePage {
   }
 
   /**
-   * 背景图路径。
+   * 背景分层：卷首水墨长图 + 过渡带 + 淡纹平铺。
    *
-   * 5 张原稿在构建期就被**离屏合成为一张 684×6000 的长图**
-   * （上下各 400px 大幅淡入淡出衔接），运行时只显示这一张。
+   * 为什么必须分三段：river-bg（1080x6000）等比铺满只有 2000vp，5 条刚好；
+   * 80 条内容约 19000vp，单张长图（1080x57000）解码要 250MB 内存，不可行。
+   * 超出段改用 480vp 的周期 tile 竖向平铺（objectRepeat），解码仅 6MB。
    *
-   * 为什么不在 ArkUI 里拼接：曾经试过 11vp 的交叉溶解，接缝处仍有一条
-   * 肉眼可见的横向雾带 —— 短距离的溶解盖不住两图河道位置的错位。
-   * 把合成放到离屏、把过渡拉到 400px，才能把错位真正抹平。
+   * 过渡带抹掉长图与 tile 的硬切：两端颜色在生成期就已对齐
+   * （见 tools/gen-home-bg.sh：tile 顶行==底行、fade 两端分别等于卷首末行与 tile 顶行）。
+   * tile 取深水段后与纸色 65/35 混成淡纹 —— 卷首已经有完整河道，
+   * 长尾只需要「河还在」的暗示，太浓会抢正文。
    *
-   * 1080×6000 全屏宽（左 684px 是河 + 纸，右 396px 用镜像纸面续上）。
-   * 为什么要续到全宽：只铺 228vp 时，右侧 App 底色（#F2EDE0）与图片纸色
-   * （#F4EADB）差了几个色阶，交界处能看出一条竖线。铺满就没有边界了。
-   * 数据增长后需要重新合成一张更高的。
+   * 用 .background() 而不是 Stack 兄弟节点：背景节点由宿主尺寸决定，
+   * 不会反过来把滚动区撑高（独立 Image 写死高度会多出空白，实测过）。
    */
-  private backgroundSource(): string {
-    return 'img/river-bg.webp'
+  @Builder
+  bgLayers() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Image($rawfile('img/river-bg.webp'))
+        .width('100%')
+        .height(this.BG_HEAD_H)
+        .objectFit(ImageFit.Fill)
+      Image($rawfile('img/river-fade.webp'))
+        .width('100%')
+        .height(this.BG_FADE_H)
+        .offset({ y: this.BG_HEAD_H })
+        .objectFit(ImageFit.Fill)
+      Image($rawfile('img/river-tile.webp'))
+        .width('100%')
+        .height('100%')
+        .offset({ y: this.BG_HEAD_H + this.BG_FADE_H })
+        .objectFit(ImageFit.Contain)
+        .objectRepeat(ImageRepeat.Y)
+    }
+    .width('100%')
+    .height('100%')
+    .clip(true)
   }
 
   /** 水纹叠层：只有白色短弧，透明底，覆盖在背景图之上 */
@@ -587,6 +614,9 @@ export struct HomePage {
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 44, bottom: 30 })
+    .onAppear(() => {
+      console.info(`yraDiag: homeTree ${Date.now() - this.t0}ms items=${this.total}`) // TEMP
+    })
   }
 
   // ---------------------------------------------------------------- 视图
@@ -659,14 +689,9 @@ export struct HomePage {
               bottom: 8,
             })
             .width('100%')
-            // 背景用 backgroundImage 而不是独立的 Image 组件：
-            // 独立 Image 的 height('100%') 在 Stack 里会被解析成**视口高度**，
-            // 只盖住第一屏（用户反馈「往下滑就没有背景了」）；
-            // 写死估算高度又会把 Stack 撑高，多出一段空白滚动。
-            // 挂在正文列上，高度天然等于内容高度，两边都对。
-            .backgroundImage($rawfile(this.backgroundSource()))
-            .backgroundImageSize(ImageSize.Cover)
-            .backgroundImagePosition(Alignment.Top)
+            // 背景走 .background()：背景节点尺寸等于宿主列尺寸，
+            // 既不撑高滚动区，也不需要估算高度
+            .background(this.bgLayers())
             // 水纹叠层走 overlay：它不影响布局尺寸，
             // 若作为 Stack 的兄弟节点并给固定高度，又会把 Stack 撑高
             .overlay(this.rippleLayer(), { align: Alignment.TopStart })

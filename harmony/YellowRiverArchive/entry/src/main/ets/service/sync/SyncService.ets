@@ -95,6 +95,9 @@ export class SyncService {
   private static distributed: DistributedSync | undefined = undefined
   private static cloud: CloudSync | undefined = undefined
   private static listener: ChangeListener | undefined = undefined
+  /** 进度回调列表（页面注册，cloud 建立后再串接） */
+  private static progressHandlers: ((p: SyncProgressView) => void)[] = []
+  private static progressBound: boolean = false
 
   /** 初始化两个通道（幂等）。任一失败都不抛异常 —— 另一个仍可用 */
   static async init(context: common.Context): Promise<void> {
@@ -108,6 +111,8 @@ export class SyncService {
       if (SyncService.listener !== undefined) {
         SyncService.cloud.subscribe(SyncService.listener)
       }
+      // 页面可能在 init 之前就注册了进度回调，这里补一次串接
+      SyncService.bindProgress()
     }
     try {
       await SyncService.distributed.init(context)
@@ -208,14 +213,34 @@ export class SyncService {
     }
   }
 
-  /** 注册同步进度回调（同步中心页画进度条用） */
+  /**
+   * 注册同步进度回调（同步中心页画进度条用）。
+   *
+   * 改成列表缓存而不是直接挂到 cloud 上：原先 `cloud === undefined` 时
+   * 直接丢弃 handler，而页面是在首次同步（才建立 cloud）之前就注册的，
+   * 进度条永远收不到事件。现在先存下来，cloud 建立后再串接。
+   */
   static onProgress(handler: (progress: SyncProgressView) => void): void {
-    const cloud: CloudSync | undefined = SyncService.cloud
-    if (cloud !== undefined) {
-      cloud.onProgress((done: number, total: number, direction: string) => {
-        handler({ done, total, direction })
-      })
+    SyncService.progressHandlers.push(handler)
+    SyncService.bindProgress()
+  }
+
+  /** 把本机的阶段进度广播给 UI（写入本机阶段由 sync() 发） */
+  private static emitProgress(done: number, total: number, direction: string): void {
+    for (const handler of SyncService.progressHandlers) {
+      handler({ done, total, direction })
     }
+  }
+
+  private static bindProgress(): void {
+    const cloud: CloudSync | undefined = SyncService.cloud
+    if (cloud === undefined || SyncService.progressBound) {
+      return
+    }
+    SyncService.progressBound = true
+    cloud.onProgress((done: number, total: number, direction: string) => {
+      SyncService.emitProgress(done, total, direction)
+    })
   }
 
   /** 最近的冲突记录（同步中心展示「双方版本、时间戳、最终采用哪一方」） */
@@ -325,7 +350,9 @@ export class SyncService {
     let applied: number = 0
     let conflicts: ConflictRecord[] = []
     if (pulled.length > 0) {
-      const report = await PersonalDao.applyRemote(context, pulled)
+      const report = await PersonalDao.applyRemote(context, pulled, (done: number, total: number) => {
+        SyncService.emitProgress(done, total, '正在写入本机')
+      })
       applied = report.applied
       conflicts = report.conflicts
     }

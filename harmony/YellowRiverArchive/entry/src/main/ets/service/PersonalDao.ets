@@ -603,12 +603,27 @@ export class PersonalDao {
    * 冲突判定：本地更新 → 本地赢（记冲突日志，不改数据）
    *          远端更新 → 远端赢（覆盖本地）
    *          时间相同 → deviceId 字典序大者赢（两端规则一致，保证收敛）
+   *
+   * onProgress 每 20 条回调一次：进度条在「写入本机」阶段也要动。
+   * 之前这一段是静默的，服务端只发了两帧（0/1 与 1/1），
+   * 条子从「正在从云端取回」直接跳到完成，看不出在干活。
    */
-  static async applyRemote(context: common.Context, sets: ChangeSet[]): Promise<ApplyReport> {
+  static async applyRemote(
+    context: common.Context,
+    sets: ChangeSet[],
+    onProgress?: (done: number, total: number) => void
+  ): Promise<ApplyReport> {
     const store: relationalStore.RdbStore = await DataImportService.open(context)
     let applied: number = 0
     let skipped: number = 0
     const conflicts: ConflictRecord[] = []
+
+    let total: number = 0
+    for (const set of sets) {
+      total += set.records.length
+    }
+    let done: number = 0
+    const BATCH: number = 20
 
     for (const set of sets) {
       for (const record of set.records) {
@@ -633,16 +648,28 @@ export class PersonalDao {
           conflicts.push(conflict)
           await PersonalDao.logConflict(store, conflict)
           skipped += 1
+          done += 1
+          if (onProgress !== undefined && done % BATCH === 0) {
+            onProgress(done, total)
+          }
           continue
         }
 
         if (local !== undefined && isSameVersion(local, remote)) {
           skipped += 1
+          done += 1
+          if (onProgress !== undefined && done % BATCH === 0) {
+            onProgress(done, total)
+          }
           continue
         }
 
         if (local !== undefined && !remoteWins(local, remote)) {
           skipped += 1
+          done += 1
+          if (onProgress !== undefined && done % BATCH === 0) {
+            onProgress(done, total)
+          }
           continue
         }
 
@@ -661,7 +688,16 @@ export class PersonalDao {
           await PersonalDao.logConflict(store, conflict)
         }
         await PersonalDao.writeRemote(store, set.table, record)
-        applied += 1      }
+        applied += 1
+        done += 1
+        if (onProgress !== undefined && done % BATCH === 0) {
+          onProgress(done, total)
+        }
+      }
+    }
+
+    if (onProgress !== undefined && total > 0) {
+      onProgress(total, total)
     }
 
     return { applied, skipped, conflicts }

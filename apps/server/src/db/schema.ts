@@ -126,17 +126,6 @@ export const SCHEMA_STATEMENTS: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_conflicts_user ON sync_conflicts(user_id, detected_at)`,
 
-  // ---- 身份配对（D4-8 兜底路径）----
-  // 零依赖的路演方案：设备 A 生成 6 位码，设备 B 输入即绑定同一身份。
-  // 不依赖华为账号与 AGC 配置，现场 30 秒可演示。
-  `CREATE TABLE IF NOT EXISTS pairing_codes (
-    code TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    expires_at INTEGER NOT NULL,
-    used_by TEXT,
-    used_at INTEGER
-  )`,
   // ---- 云端快照（备份点）----
   // 存在理由：同步只保证「最新状态一致」，不保证「能回到过去」。
   // 一次误删若已被同步到所有设备，没有快照就真的找不回来了。

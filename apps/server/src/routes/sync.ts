@@ -28,7 +28,7 @@ import type { WebSocket } from 'ws'
 
 import type { Db } from '../db/index'
 import { createSnapshot, deleteSnapshot, listSnapshots, readSnapshotForRestore, snapshotStats } from '../sync/backup'
-import { listDevices, touchDevice } from '../sync/pairing'
+import { listDevices, touchDevice } from '../sync/devices'
 import { isAccountUser } from '../auth/store'
 import { applyPull, applyPush, currentCursor, userStats } from '../sync/store'
 

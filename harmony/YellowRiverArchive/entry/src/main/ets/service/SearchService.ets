@@ -45,6 +45,16 @@ interface ChunkRow {
 export class SearchService {
   private static chunks: ChunkRow[] | undefined = undefined
   private static tokenizer: TextTokenizer | undefined = undefined
+  /**
+   * 词的文档频率（出现在多少个片段里）。
+   *
+   * 为什么要这个：原先打分是 tokenHits * 22，不管词多常见都同权。
+   * 「黄河」几乎每条正文都有，80 条时会把全部条目以同分顶上来，
+   * 排序等于随机；而「绿松石」只在一两处出现，才是真正区分性的信号。
+   * 这就是 ADR-037 里没做完的那半句：兑底要过滤弱命中。
+   */
+  private static df: Map<string, number> = new Map<string, number>()
+  private static docCount: number = 0
 
   /** 预热：加载片段与词表（幂等） */
   static async ready(context: common.Context): Promise<void> {
@@ -81,6 +91,26 @@ export class SearchService {
     }
     rs.close()
     SearchService.chunks = loaded
+
+    // 文档频率：每个片段的同词只计一次（df 是「多少篇里有」，不是「出现多少次」）
+    const df: Map<string, number> = new Map<string, number>()
+    for (const chunk of loaded) {
+      const seen: Set<string> = new Set<string>(chunk.tokens)
+      for (const t of seen) {
+        df.set(t, (df.get(t) ?? 0) + 1)
+      }
+    }
+    SearchService.df = df
+    SearchService.docCount = loaded.length
+  }
+
+  /**
+   * 稀有度权重 IDF。常见词接近 1，生僻词可到 6。
+   * 未登录词当作最稀有处理（df=0）——专有名词、错字正是靠它命中。
+   */
+  private static idf(token: string): number {
+    const d: number = SearchService.df.get(token) ?? 0
+    return Math.log(1 + (SearchService.docCount + 1) / (d + 1))
   }
 
   private static indexOf(haystack: string, needle: string): number {
@@ -158,9 +188,11 @@ export class SearchService {
 
     for (const chunk of chunks) {
       let tokenHits: number = 0
+      let idfSum: number = 0
       for (const qt of queryTokens) {
         if (qt.length >= 2 && chunk.tokens.includes(qt)) {
           tokenHits += 1
+          idfSum += SearchService.idf(qt)
         }
       }
 
@@ -170,7 +202,8 @@ export class SearchService {
         continue
       }
 
-      const base: number = tokenHits * 22 + (subAt >= 0 ? 18 : 0)
+      // 按词的稀有度计分，而不是按命中个数同权相加
+      const base: number = idfSum * 9 + (subAt >= 0 ? 18 : 0)
       const existing: ChunkHit | undefined = hits.get(chunk.itemId)
       if (existing === undefined || base > existing.weight) {
         hits.set(chunk.itemId, {
@@ -261,6 +294,20 @@ export class SearchService {
     }
 
     scored.sort((a: SearchHit, b: SearchHit) => b.score - a.score)
+
+    /*
+     * 弱命中过滤。只在「确实有强命中」时生效：
+     *   顶部是字段级命中（≥ 25）时，丢掉不足其 18% 的正文噪声；
+     *   全是正文命中时不过滤 —— 那是用户唯一能得的结果，宁多勿缺。
+     * 这样「黄河」这类全库常见词不会把 80 条同分顶上来，
+     * 而「绿松石龙」这种只在正文出现的说法仍能搜到。
+     */
+    const top: number = scored.length > 0 ? scored[0].score : 0
+    if (top >= 25) {
+      const floor: number = top * 0.18
+      const kept: SearchHit[] = scored.filter((h: SearchHit) => h.score >= floor)
+      return kept.slice(0, MAX_HITS)
+    }
     return scored.slice(0, MAX_HITS)
   }
 }
