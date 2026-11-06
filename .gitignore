@@ -78,3 +78,6 @@ submission/.work/
 
 # 演示 PPT 超过仓库单文件 5MB 限制，作为平台提交材料单独存放，不入库
 黄河图志 · 演示版V3.pptx
+
+# 真机投屏的临时帧
+.shots/mirror/

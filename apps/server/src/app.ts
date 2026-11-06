@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import {
   DashScopeEmbedding,
   DashScopeRerank,
+  DashScopeLlm,
   DeepSeekLlm,
   readEmbeddingEnv,
   readEnv,
@@ -82,12 +83,20 @@ export async function buildServer(options: BuildOptions = {}): Promise<FastifyIn
   }
 
   // ---- 生成模型（问答用）----
+  // 两家都能用，按可用性选：DeepSeek 有时代金余额会变成负数（实测 -0.10 元），
+  // 此时请求一律 402，问答就静默退化成检索摘要 —— 看起来像「AI 坏了」。
+  // 所以有明显余额的百炼优先，DeepSeek 作为备选，可用 YRA_LLM 强制指定。
   const llmEnv = readEnv(true)
-  const llm: LlmProvider = new DeepSeekLlm(llmEnv)
-  if (llmEnv.deepseekKey.length === 0) {
-    app.log.warn('未配置 DEEPSEEK_API_KEY：问答生成不可用，/api/qa 只返回检索原文摘要')
+  const prefer: string = process.env.YRA_LLM ?? 'dashscope'
+  const useDeepSeek: boolean =
+    prefer === 'deepseek' && llmEnv.deepseekKey.length > 0
+  const llm: LlmProvider = useDeepSeek
+    ? new DeepSeekLlm(llmEnv)
+    : new DashScopeLlm(llmEnv)
+  if (llmEnv.dashscopeKey.length === 0 && llmEnv.deepseekKey.length === 0) {
+    app.log.warn('两家生成 Key 都没配：问答生成不可用，/api/qa 只返回检索原文摘要')
   } else {
-    app.log.info(`生成就绪：${llm.model}`)
+    app.log.info(`生成就绪：${llm.model}（provider=${useDeepSeek ? 'deepseek' : 'dashscope'}）`)
   }
 
   // ---- 实体词典（查询理解用）----
