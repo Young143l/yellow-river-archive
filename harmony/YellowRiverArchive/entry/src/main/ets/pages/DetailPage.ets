@@ -275,27 +275,9 @@ struct DetailPage {
   @Builder
   introSection(item: HeritageItem) {
     Column({ space: AppSize.cardGap }) {
+      // 暂不展示配图：数据量还不足以支撑全套实拍授权，
+      // 版式先按纯文字排，配图位留着（schema 里的 images 字段照旧保留）
       this.sectionText(item.intro)
-
-      ForEach(
-        item.images,
-        (img: ImagePayload) => {
-          Column({ space: 4 }) {
-            Image($rawfile(img.url))
-              .width('100%')
-              .height(180)
-              .borderRadius(8)
-              .objectFit(ImageFit.Cover)
-              .backgroundColor(AppColor.divider)
-            Text(`${img.caption}（${img.credit} / ${img.license}）`)
-              .fontSize(11)
-              .fontColor(AppColor.textTertiary)
-              .width('100%')
-          }
-          .width('100%')
-        },
-        (img: ImagePayload) => img.url
-      )
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -522,13 +504,6 @@ struct DetailPage {
   @Builder
   header(item: HeritageItem) {
     Column({ space: 8 }) {
-      Image($rawfile(item.images.length > 0 ? item.images[0].url : ''))
-        .width('100%')
-        .height(200)
-        .borderRadius(AppSize.cardRadius)
-        .objectFit(ImageFit.Cover)
-        .backgroundColor(AppColor.divider)
-
       Text(item.name)
         .fontSize(26)
         .fontFamily(FontFamily.serifBold)

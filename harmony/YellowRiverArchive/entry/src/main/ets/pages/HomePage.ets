@@ -139,9 +139,6 @@ export struct HomePage {
     this.loadPicks()
   }
 
-  /** 是否存在按内容高度合成的长背景（构建期生成，缺失时回退原图） */
-  private hasLongBg: boolean = true
-
   aboutToAppear(): void {
     this.load()
     this.loadPicks()
@@ -328,10 +325,9 @@ export struct HomePage {
    * 时才切过去，条数少的时候保持清晰。
    */
   private backgroundSource(): string {
-    // 长图只在资源存在时才用（构建期按内容高度生成；条数少时不生成）
-    if (this.estimateHeight() > this.BG_HEAD_H && this.hasLongBg) {
-      return 'img/river-bg-long.webp'
-    }
+    // 一律用原始清晰长图（1080x6000 覆盖 2000vp）。
+    // 合成长图那条路（river-bg-long.webp）在条数少时既无必要，
+    // 且资源缺失会导致背景整个不渲染（rawfile 找不到就什么都不画）。
     return 'img/river-bg.webp'
   }
 
@@ -674,8 +670,12 @@ export struct HomePage {
             // 背景走 .background()：背景节点尺寸等于宿主列尺寸，
             // 既不撑高滚动区，也不需要估算高度
             // 背景挂在正文列上：高度天然等于内容高度
+            // Fill 而不是 Cover：Cover 会等比铺满宽度、只盖到 2000vp 左右，
+            // 内容更长时末尾会出现「河断了」；Fill 把同一张图纵向拉满内容高度，
+            // 水面纵向拉伸肉眼几乎无感，且**没有任何拼接**（拼接缝来自源图缝合，
+            // 只要不在运行时再拼就不会有）
             .backgroundImage($rawfile(this.backgroundSource()))
-            .backgroundImageSize(ImageSize.Cover)
+            .backgroundImageSize(ImageSize.FILL)
             .backgroundImagePosition(Alignment.Top)
             // 水纹叠层走 overlay：它不影响布局尺寸，
             // 若作为 Stack 的兄弟节点并给固定高度，又会把 Stack 撑高
