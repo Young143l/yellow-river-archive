@@ -17,8 +17,12 @@ set -euo pipefail
 
 IMG_DIR="$(cd "$(dirname "$0")/.." && pwd)/harmony/YellowRiverArchive/entry/src/main/resources/rawfile/img"
 SRC="$IMG_DIR/river-bg.webp"
-OUT_TILE="$IMG_DIR/river-tile.webp"
-OUT_FADE="$IMG_DIR/river-fade.webp"
+# tile 与过渡带只是合成用的中间产物，写到 derived/（已 gitignore），
+# 不进 rawfile —— 否则会被打进 HAP 而运行时根本用不到
+DERIVED="$(cd "$(dirname "$0")/.." && pwd)/packages/data/derived"
+mkdir -p "$DERIVED"
+OUT_TILE="$DERIVED/river-tile.webp"
+OUT_FADE="$DERIVED/river-fade.webp"
 TMP="$(mktemp -d)"
 trap "rm -rf '$TMP'" EXIT
 
@@ -65,3 +69,31 @@ magick "$OUT_TILE" -format "tile 底行   %[pixel:p{150,1439}]\n" info:
 magick "$OUT_FADE" -format "fade 顶行   %[pixel:p{150,0}]\n" info:
 magick "$OUT_FADE" -format "fade 底行   %[pixel:p{150,479}]\n" info:
 magick "$SRC" -format "卷首末行 %[pixel:p{150,5999}]\n" info:
+
+# ---- 5) 合成长图 river-bg-long.webp ----
+# 为什么需要它：真机实测 `.background(CustomBuilder)` 不渲染（同一位置
+# `.background('#FF0000')` 能铺满，`.overlay(builder)` 能出画），
+# 三层叠加方案在 ArkTS 侧落不了地。于是把「卷首 + 过渡 + N 次 tile」
+# 在生成期合成成一张图，运行时仍走已验证的 backgroundImage + Cover。
+#
+# 宽度取 270（屏宽 360vp 的 3/4）：内容 19000vp 时解码约 15.7MB，
+# 单张 1080x57000 要 250MB，不可行。代价是卷首水墨会软一些 ——
+# 所以只在内容超过 2000vp 时才用它，5 条时仍走清晰的原图。
+LONG_H_VP="${1:-19500}"          # 目标内容高度（vp）
+TILE_VP=480                       # tile 铺满后的高
+HEAD_VP=2000
+FADE_VP=160
+W=270
+N_TILE=$(( (LONG_H_VP - HEAD_VP - FADE_VP + TILE_VP - 1) / TILE_VP ))
+TOTAL_VP=$(( HEAD_VP + FADE_VP + N_TILE * TILE_VP ))
+
+magick "$SRC" -resize ${W}x$(( W * HEAD_VP / 360 ))\! "$TMP/head_s.png"
+magick "$OUT_FADE" -resize ${W}x$(( W * FADE_VP / 360 ))\! "$TMP/fade_s.png"
+magick "$OUT_TILE" -resize ${W}x$(( W * TILE_VP / 360 ))\! "$TMP/tile_s.png"
+# -duplicate n 产出 n+1 帧，所以要 N-1（实测 -clone 0-N 在单帧上会被截断成 2 帧）
+magick "$TMP/tile_s.png" -duplicate $(( N_TILE - 1 )) -append "$TMP/tiles.png"
+magick "$TMP/head_s.png" "$TMP/fade_s.png" "$TMP/tiles.png" -append \
+  -quality 80 -define webp:method=6 "$IMG_DIR/river-bg-long.webp"
+echo "== 合成长图 =="
+magick identify "$IMG_DIR/river-bg-long.webp"
+echo "   覆盖 $TOTAL_VP vp（卷首 $HEAD_VP + 过渡 $FADE_VP + tile ${N_TILE}x${TILE_VP}）"

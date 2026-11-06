@@ -139,10 +139,7 @@ export struct HomePage {
     this.loadPicks()
   }
 
-  private t0: number = 0 // TEMP 性能探针
-
   aboutToAppear(): void {
-    this.t0 = Date.now() // TEMP 性能探针
     this.load()
     this.loadPicks()
   }
@@ -312,42 +309,23 @@ export struct HomePage {
   }
 
   /**
-   * 背景分层：卷首水墨长图 + 过渡带 + 淡纹平铺。
+   * 背景图选择。
    *
-   * 为什么必须分三段：river-bg（1080x6000）等比铺满只有 2000vp，5 条刚好；
-   * 80 条内容约 19000vp，单张长图（1080x57000）解码要 250MB 内存，不可行。
-   * 超出段改用 480vp 的周期 tile 竖向平铺（objectRepeat），解码仅 6MB。
+   * 为什么需要两张：river-bg（1080x6000）等比铺满只有 2000vp，5 条刚好；
+   * 80 条内容约 19400vp。单张 1080x57000 解码要 250MB 内存，不可行。
+   * 所以 tools/gen-home-bg.sh 把「卷首 + 过渡带 + 37 次淡纹 tile」在生成期
+   * 合成一张 270x14940 的长图（解码 16MB），运行时仍走已验证的
+   * backgroundImage + Cover。
    *
-   * 过渡带抹掉长图与 tile 的硬切：两端颜色在生成期就已对齐
-   * （见 tools/gen-home-bg.sh：tile 顶行==底行、fade 两端分别等于卷首末行与 tile 顶行）。
-   * tile 取深水段后与纸色 65/35 混成淡纹 —— 卷首已经有完整河道，
-   * 长尾只需要「河还在」的暗示，太浓会抢正文。
+   * 为什么不直接在运行时叠三层：真机实测 `.background(CustomBuilder)` 不渲染
+   * —— 同一位置 `.background('#FF0000')` 能铺满，`.overlay(builder)` 能出画，
+   * 两种 builder 传参形式都试过。所以把叠加放到生成期。
    *
-   * 用 .background() 而不是 Stack 兄弟节点：背景节点由宿主尺寸决定，
-   * 不会反过来把滚动区撑高（独立 Image 写死高度会多出空白，实测过）。
+   * 代价：长图宽 270，卷首水墨会比原图软。因此只在内容确实超过 2000vp
+   * 时才切过去，条数少的时候保持清晰。
    */
-  @Builder
-  bgLayers() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Image($rawfile('img/river-bg.webp'))
-        .width('100%')
-        .height(this.BG_HEAD_H)
-        .objectFit(ImageFit.Fill)
-      Image($rawfile('img/river-fade.webp'))
-        .width('100%')
-        .height(this.BG_FADE_H)
-        .offset({ y: this.BG_HEAD_H })
-        .objectFit(ImageFit.Fill)
-      Image($rawfile('img/river-tile.webp'))
-        .width('100%')
-        .height('100%')
-        .offset({ y: this.BG_HEAD_H + this.BG_FADE_H })
-        .objectFit(ImageFit.Contain)
-        .objectRepeat(ImageRepeat.Y)
-    }
-    .width('100%')
-    .height('100%')
-    .clip(true)
+  private backgroundSource(): string {
+    return this.estimateHeight() > this.BG_HEAD_H ? 'img/river-bg-long.webp' : 'img/river-bg.webp'
   }
 
   /** 水纹叠层：只有白色短弧，透明底，覆盖在背景图之上 */
@@ -614,9 +592,6 @@ export struct HomePage {
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 44, bottom: 30 })
-    .onAppear(() => {
-      console.info(`yraDiag: homeTree ${Date.now() - this.t0}ms items=${this.total}`) // TEMP
-    })
   }
 
   // ---------------------------------------------------------------- 视图
@@ -691,7 +666,10 @@ export struct HomePage {
             .width('100%')
             // 背景走 .background()：背景节点尺寸等于宿主列尺寸，
             // 既不撑高滚动区，也不需要估算高度
-            .background(this.bgLayers())
+            // 背景挂在正文列上：高度天然等于内容高度
+            .backgroundImage($rawfile(this.backgroundSource()))
+            .backgroundImageSize(ImageSize.Cover)
+            .backgroundImagePosition(Alignment.Top)
             // 水纹叠层走 overlay：它不影响布局尺寸，
             // 若作为 Stack 的兄弟节点并给固定高度，又会把 Stack 撑高
             .overlay(this.rippleLayer(), { align: Alignment.TopStart })
