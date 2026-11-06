@@ -14,7 +14,8 @@
     "embed": "tsx src/index.ts embed",
     "env:init": "tsx src/env-init.ts",
     "lint": "tsx src/index.ts lint",
-    "draft": "tsx src/index.ts draft"
+    "draft": "tsx src/index.ts draft",
+    "covers": "tsx src/index.ts covers"
   },
   "dependencies": {
     "@yra/ai": "workspace:*",

@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { buildChunks } from './chunk'
+import { generateCovers, fixImageCredit, type CoverReport } from './covers'
 import { runEmbedding, type EmbedReport } from './embed'
 import { exportPreset } from './export'
 import { buildGraph } from './graph'
@@ -41,6 +42,19 @@ const SITES_INDEX: string = join(REPO_ROOT, 'packages', 'data', 'sites.yaml')
 const SOURCES_DIR: string = join(REPO_ROOT, 'packages', 'data', 'sources')
 const LEXICON: string = join(REPO_ROOT, 'packages', 'data', 'lexicon.txt')
 const DRAFTS_DIR: string = join(REPO_ROOT, 'packages', 'data', 'drafts')
+const RAWFILE_DIR: string = join(
+  REPO_ROOT,
+  'harmony',
+  'YellowRiverArchive',
+  'entry',
+  'src',
+  'main',
+  'resources',
+  'rawfile'
+)
+const FONT: string = join(RAWFILE_DIR, 'fonts', 'NotoSerifSC-SemiBold.ttf')
+const PAPER: string = join(RAWFILE_DIR, 'img', 'paper.webp')
+const IMG_DIR: string = join(RAWFILE_DIR, 'img')
 
 /** 端侧词表规模上限（约 100KB，见设计文档 §4.6 体积预算） */
 const VOCAB_TOP_N: number = 12000
@@ -181,6 +195,33 @@ async function main(): Promise<void> {
     if (errorCount > 0) {
       process.exit(1)
     }
+    return
+  }
+
+  // covers 子命令：程序化生成封面卡 + 修正 yaml 占位措辞
+  if (command === 'covers') {
+    const reports: CoverReport[] = await generateCovers({
+      sitesDir: SITES_DIR,
+      fontPath: FONT,
+      paperPath: PAPER,
+      outDir: IMG_DIR,
+    })
+    let creditFixed: number = 0
+    for (const item of (await loadSites(SITES_DIR)).items) {
+      const yamlPath: string = join(SITES_DIR, `${item.id}.yaml`)
+      try {
+        if (fixImageCredit(yamlPath, item.name)) creditFixed++
+      } catch {
+        // 条目 yaml 缺 images 段时跳过
+      }
+    }
+    const ok: number = reports.filter((r) => r.ok).length
+    console.log('[covers] 封面卡生成')
+    for (const r of reports) {
+      console.log(`  ${r.ok ? 'OK  ' : 'FAIL'} ${r.id.padEnd(22, ' ')} ${r.message}`)
+    }
+    console.log(`[covers] 成功 ${ok}/${reports.length} 张，yaml 署名修正 ${creditFixed} 个文件`)
+    if (ok < reports.length) process.exit(1)
     return
   }
 
