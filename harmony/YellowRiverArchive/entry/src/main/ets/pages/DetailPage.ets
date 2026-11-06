@@ -504,12 +504,27 @@ struct DetailPage {
   @Builder
   header(item: HeritageItem) {
     Column({ space: 8 }) {
-      Text(item.name)
-        .fontSize(26)
-        .fontFamily(FontFamily.serifBold)
-        .fontColor(AppColor.textPrimary)
-        .letterSpacing(2)
-        .width('100%')
+      // 顶部题名块：纯色底 + 居中宋体题名，不依赖任何图片资源。
+      // 最早那版的形态 —— 数据还没有实拍图时，与其放一张示意图，
+      // 不如只留一块安静的字，不误导也不抢正文。
+      Column() {
+        Text(item.name)
+          .fontSize(30)
+          .fontFamily(FontFamily.serifBold)
+          .fontColor(AppColor.textPrimary)
+          .textAlign(TextAlign.Center)
+          .letterSpacing(4)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .height(200)
+      .justifyContent(FlexAlign.Center)
+      .padding({ left: 24, right: 24 })
+      .backgroundColor(AppColor.surface)
+      .borderRadius(AppSize.cardRadius)
+      .borderWidth(1)
+      .borderColor(AppColor.hairlineWarm)
 
       Row({ space: 8 }) {
         Text(`${item.city} · ${item.era}`)
