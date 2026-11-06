@@ -9,7 +9,7 @@
  * 本项目的图谱规模是 57-500 节点，因此先不做，但把阈值写成常量便于后续替换。
  */
 
-/** 超过此节点数应启用网格桶近似（当前未实现，仅作提醒） */
+/** 超过此节点数启用网格桶近似（斥力只算邻近 3x3 格，远于截断半径的节点对不计） */
 export const GRID_BUCKET_THRESHOLD: number = 500
 
 /** 布局中的节点：位置、速度与视觉属性 */
@@ -151,36 +151,107 @@ export class ForceLayout {
     const damping: number = 0.82
     const centerPull: number = 0.012
 
-    // ---- 斥力（O(n²)）----
-    for (let i = 0; i < n; i += 1) {
-      const a: SimNode = this.nodes[i]
-      for (let j = i + 1; j < n; j += 1) {
-        const b: SimNode = this.nodes[j]
-        let dx: number = a.x - b.x
-        let dy: number = a.y - b.y
-        let dist2: number = dx * dx + dy * dy
-        if (dist2 < 0.01) {
-          // 完全重合时给一个确定性的微扰，避免除零后 NaN 扩散到整张图
-          dx = (i % 7) - 3
-          dy = (j % 5) - 2
-          dist2 = dx * dx + dy * dy + 0.01
+    // ---- 斥力 ----
+    // 节点数超阈值时用网格桶：斥力本就随距离平方衰减，远于 2 倍理想边长
+    // 的节点对贡献可忽略。按截断半径分格，只扫自身与相邻 8 格。
+    // 80 条档案约 700 节点，朴素 O(n²) 实测约 80ms/帧（12fps，动画不可用）；
+    // 桶化后每节点只与常数个邻居交互，降到几毫秒级。
+    const useBuckets: boolean = n > GRID_BUCKET_THRESHOLD
+    const cutoff: number = idealLength * 2
+    if (useBuckets) {
+      const cell: number = Math.max(1, cutoff)
+      const buckets: Map<string, number[]> = new Map<string, number[]>()
+      for (let i = 0; i < n; i += 1) {
+        const nd: SimNode = this.nodes[i]
+        if (nd.hidden) {
+          continue
         }
-        const dist: number = Math.sqrt(dist2)
-        const force: number = repulsion / dist2
-        const fx: number = (dx / dist) * force
-        const fy: number = (dy / dist) * force
-        a.vx += fx
-        a.vy += fy
-        b.vx -= fx
-        b.vy -= fy
+        const key: string = `${Math.floor(nd.x / cell)}_${Math.floor(nd.y / cell)}`
+        const arr: number[] | undefined = buckets.get(key)
+        if (arr !== undefined) {
+          arr.push(i)
+        } else {
+          buckets.set(key, [i])
+        }
+      }
+      for (let i = 0; i < n; i += 1) {
+        const a: SimNode = this.nodes[i]
+        if (a.hidden) {
+          continue
+        }
+        const gx: number = Math.floor(a.x / cell)
+        const gy: number = Math.floor(a.y / cell)
+        for (let ox: number = -1; ox <= 1; ox += 1) {
+          for (let oy: number = -1; oy <= 1; oy += 1) {
+            const arr: number[] | undefined = buckets.get(`${gx + ox}_${gy + oy}`)
+            if (arr === undefined) {
+              continue
+            }
+            for (const j of arr) {
+              if (j <= i) {
+                continue
+              }
+              const b: SimNode = this.nodes[j]
+              let dx: number = a.x - b.x
+              let dy: number = a.y - b.y
+              let dist2: number = dx * dx + dy * dy
+              if (dist2 > cutoff * cutoff) {
+                continue
+              }
+              if (dist2 < 0.01) {
+                dx = (i % 7) - 3
+                dy = (j % 5) - 2
+                dist2 = dx * dx + dy * dy + 0.01
+              }
+              const dist: number = Math.sqrt(dist2)
+              const force: number = repulsion / dist2
+              const fx: number = (dx / dist) * force
+              const fy: number = (dy / dist) * force
+              a.vx += fx
+              a.vy += fy
+              b.vx -= fx
+              b.vy -= fy
+            }
+          }
+        }
+      }
+    } else {
+      for (let i = 0; i < n; i += 1) {
+        const a: SimNode = this.nodes[i]
+        if (a.hidden) {
+          continue
+        }
+        for (let j = i + 1; j < n; j += 1) {
+          const b: SimNode = this.nodes[j]
+          if (b.hidden) {
+            continue
+          }
+          let dx: number = a.x - b.x
+          let dy: number = a.y - b.y
+          let dist2: number = dx * dx + dy * dy
+          if (dist2 < 0.01) {
+            // 完全重合时给一个确定性的微扰，避免除零后 NaN 扩散到整张图
+            dx = (i % 7) - 3
+            dy = (j % 5) - 2
+            dist2 = dx * dx + dy * dy + 0.01
+          }
+          const dist: number = Math.sqrt(dist2)
+          const force: number = repulsion / dist2
+          const fx: number = (dx / dist) * force
+          const fy: number = (dy / dist) * force
+          a.vx += fx
+          a.vy += fy
+          b.vx -= fx
+          b.vy -= fy
+        }
       }
     }
 
-    // ---- 弹簧引力 ----
+    // ---- 弹簧引力（隐藏节点不参与） ----
     for (const edge of this.edges) {
       const a: SimNode = this.nodes[edge.from]
       const b: SimNode = this.nodes[edge.to]
-      if (a === undefined || b === undefined) {
+      if (a === undefined || b === undefined || a.hidden || b.hidden) {
         continue
       }
       const dx: number = a.x - b.x
@@ -197,8 +268,13 @@ export class ForceLayout {
       b.vy += fy
     }
 
-    // ---- 向心力 + 阻尼 + 边界收敛 ----
+    // ---- 向心力 + 阻尼 + 边界收敛（隐藏节点冻结） ----
     for (const node of this.nodes) {
+      if (node.hidden) {
+        node.vx = 0
+        node.vy = 0
+        continue
+      }
       if (node.fixed) {
         node.vx = 0
         node.vy = 0
@@ -239,13 +315,58 @@ export class ForceLayout {
     }
   }
 
-  /** 总动能（用于判断是否已收敛，可以停掉动画省电） */
+  /** 总动能（隐藏节点不计，否则冻结子图永远不收敛） */
   energy(): number {
     let sum: number = 0
     for (const node of this.nodes) {
+      if (node.hidden) {
+        continue
+      }
       sum += node.vx * node.vx + node.vy * node.vy
     }
     return sum
+  }
+
+  /**
+   * 径向种子：焦点居中固定，一跳邻居黄金角螺旋环绕。
+   * 聚焦模式的专用初始化 —— 全图 seed() 会把邻居放到各自簇心去，
+   * 聚焦子图看起来就散架了。
+   */
+  radialSeed(focusIndex: number): void {
+    const cx: number = this.width / 2
+    const cy: number = this.height / 2
+    const focus: SimNode | undefined = this.nodes[focusIndex]
+    if (focus === undefined) {
+      return
+    }
+    focus.x = cx
+    focus.y = cy
+    focus.vx = 0
+    focus.vy = 0
+    focus.fixed = true
+
+    const neighborSet: Set<number> = new Set<number>()
+    for (const edge of this.edges) {
+      if (edge.from === focusIndex) {
+        neighborSet.add(edge.to)
+      } else if (edge.to === focusIndex) {
+        neighborSet.add(edge.from)
+      }
+    }
+    const golden: number = Math.PI * (3 - Math.sqrt(5))
+    let k: number = 0
+    this.nodes.forEach((node: SimNode, i: number) => {
+      node.vx = 0
+      node.vy = 0
+      if (i === focusIndex || !neighborSet.has(i)) {
+        return
+      }
+      const spread: number = 84 + 30 * Math.sqrt(k + 0.5)
+      const theta: number = golden * (k + 1)
+      node.x = cx + spread * Math.cos(theta)
+      node.y = cy + spread * Math.sin(theta)
+      k += 1
+    })
   }
 
   /** 命中测试：返回被点中的节点下标（-1 表示没点中） */

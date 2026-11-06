@@ -6,7 +6,7 @@ import { CORE_ERAS } from '../shared'
 import { AppColor, AppFont, AppSize, FontFamily } from '../constants/Theme'
 import { GraphDao } from '../service/GraphDao'
 import { HeritageDao } from '../service/HeritageDao'
-import { ForceLayout, SimEdge, SimNode } from '../utils/ForceLayout'
+import { ForceLayout, GRID_BUCKET_THRESHOLD, SimEdge, SimNode } from '../utils/ForceLayout'
 
 /**
  * 节点配色：按类型分。
@@ -74,6 +74,10 @@ export struct GraphPage {
   @State selectedItemId: string = ''
   @State zoomLevel: number = 1
   @State activeEra: string = ''
+  /** focus = 只画焦点遗址与一跳邻居；full = 全图（布局收敛后冻结） */
+  @State viewMode: string = 'focus'
+  @State visibleCount: number = 0
+  @State focusName: string = ''
 
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings)
@@ -81,6 +85,8 @@ export struct GraphPage {
   private ready: boolean = false
   private timer: number = -1
   private selected: number = -1
+  private focusIndex: number = -1
+  private calmFrames: number = 0
   private neighbors: Map<number, number[]> = new Map<number, number[]>()
   private eraNodes: Map<string, number[]> = new Map<string, number[]>()
 
@@ -139,6 +145,20 @@ export struct GraphPage {
       this.nodeCount = nodes.length
       this.edgeCount = this.layout.edges.length
       this.layout.seed()
+      // 默认聚焦：取权重最高的遗址作焦点。
+      // 80 条时全图约 700 节点，手机上读不动也拖不动；
+      // 聚焦子图（约 20 节点）才是移动端该给的默认视图。
+      let best: number = -1
+      let bestWeight: number = -1
+      this.layout.nodes.forEach((node: SimNode, i: number) => {
+        if (node.type === 'Site' && node.weight > bestWeight) {
+          bestWeight = node.weight
+          best = i
+        }
+      })
+      if (best >= 0) {
+        this.applyFocus(best)
+      }
     } catch (err) {
       this.nodeCount = 0
     }
@@ -208,12 +228,73 @@ export struct GraphPage {
     if (!this.ready || this.timer !== -1 || this.layout.nodes.length === 0) {
       return
     }
+    this.calmFrames = 0
     this.timer = setInterval(() => {
       if (this.layout.energy() > 0.6) {
         this.layout.step()
+        this.calmFrames = 0
+      } else {
+        // 收敛后连续静默 45 帧（约 0.7s）就停掣 —— 空转重绘只在耗电
+        this.calmFrames += 1
+        if (this.calmFrames > 45) {
+          this.stopLoop()
+          this.draw()
+          return
+        }
       }
       this.draw()
     }, 16)
+  }
+
+  /** 切到聚焦模式：焦点 + 一跳邻居可见，其余隐藏，径向种子 */
+  private applyFocus(idx: number): void {
+    if (idx < 0 || idx >= this.layout.nodes.length) {
+      return
+    }
+    const nbs: number[] = this.neighbors.get(idx) ?? []
+    this.layout.nodes.forEach((node: SimNode, i: number) => {
+      node.hidden = !(i === idx || nbs.includes(i))
+      node.fixed = false
+    })
+    this.layout.radialSeed(idx)
+    this.focusIndex = idx
+    this.focusName = this.layout.nodes[idx].name
+    this.visibleCount = nbs.length + 1
+    this.selected = idx
+    this.selectedName = this.layout.nodes[idx].name
+    const label: string | undefined = TYPE_LABELS.get(this.layout.nodes[idx].type)
+    this.selectedType = label !== undefined ? label : this.layout.nodes[idx].type
+    this.selectedItemId = this.layout.nodes[idx].type === 'Site' ? this.layout.nodes[idx].id : ''
+    this.activeEra = ''
+    this.setZoom(1)
+    this.startLoop()
+  }
+
+  /** 切回全图：全部可见。小图收敛后自动冻结；大图直接用种子布局，不动画 */
+  private applyFull(): void {
+    this.layout.nodes.forEach((node: SimNode) => {
+      node.hidden = false
+      node.fixed = false
+    })
+    this.focusIndex = -1
+    this.focusName = ''
+    this.visibleCount = this.layout.nodes.length
+    this.selected = -1
+    this.selectedName = ''
+    this.selectedType = ''
+    this.selectedItemId = ''
+    this.setZoom(1)
+    this.layout.seed()
+    // 大图不做逐帧动画：700 节点的斥力在端侧约 80ms/帧（12fps，动画不可用），
+    // 且高密度下网格桶也截不掉多少节点对（实测桌面基准近似持平）。
+    // 种子布局（簇心环 + 黄金角螺旋）本身就是结构清晰的静态图；
+    // 小图（<=500 节点）保持力导向动画，收敛后自动冻结。
+    if (this.layout.nodes.length <= GRID_BUCKET_THRESHOLD) {
+      this.startLoop()
+    } else {
+      this.stopLoop()
+      this.draw()
+    }
   }
 
   private stopLoop(): void {
@@ -236,6 +317,9 @@ export struct GraphPage {
     let minY: number = Number.MAX_VALUE
     let maxY: number = -Number.MAX_VALUE
     for (const node of this.layout.nodes) {
+      if (node.hidden) {
+        continue
+      }
       minX = Math.min(minX, node.x - node.radius())
       maxX = Math.max(maxX, node.x + node.radius())
       minY = Math.min(minY, node.y - node.radius())
@@ -290,7 +374,7 @@ export struct GraphPage {
     for (const edge of this.layout.edges) {
       const a: SimNode | undefined = this.layout.nodes[edge.from]
       const b: SimNode | undefined = this.layout.nodes[edge.to]
-      if (a === undefined || b === undefined) {
+      if (a === undefined || b === undefined || a.hidden || b.hidden) {
         continue
       }
       const touches: boolean =
@@ -309,6 +393,9 @@ export struct GraphPage {
 
     // ---- 节点 ----
     this.layout.nodes.forEach((node: SimNode, index: number) => {
+      if (node.hidden) {
+        return
+      }
       const isSelected: boolean = index === this.selected
       const isNeighbor: boolean = highlighted.includes(index)
       const eraDim: boolean = hasEra && !eraSet.has(index)
@@ -396,6 +483,16 @@ export struct GraphPage {
       }
     })
     if (best === this.selected) {
+      return
+    }
+    // 聚焦模式下点遗址 = 把焦点换过去 —— 图谱的浏览单位就是「一处遗址的星系」
+    if (
+      best >= 0 &&
+      this.viewMode === 'focus' &&
+      this.layout.nodes[best].type === 'Site' &&
+      best !== this.focusIndex
+    ) {
+      this.applyFocus(best)
       return
     }
     this.selected = best
@@ -528,15 +625,42 @@ export struct GraphPage {
               this.setZoom(1)
             })
         }
+        Text(this.viewMode === 'focus' ? '全图' : '聚焦')
+          .fontSize(11)
+          .fontColor(AppColor.primary)
+          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .borderRadius(12)
+          .borderWidth(1)
+          .borderColor(AppColor.gold)
+          .margin({ left: 6 })
+          .onClick(() => {
+            if (this.viewMode === 'focus') {
+              this.viewMode = 'full'
+              this.applyFull()
+            } else {
+              this.viewMode = 'focus'
+              if (this.focusIndex >= 0) {
+                this.applyFocus(this.focusIndex)
+              }
+            }
+          })
       }
       .width('100%')
       .padding({ left: AppSize.pagePadding, right: AppSize.pagePadding, top: 14, bottom: 6 })
 
-      Text(`${this.nodeCount} 节点 · ${this.edgeCount} 连边`)
-        .fontSize(10)
-        .fontColor(AppColor.textTertiary)
-        .width('100%')
-        .padding({ left: AppSize.pagePadding, bottom: 6 })
+      if (this.viewMode === 'focus') {
+        Text(`聚焦 ${this.focusName} · ${this.visibleCount} 节点`)
+          .fontSize(10)
+          .fontColor(AppColor.textTertiary)
+          .width('100%')
+          .padding({ left: AppSize.pagePadding, bottom: 6 })
+      } else {
+        Text(`全图 · ${this.nodeCount} 节点 · ${this.edgeCount} 连边`)
+          .fontSize(10)
+          .fontColor(AppColor.textTertiary)
+          .width('100%')
+          .padding({ left: AppSize.pagePadding, bottom: 6 })
+      }
 
       this.legend()
       this.eraBar()
